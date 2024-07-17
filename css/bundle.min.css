@@ -1,4 +1,73 @@
-  /************ Skills Css ************/
+ /* complex carousel theme */
+ 
+.mainBody {
+  background-color: black;
+  }
+  
+  .section2 {
+    padding-top: 32px;
+    background-color: black;
+    }
+
+/* Carousel Styles */
+.carousel-container {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: auto;
+  overflow: hidden;
+}
+.carousel-item {
+  display: none;
+  text-align: center;
+}
+.carousel-item.active {
+  display: block;
+}
+.carousel-control-prev, .carousel-control-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.carousel-control-prev {
+  left: 0;
+}
+.carousel-control-next {
+  right: 0;
+}
+.carousel-item img {
+  max-width: 33.33%; /* Set image width to 1/3 of the container */
+  height: auto; /* Maintain aspect ratio */
+}
+
+
+.carousel-inner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.carousel-item .icon {
+  font-size: 3rem;
+}
+
+.carousel-item p {
+  margin-top: 10px;
+}
+
+
+.carousel-indicators li {
+  background-color: #ee8034;
+}
+
 .skill {
   padding: 0 0 50px 0;
   position: relative;
@@ -13,7 +82,7 @@
   margin-bottom: 100px;
 }
 
-@media screen and (max-width: 768px){
+@media screen and (max-width: 768px) {
   .skill-bx {
     margin-top: -50px;
   }
@@ -24,14 +93,6 @@
   font-weight: 700;
 }
 
-.carousel-inner .item {
-  padding: 15px;
-}
-
-.carousel-inner .my-3 i {
-  color: #ff9900;
-}
-
 .background-image-left {
   top: 28%;
   position: absolute;
@@ -40,12 +101,11 @@
   z-index: -4;
 }
 
-.carousel-control-prev-icon,
-.carousel-control-next-icon {
-  background-color: #ee8034;
-  border-radius: 50%;
+.carousel-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-
   /************ Banner2 Css ************/
   .banner2 {
     margin-top: 0;
@@ -131,7 +191,7 @@
   z-index: 2;
   cursor: pointer;
   border-radius: 12px; /* Adjust this value for more or less rounding */
-  box-shadow: 0 4px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
+  box-shadow: 0 6px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
 }
 
 .banner2 .btn-custom svg {
@@ -2025,7 +2085,8 @@ font-family: 'Play', sans-serif;
 .mdc-drawer-app-content {
   margin-left: 0;
   margin-right: 0;
-  position: relative
+  position: relative;
+  background-color: black;
 }
 [dir=rtl] .mdc-drawer-app-content, .mdc-drawer-app-content[dir=rtl] {
   margin-left: 0;
@@ -17879,7 +17940,7 @@ a {
   margin-right: auto;
   margin-left: auto;
   width: 100%;
-  max-width: 1280px;
+  max-width: 1280px;  
   /* background-color: cornsilk; */
 }
 .mdc-card {
