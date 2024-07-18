@@ -6,66 +6,143 @@
   
   .section2 {
     padding-top: 32px;
-    background-color: black;
+    background-color: ;
     }
 
+    .section4{
+      background-color: #151515;
+    }
+    .section6{
+      background-color: white;
+    }
+
+/* ways to play styling */
+.play-card {
+  background-color: black;
+  color: white;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  transition: box-shadow 0.3s ease-in-out;
+  height: 200px; /* Ensure all cards have the same height */
+}
+.play-card img {
+  max-width: 64px;
+  height: auto;
+  margin-bottom: 10px;
+  border-radius: 20%; /* Make images circular */
+}
+.play-card:hover {
+  box-shadow: 0 0 10px white;
+}
+.waysToPlay {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
 /* Carousel Styles */
-.carousel-container {
-  position: relative;
-  width: 100%;
-  max-width: 600px;
-  margin: auto;
-  overflow: hidden;
+  /* Carousel Styles */
+  .carousel-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+    overflow: hidden;
 }
 .carousel-item {
-  display: none;
-  text-align: center;
+    display: none;
+    text-align: center;
+    transition: opacity 1s ease-in-out;
 }
 .carousel-item.active {
-  display: block;
+    display: block;
+    opacity: 1;
 }
-.carousel-control-prev, .carousel-control-next {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
+/* for second carousel items */
+.carousel2-item.active {
   display: flex;
+  justify-content: space-around;
   align-items: center;
-  justify-content: center;
+  flex-direction: row; /* Display items in a row */
+}
+.carousel2-item {
+  display: none;
+  text-align: center;
+  transition: transform 1.5s ease-in-out; /* Add transition for sliding effect */
+
+}
+.carousel2-item img {
+  max-width: 30px; /* Set image width to match icon size */
+  height: auto; /* Maintain aspect ratio */
+
+}
+
+.carousel-control-prev, .carousel-control-next {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .carousel-control-prev {
-  left: 0;
+    left: 0;
 }
 .carousel-control-next {
-  right: 0;
+    right: 0;
 }
 .carousel-item img {
-  max-width: 33.33%; /* Set image width to 1/3 of the container */
-  height: auto; /* Maintain aspect ratio */
+    max-width: 33.33%; /* Set image width to 1/3 of the container */
+    height: auto; /* Maintain aspect ratio */
 }
-
-
 .carousel-inner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: relative; /* Add relative positioning to contain absolute elements */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
-
 .carousel-item .icon {
-  font-size: 3rem;
+    font-size: 3rem;
 }
-
 .carousel-item p {
-  margin-top: 10px;
+    margin-top: 10px;
 }
-
-
+.carousel-indicators {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 10px;
+    list-style: none;
+}
 .carousel-indicators li {
-  background-color: #ee8034;
+    background-color: #ee8034;
+    padding: 2px;
+    font-weight: 800;
+    color: white;
+    border-radius: 50%; /* Make the list items circular */
+    display: inline-block; /* Allow width and height to be set */
+    width: 50px; /* Set width */
+    height: 50px; /* Set height */
+    text-align: center; /* Center the text horizontally */
+    line-height: 50px; /* Center the text vertically */
+    margin: 10px; /* Add some space between the circles */
+    font-size: 16px; /* Adjust font size if needed */
+
+}
+.carousel-indicators p{
+  font: bold;
+  text-align: center; /* Center the text horizontally */
+  line-height: 50px; /* Center the text vertically */
+  margin: 10px; /* Add some space between the circles */
+
+}
+.carousel-indicators .active {
+    background-color: #007bff;
 }
 
 .skill {
@@ -17941,7 +18018,6 @@ a {
   margin-left: auto;
   width: 100%;
   max-width: 1280px;  
-  /* background-color: cornsilk; */
 }
 .mdc-card {
   border-radius: 4px;
