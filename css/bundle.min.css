@@ -1,5 +1,17 @@
  /* complex carousel theme */
- 
+ .HowToDeposit {
+padding-left: 12px;  
+  color: #ED8437; /* Set the text color to gray */
+  text-decoration: underline; /* Underline the text */
+  cursor: pointer; /* Change the cursor to pointer on hover */
+  transition: color 0.3s ease-in-out; /* Add a transition effect */
+}
+
+.HowToDeposit:hover {
+  color: gray; /* Change to a darker gray on hover */
+  text-decoration: underline; /* Underline the text */
+}
+
 .mainBody {
   background-color: black;
   }
@@ -12,10 +24,94 @@
     .section4{
       background-color: #151515;
     }
-    .section6{
-      color: #000;
-      background-color: white;
-    }
+    .section6 {
+      margin-top: 0;
+      padding: 100px 0;
+      background-position: top center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      position: relative;
+      color: white;
+  }
+    .section6:before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 50, 0.8); /* Navy blue overlay with 80% opacity */
+      z-index: 1;
+  }
+  .section6 .revamp-footer-logo {
+    position: relative;
+    z-index: 2;
+    color: white;
+  }
+  .section6 h1 {
+    font-size: 35px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    line-height: 1;
+    margin-bottom: 100px;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+  }
+  
+  .section6 h2 {
+    z-index: 2;
+    font-size: 35px;
+    font-weight: 700;
+    color: #ee8034;
+    letter-spacing: 0.8px;
+    line-height: 1;
+    margin-bottom: 5px; /* Adjusted margin */
+  }
+  
+  .section6 h3 {
+    z-index: 2;
+    font-size: 65px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    line-height: 1;
+    margin-top: 5px; /* Adjusted margin */
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 2;
+  }
+  
+  
+  .section6 p {
+      color: #B8B8B8;
+      font-size: 16px;
+      letter-spacing: 0.8px;
+      line-height: 1.5em;
+      width: 96%;
+      position: relative;
+    z-index: 2;
+  }
+  
+  .section6 img{
+    z-index: 1;
+  }
+
+  
+  .section6 .btn-grey {
+      color: #B8B8B8;
+      font-weight: 700;
+      font-size: 20px;
+      margin-top: 20px;
+      letter-spacing: 0.8px;
+      display: inline-block;
+      align-items: center;
+      border: 2px solid #B8B8B8;
+      background-color: transparent;
+      transition: background-color 0.3s, color 0.3s;
+      position: relative;
+      z-index: 2;
+  }
+  
 
     .getIn{
       text-align: center;
@@ -25,7 +121,21 @@
     }
     
    
-/* ways to play styling */
+/* ways to play styling *//* ways to play styling */
+.waysToPlay {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.play-card-wrapper {
+  flex: 1 1 25%;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.5rem; /* Adjust the padding as needed */
+}
+
 .play-card {
   background-color: black;
   color: white;
@@ -33,23 +143,47 @@
   padding: 20px;
   text-align: center;
   transition: box-shadow 0.3s ease-in-out;
-  height: 200px; /* Ensure all cards have the same height */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden; /* Prevent content overflow */
 }
+
 .play-card img {
   max-width: 64px;
   height: auto;
   margin-bottom: 10px;
   border-radius: 20%; /* Make images circular */
+  margin-left: auto; /* Add this line */
+  margin-right: auto; /* Add this line */
 }
+
 .play-card:hover {
   box-shadow: 0 0 10px white;
 }
-.waysToPlay {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-}
 
+.truncate-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* Media query for mobile view */
+@media (max-width: 767px) {
+  .waysToPlay {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .play-card-wrapper {
+    flex: 1 1 100%;
+  }
+
+  .play-card {
+    width: 1/3;
+  }
+}
 /* Carousel Styles */
   /* Carousel Styles */
   .carousel-container {
@@ -7232,7 +7366,7 @@ a.mdc-list-item {
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 4;
+  z-index: 5;
   padding: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -19565,8 +19699,8 @@ a {
 }
 .product-intro__wrapper {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  /* align-items: center; */
+  /* justify-content: space-between; */
   /* margin-top: 176px; */
   /* margin-bottom: 176px; */
   position: relative;
@@ -19698,6 +19832,7 @@ a {
   }
 }
 .product-intro__content-item__text {
+  padding-bottom: 12px;
   /* max-width: 420px; */
 }
 .product-intro__content-item__text .mdc-typography--headline6 {
