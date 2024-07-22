@@ -184,9 +184,7 @@ padding-left: 12px;
     width: 1/3;
   }
 }
-/* Carousel Styles */
-/* Carousel Styles */
-.carousel-container {
+/* Carousel Styles */.carousel-container {
   position: relative;
   width: 100%;
   max-width: 800px;
@@ -197,9 +195,7 @@ padding-left: 12px;
   z-index: 1; /* Ensure the carousel is above other elements */
 }
 
-.carousel-inner {
-  z-index: 1; /* Ensure the carousel content is above other elements */
-}
+
 
 .carousel-item {
   padding-top: 60px;
@@ -207,37 +203,41 @@ padding-left: 12px;
   text-align: center;
   opacity: 0;
   transition: opacity 1s ease-in-out;
+  position: relative; /* Ensure the carousel item is positioned correctly */
+  z-index: 1; /* Set a base z-index */
 }
 
 .carousel-item.active {
-  display: block;
+  display: flex;
   opacity: 1;
-  display: flex; /* Use Flexbox to align items */
   align-items: center; /* Center items vertically */
-  text-align: end;
   justify-content: space-between; /* Distribute space between items */
   padding: 20px; /* Add padding to prevent overlap */
 }
 
-.carousel-item .left-content,
-.carousel-item .right-content {
-  flex: 1; /* Each takes up 50% of the parent */
-  height: 100%; /* Ensure they stretch to the parent's height */
+.carousel-item img {
+  max-width: 33.33%; /* Set image width to 1/3 of the container */
+  height: auto; /* Maintain aspect ratio */
 }
 
-.carousel-item .left-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.carousel-caption {
+  position: relative;
+  z-index: 2; /* Ensure the caption is above other elements */
+  pointer-events: auto; /* Ensure pointer events are enabled */
 }
 
-.carousel-item .right-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start; /* Align text to the left */
-  padding: 20px;
+.carousel-caption a.btn {
+  cursor: pointer;
+  z-index: 9999 ;
+  pointer-events: auto; /* Ensure pointer events are enabled */  pointer-events: auto; /* Ensure pointer events are enabled */
 }
+
+.carousel-caption a.btn:hover {
+  background-color: #ee8034;
+  color: #fff;
+  cursor: pointer;
+}
+
 
 .carousel-control-prev, .carousel-control-next {
   position: absolute;
@@ -253,7 +253,7 @@ padding-left: 12px;
   justify-content: center;
   transition: background-color 0.3s;
   pointer-events: auto;
-  z-index: 2; /* Ensure the controls are above other elements */
+  z-index: 3; /* Ensure the controls are above other elements */
 }
 
 .carousel-control-prev:hover, .carousel-control-next:hover {
@@ -266,19 +266,6 @@ padding-left: 12px;
 
 .carousel-control-next {
   right: 0;
-}
-
-.carousel-item img {
-  max-width: 33.33%; /* Set image width to 1/3 of the container */
-  height: auto; /* Maintain aspect ratio */
-}
-
-.carousel-item .icon {
-  font-size: 3rem;
-}
-
-.carousel-item p {
-  margin-top: 10px;
 }
 
 .carousel-indicators {
@@ -346,27 +333,6 @@ padding-left: 12px;
   height: auto; /* Maintain aspect ratio */
 }
 
-.carousel-control-prev, .carousel-control-next {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.carousel-control-prev {
-    left: 0;
-}
-.carousel-control-next {
-    right: 0;
-}
-
 .skill {
   padding: 0 0 50px 0;
   position: relative;
@@ -380,6 +346,7 @@ padding-left: 12px;
   margin-top: 100px;
   margin-bottom: 100px;
 }
+
 
 @media screen and (max-width: 768px) {
   .skill-bx {
