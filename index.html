@@ -159,114 +159,127 @@ label {
                 </div>
             </div>
           </section>
-
-<section class="section2">
-  <div class="carousel-indicators">
-    <li data-slide-to="0" class="active">1</li>
-    <p> ------ </p>
-    <li data-slide-to="1">2</li>
-    <p> ------ </p>
-    <li data-slide-to="2">3</li>
-    <p> ------ </p>
-    <li data-slide-to="3">4</li>
-</div>
-  <div id="myCarousel" class="carousel-container">
-      <div class="carousel-inner">
-          <div class="carousel-item active" id="carousel-item-0">
-              <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
-              <div class="container">
-                  <div class="carousel-caption text-start">
+         
+          
+          <section class="section2">
+            <div id="myCarousel" class="carousel-container">
+              <div class="carousel-indicators">
+                <li data-slide-to="0" class="active">1</li>
+                <p> ------ </p>
+                <li data-slide-to="1">2</li>
+                <p> ------ </p>
+                <li data-slide-to="2">3</li>
+                <p> ------ </p>
+                <li data-slide-to="3">4</li>
+              </div>
+              <div class="carousel-inner">
+                <div class="carousel-item active" id="carousel-item-0">
+                  <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
+                  <div class="">
+                    <div class="carousel-caption text-start">
                       <h1>Sign Up</h1>
                       <p>Sign up for an account on Bitcoin Bay. Confirm your email and account information.</p>
                       <p><a class="btn btn-lg btn-primary" href="#">Sign Up</a></p>
+                    </div>
                   </div>
-              </div>
-          </div>
-          <div class="carousel-item" id="carousel-item-1">
-              <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
-              <div class="container">
-                  <div class="carousel-caption">
+                </div>
+                <div class="carousel-item" id="carousel-item-1">
+                  <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
+                  <div class="">
+                    <div class="carousel-caption">
                       <h1>Deposit</h1>
                       <p>Make a deposit. We will match up to $100 Freeplay on your first deposit.<br/>All deposits made with Bitcoin will receive an additional 10% Free Play.</p>
                       <p><a class="btn btn-lg btn-primary2" href="#">Learn more</a></p>
+                    </div>
                   </div>
-              </div>
-          </div>
-          <div class="carousel-item" id="carousel-item-2">
-              <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
-              <div class="container">
-                  <div class="carousel-caption text-end">
+                </div>
+                <div class="carousel-item" id="carousel-item-2">
+                  <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
+                  <div class="">
+                    <div class="carousel-caption text-end">
                       <h1>Place Your First Bet</h1>
                       <p>Place any wager or variety of wagers that match the value of your first deposit.</p>
                       <p><a class="btn btn-lg btn-primary" href="#">Play Now</a></p>
+                    </div>
                   </div>
-              </div>
-          </div>
-          <div class="carousel-item" id="carousel-item-3">
-              <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
-              <div class="container">
-                  <div class="carousel-caption text-end">
+                </div>
+                <div class="carousel-item" id="carousel-item-3">
+                  <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
+                  <div class="">
+                    <div class="carousel-caption text-end">
                       <h1>Contact MY AGENT and receive Free Play</h1>
                       <p>Once your total first deposit has been wagered, contact MY AGENT via text message to receive your additional Free Play.</p>
                       <p><a class="btn btn-lg btn-primary2" href="#">Sign Up</a></p>
+                    </div>
                   </div>
+                </div>
               </div>
-          </div>
-      </div>
-      <a class="carousel-control-prev" href="javascript:void(0);" role="button" onclick="prevSlide()">
-          <span class="carousel-control-prev-icon" aria-hidden="true">&#9664;</span>
-          <span class="sr-only">Previous</span>
-      </a>
-      <a class="carousel-control-next" href="javascript:void(0);" role="button" onclick="nextSlide()">
-          <span class="carousel-control-next-icon" aria-hidden="true">&#9654;</span>
-          <span class="sr-only">Next</span>
-      </a>
-  </div>
-</section>
+              <a class="carousel-control-prev" href="javascript:void(0);" role="button" onclick="prevSlide()">
+                <span class="carousel-control-prev-icon" aria-hidden="true">&#9664;</span>
+                <span class="sr-only">Previous</span>
+              </a>
+              <a class="carousel-control-next" href="javascript:void(0);" role="button" onclick="nextSlide()">
+                <span class="carousel-control-next-icon" aria-hidden="true">&#9654;</span>
+                <span class="sr-only">Next</span>
+              </a>
+            </div>
+          </section>
+          
+          
+          
 
 
-<script>
-  let currentIndex = 0;
-  const items = document.querySelectorAll('#myCarousel .carousel-item');
-  const indicators = document.querySelectorAll('.carousel-indicators li');
-  const totalItems = items.length;
-
-  function showSlide(index) {
-      items.forEach((item, i) => {
-          if (i === index) {
-              item.classList.add('active');
-              item.style.opacity = 1;
-          } else {
-              item.classList.remove('active');
-              item.style.opacity = 0;
-          }
-      });
-      indicators.forEach((indicator, i) => {
-          if (i === index) {
-              indicator.classList.add('active');
-          } else {
-              indicator.classList.remove('active');
-          }
-      });
-  }
-
-  function nextSlide() {
-      currentIndex = (currentIndex + 1) % totalItems;
-      showSlide(currentIndex);
-  }
-
-  function prevSlide() {
-      currentIndex = (currentIndex - 1 + totalItems) % totalItems;
-      showSlide(currentIndex);
-  }
-
-  indicators.forEach((indicator, i) => {
-      indicator.addEventListener('click', () => {
-          currentIndex = i;
-          showSlide(currentIndex);
-      });
-  });
-</script>
+          <script>
+            let currentIndex = 0;
+            const items = document.querySelectorAll('#myCarousel .carousel-item');
+            const indicators = document.querySelectorAll('.carousel-indicators li');
+            const totalItems = items.length;
+          
+            function showSlide(index) {
+              items.forEach((item, i) => {
+                if (i === index) {
+                  item.classList.add('active');
+                  item.style.opacity = 1;
+                } else {
+                  item.classList.remove('active');
+                  item.style.opacity = 0;
+                }
+              });
+              indicators.forEach((indicator, i) => {
+                if (i === index) {
+                  indicator.classList.add('active');
+                } else {
+                  indicator.classList.remove('active');
+                }
+              });
+            }
+          
+            function nextSlide() {
+              currentIndex = (currentIndex + 1) % totalItems;
+              showSlide(currentIndex);
+            }
+          
+            function prevSlide() {
+              currentIndex = (currentIndex - 1 + totalItems) % totalItems;
+              showSlide(currentIndex);
+            }
+          
+            indicators.forEach((indicator, i) => {
+              indicator.addEventListener('click', () => {
+                currentIndex = i;
+                showSlide(currentIndex);
+              });
+            });
+          
+            // Attach event listeners to the left and right buttons
+            document.querySelector('.carousel-control-prev').addEventListener('click', prevSlide);
+            document.querySelector('.carousel-control-next').addEventListener('click', nextSlide);
+          
+            // Initialize the carousel by showing the first slide
+            showSlide(currentIndex);
+          </script>
+          
+          
 
 <section class="" id="">
   <div class="container">
@@ -326,8 +339,8 @@ label {
             <p class="mdc-typography--body2"> <span style="color: #ED8437">•</span> Log in to Bitcoin Bay<br>
               <span style="color: #ED8437">•</span> Go to the Cashiers Tab<br>
               <span style="color: #ED8437">•</span> Deposit<br>
-              <span style="color: #ED8437">•</span>For more details,<br/> <span class="HowToDeposit">Click Here</span></p>
-          </div>
+              <span style="color: #ED8437">•</span> For more details,<br/>
+              <a href="/HowTo" class="HowToDeposit" style="color: #ED8437; text-decoration: none;">Click Here</a>          </div>
         </div>
         <div class="product-intro__content-item">
           <div class="product-intro__content-item__image">
@@ -339,7 +352,7 @@ label {
             <p class="mdc-typography--body2"> <span style="color: #ED8437">•</span> Log in to Bitcoin Bay<br>
               <span style="color: #ED8437">•</span> Submit your request to 'My Agent' on your accounts messaging system.<br>
               <span style="color: #ED8437">•</span> Recieve your payout within 24 hours!<br>
-              <span style="color: #ED8437">•</span>For neccesary details,<br/> <span class="HowToDeposit">Click Here</span></p>
+              <span style="color: #ED8437">•</span>For neccesary details,<br/> <span href="/HowTo" class="HowToDeposit">Click Here</span></p>
           </div>
         </div>
       </div>
@@ -349,11 +362,7 @@ label {
       <img alt="Bet on this 2025 Football Season with Crypto" src="newimages/BTCHero3.png"> 
     </div>
   </div>
-  <script>
-    document.querySelector('.HowToDeposit').addEventListener('click', function() {
-        window.location.href = '/HowToDeposit';
-    });
-</script>
+ 
 
 </section>
 

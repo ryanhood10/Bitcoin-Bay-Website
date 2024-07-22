@@ -185,23 +185,150 @@ padding-left: 12px;
   }
 }
 /* Carousel Styles */
-  /* Carousel Styles */
-  .carousel-container {
-    position: relative;
-    width: 100%;
-    max-width: 600px;
-    margin: auto;
-    overflow: hidden;
+/* Carousel Styles */
+.carousel-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  max-height: 600px;
+  margin: auto;
+  overflow: hidden;
+  padding-top: 80px; /* Add padding to make space for indicators */
+  z-index: 1; /* Ensure the carousel is above other elements */
 }
+
+.carousel-inner {
+  z-index: 1; /* Ensure the carousel content is above other elements */
+}
+
 .carousel-item {
-    display: none;
-    text-align: center;
-    transition: opacity 1s ease-in-out;
+  padding-top: 60px;
+  display: none;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
 }
+
 .carousel-item.active {
-    display: block;
-    opacity: 1;
+  display: block;
+  opacity: 1;
+  display: flex; /* Use Flexbox to align items */
+  align-items: center; /* Center items vertically */
+  text-align: end;
+  justify-content: space-between; /* Distribute space between items */
+  padding: 20px; /* Add padding to prevent overlap */
 }
+
+.carousel-item .left-content,
+.carousel-item .right-content {
+  flex: 1; /* Each takes up 50% of the parent */
+  height: 100%; /* Ensure they stretch to the parent's height */
+}
+
+.carousel-item .left-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.carousel-item .right-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start; /* Align text to the left */
+  padding: 20px;
+}
+
+.carousel-control-prev, .carousel-control-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+  pointer-events: auto;
+  z-index: 2; /* Ensure the controls are above other elements */
+}
+
+.carousel-control-prev:hover, .carousel-control-next:hover {
+  background-color: #ee8034; /* Change color on hover */
+}
+
+.carousel-control-prev {
+  left: 0;
+}
+
+.carousel-control-next {
+  right: 0;
+}
+
+.carousel-item img {
+  max-width: 33.33%; /* Set image width to 1/3 of the container */
+  height: auto; /* Maintain aspect ratio */
+}
+
+.carousel-item .icon {
+  font-size: 3rem;
+}
+
+.carousel-item p {
+  margin-top: 10px;
+}
+
+.carousel-indicators {
+  display: flex;
+  justify-content: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  list-style: none;
+  position: absolute;
+  top: 0; /* Adjust this value to position the indicators above the carousel */
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  z-index: 2; /* Ensure the indicators are above other elements */
+}
+
+.carousel-indicators li {
+  background-color: #ee8034;
+  padding: 2px;
+  font-weight: 800;
+  color: white;
+  border-radius: 50%; /* Make the list items circular */
+  display: flex;
+  justify-content: center; /* Center the text horizontally */
+  align-items: center; /* Center the text vertically */
+  width: 50px; /* Set width */
+  height: 50px; /* Set height */
+  margin: 10px; /* Add some space between the circles */
+  font-size: 16px; /* Adjust font size if needed */
+  list-style-type: none; /* Remove default list styling */
+}
+
+.carousel-indicators li::before {
+  content: attr(data-slide-to);
+  display: block;
+  color: white;
+  font-weight: bold;
+}
+
+.carousel-indicators p {
+  font: bold;
+  text-align: center; /* Center the text horizontally */
+  line-height: 50px; /* Center the text vertically */
+  margin: 10px; /* Add some space between the circles */
+}
+
+.carousel-indicators .active {
+  background-color: #007bff;
+}
+
 /* for second carousel items */
 .carousel2-item.active {
   display: flex;
@@ -213,12 +340,10 @@ padding-left: 12px;
   display: none;
   text-align: center;
   transition: transform 1.5s ease-in-out; /* Add transition for sliding effect */
-
 }
 .carousel2-item img {
   max-width: 30px; /* Set image width to match icon size */
   height: auto; /* Maintain aspect ratio */
-
 }
 
 .carousel-control-prev, .carousel-control-next {
@@ -234,58 +359,12 @@ padding-left: 12px;
     align-items: center;
     justify-content: center;
 }
+
 .carousel-control-prev {
     left: 0;
 }
 .carousel-control-next {
     right: 0;
-}
-.carousel-item img {
-    max-width: 33.33%; /* Set image width to 1/3 of the container */
-    height: auto; /* Maintain aspect ratio */
-}
-.carousel-inner {
-  position: relative; /* Add relative positioning to contain absolute elements */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.carousel-item .icon {
-    font-size: 3rem;
-}
-.carousel-item p {
-    margin-top: 10px;
-}
-.carousel-indicators {
-    display: flex;
-    justify-content: center;
-    padding-bottom: 10px;
-    list-style: none;
-}
-.carousel-indicators li {
-    background-color: #ee8034;
-    padding: 2px;
-    font-weight: 800;
-    color: white;
-    border-radius: 50%; /* Make the list items circular */
-    display: inline-block; /* Allow width and height to be set */
-    width: 50px; /* Set width */
-    height: 50px; /* Set height */
-    text-align: center; /* Center the text horizontally */
-    line-height: 50px; /* Center the text vertically */
-    margin: 10px; /* Add some space between the circles */
-    font-size: 16px; /* Adjust font size if needed */
-
-}
-.carousel-indicators p{
-  font: bold;
-  text-align: center; /* Center the text horizontally */
-  line-height: 50px; /* Center the text vertically */
-  margin: 10px; /* Add some space between the circles */
-
-}
-.carousel-indicators .active {
-    background-color: #007bff;
 }
 
 .skill {
@@ -321,11 +400,7 @@ padding-left: 12px;
   z-index: -4;
 }
 
-.carousel-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+
   /************ Banner2 Css ************/
   .banner2 {
     margin-top: 0;
