@@ -11,6 +11,16 @@ padding-left: 12px;
   color: gray; /* Change to a darker gray on hover */
   text-decoration: underline; /* Underline the text */
 }
+.referral-text {
+  padding-left: 58px;
+  font-weight: bold;
+}
+
+@media (max-width: 767px) {
+  .referral-text {
+    padding-left: 0 !important;
+  }
+}
 
 
 .mainBody {
@@ -25,8 +35,15 @@ padding-left: 12px;
     .section4{
       background-color: #151515;
     }
+    .section5{
+      margin-bottom: 0px;
+
+    }
     .section6 {
-      margin-top: 0;
+      margin-top: 0px;
+      border-bottom: 1px solid #e9ecef;
+      border-top: 1px solid #ED8437;
+
       padding: 100px 0;
       background-position: top center;
       background-size: cover;
@@ -182,8 +199,28 @@ padding-left: 12px;
   }
 
   .play-card {
-    width: 1/3;
+    min-width: 615px;
   }
+  .btn-referral{
+    font-size: small;
+  }
+  .section2{
+    padding-bottom: 80px;
+  }
+  .section4{
+    padding-top: 20px;
+    padding-bottom: 20px;
+
+  }
+  .skill{
+    padding-top: 200px;
+    padding-bottom: 20px;
+  }
+  .product-intro__wrapper{
+    display: flex;
+
+  }
+
 }
 /* Carousel Styles */.carousel-container {
   position: relative;
@@ -378,14 +415,10 @@ padding-left: 12px;
   padding: 60px 50px;
   margin-top: 100px;
   margin-bottom: 100px;
+  position: relative;
+
 }
 
-
-@media screen and (max-width: 768px) {
-  .skill-bx {
-    margin-top: -50px;
-  }
-}
 
 .skill h1 {
   font-size: 45px;
@@ -7821,7 +7854,7 @@ a.mdc-list-item {
   letter-spacing: .01785714em;
   text-decoration: inherit;
   text-transform: inherit;
-  color: rgba(255, 255, 255, .6)
+  color: rgba(255, 255, 255, .6);
 }
 .mdc-typography--caption {font-family: 'Play', sans-serif;
   -moz-osx-font-smoothing: grayscale;
@@ -19625,6 +19658,12 @@ a {
   text-align: center;
   color: #ff770a;
 }
+@media (max-width: 767px) {
+  .product-intro__image img  {
+    display: none;
+  }
+}
+
 @media(max-width:839px) {
   .home-intro__title .mdc-typography--headline3 {
     font-size: 34px;
