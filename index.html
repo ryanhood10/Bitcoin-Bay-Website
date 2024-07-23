@@ -34,13 +34,13 @@ body {
     background-color: transparent;
     font-family: 'Play', sans-serif !important;
 }
-a:hover {
+/* a:hover {
     color: white;
     text-decoration: none;
 }
 a {
     color: #ED8437;
-}
+} */
 .modal-header {
     display: -webkit-box;
     display: -ms-flexbox;
@@ -57,7 +57,7 @@ a {
     border-top-right-radius: .3rem;
     background-color: #222133;
 }
-.btn-primary {
+/* .btn-primary {
     color: #fff;
     background-color: #ee8034;
     border-color: white;
@@ -86,7 +86,7 @@ a {
   background-color: #fff;
   color: #151515;
 
-}
+} */
 
 .close {
     float: right;
@@ -173,23 +173,24 @@ label {
                 <li data-slide-to="3">4</li>
               </div>
               <div class="carousel-inner">
-                <div class="carousel-item active" id="carousel-item-0">
+                <div class="carousel-item active">
                   <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
                   <div class="right-content">
-                    <div class="carousel-caption text-start">
+                    <div class="carousel-caption text-start" style="pointer-events: auto; z-index: 10;">
                       <h1>Sign Up</h1>
                       <p>Sign up for an account on Bitcoin Bay. Confirm your email and account information.</p>
-                      <p><a class="btn btn-lg btn-primary" href="#">Sign Up</a></p>
+                      <p><a class="btn btn-lg btn-primary" class="menuButton1" href="/">Sign Up</a></p>
                     </div>
                   </div>
                 </div>
+                
                 <div class="carousel-item" id="carousel-item-1">
                   <img src="newImages/BTCiphoneIMG1.png" class="d-block" alt="Bitcoin iPhone">
                   <div class="right-content">
                     <div class="carousel-caption">
                       <h1>Deposit</h1>
                       <p>Make a deposit. We will match up to $100 Freeplay on your first deposit.<br/>All deposits made with Bitcoin will receive an additional 10% Free Play.</p>
-                      <p><a class="btn btn-lg btn-primary2" href="#">Learn more</a></p>
+                      <p><a class="btn btn-lg btn-primary2" href="/">Learn more</a></p>
                     </div>
                   </div>
                 </div>
@@ -225,6 +226,11 @@ label {
             </div>
           </section>
           
+          <script>
+            document.querySelector(".menuButton1").addEventListener("click", (e) => {
+  console.log("button was clicked!");
+})
+          </script>
           
           
           
@@ -272,11 +278,10 @@ label {
                 showSlide(currentIndex);
               });
             });
-          
-          
             // Initialize the carousel by showing the first slide
             showSlide(currentIndex);
           </script>
+          
           
           
           
@@ -455,7 +460,6 @@ label {
           </div>
       </div>
   </div>
-  <img class="background-image-left" src="color-sharp.png" alt="Background">
 </section>
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
@@ -585,7 +589,7 @@ label {
         </div>
       </div>
       <div class="product-intro__image col-12 col-md-6">
-        <img alt="BitcoinBay's multi-currency options displayed in front of mobile device" src="sites/bitcoinbay.ag/images/support.png"> 
+        <!-- <img alt="BitcoinBay's multi-currency options displayed in front of mobile device" src="sites/bitcoinbay.ag/images/support.png">  -->
         <img alt="BitcoinBay's multi-currency options displayed in front of mobile device" src="images/support.png"> 
       </div>
     </div>
@@ -606,8 +610,9 @@ label {
               <span style="font-size: 12px; font-style: italic">*New clients must message Customer Support above to verify new account </span> </h5>
           </div>
           </a> </div>
-        <div class="mdc-layout-grid__cell home-intro__card"> <a class="mdc-card mdc-card__primary-action home-intro__card-inner" href="#casino"> <img class="background-image" src='sites/bitcoinbay.ag/images/sport-card-bg.png' />
-          <div class="home-intro__card-content">
+          <!-- <div class="mdc-layout-grid__cell home-intro__card"> <a class="mdc-card mdc-card__primary-action home-intro__card-inner" href="#casino"> <img class="background-image" src='sites/bitcoinbay.ag/images/sport-card-bg.png' /> -->
+            <div class="mdc-layout-grid__cell home-intro__card"> <a class="mdc-card mdc-card__primary-action home-intro__card-inner" href="#casino"> <img class="background-image" src='images/sport-card-bg.png' />
+              <div class="home-intro__card-content">
             <h6 class="mdc-typography--headline6">Become An Agent with Bitcoin Bay - Start making Bitcoin today!</h6>
             <h5 class="mdc-typography--body2"> Do you like to make money passively? <br>
               Here is the perfect opportunity! <br>
@@ -707,7 +712,7 @@ label {
         <div class="col-md-4">
           <div align="center" class="create-account-icon m-auto"> 
             <!-- <img class="imgicon" src='sites/bitcoinbay.ag/images/money2.png'/> -->
-            <img class="imgicon" src='sites/bitcoinbay.ag/images/money2.png' alt="Sports Bet with Bitcoin"/>
+            <img class="imgicon" src='images/money2.png' alt="Sports Bet with Bitcoin"/>
              <br>
             <br>
             <span class="mdc-typography--headline6">2. Fund your account </span> </div>
@@ -1085,8 +1090,8 @@ label {
   </div>
 </div>
 </body>
-<script data-main="app/setting/config-login" src="js/require.js" type="text/javascript"></script>
-<script>
+<!-- <script data-main="app/setting/config-login" src="js/require.js" type="text/javascript"></script> -->
+<!-- <script>
   window.watsonAssistantChatOptions = {
   integrationID: "066e40a2-c701-4a5d-bd1d-151b3d379c2e", // The ID of this integration.
   region: "au-syd", // The region your integration is hosted in.
@@ -1098,7 +1103,7 @@ label {
   t.src="https://web-chat.global.assistant.watson.appdomain.cloud/versions/" + (window.watsonAssistantChatOptions.clientVersion || 'latest') + "/WatsonAssistantChatEntry.js";
   document.head.appendChild(t);
   });
-  </script>
+  </script> -->
   <script type="text/javascript" src="https://pixel.intersecttechnologies.com/vpixel.js"></script>
   <script>vpixel.piximage('ebb700e4-6ffb-46dd-a85c-eec0e06a0b68');</script>
 </html>

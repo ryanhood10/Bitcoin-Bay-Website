@@ -213,6 +213,8 @@ padding-left: 12px;
   align-items: center; /* Center items vertically */
   justify-content: space-between; /* Distribute space between items */
   padding: 20px; /* Add padding to prevent overlap */
+  pointer-events: auto; /* Ensure the active slide can receive pointer events */
+  z-index: 1000;
 }
 
 .carousel-item img {
@@ -222,21 +224,34 @@ padding-left: 12px;
 
 .carousel-caption {
   position: relative;
-  z-index: 2; /* Ensure the caption is above other elements */
+  z-index: 1002;
   pointer-events: auto; /* Ensure pointer events are enabled */
 }
 
+/* Ensure the buttons inside the carousel caption are above other elements */
 .carousel-caption a.btn {
-  cursor: pointer;
-  z-index: 9999 ;
-  pointer-events: auto; /* Ensure pointer events are enabled */  pointer-events: auto; /* Ensure pointer events are enabled */
+  z-index: 1003;
+  pointer-events: auto ; /* Ensure pointer events are enabled */
+  background-color: #007bff; /* Original button background color */
+  color: #fff; /* Original button text color */
+  cursor: pointer; /* Pointer cursor */
 }
 
+/* Debugging styles with very high specificity */
 .carousel-caption a.btn:hover {
+  background-color: red !important; /* High specificity for debugging */
+  color: yellow !important; /* Ensure text is visible */
+  cursor: pointer !important;
+}
+.right-content {
+  pointer-events: auto;
+  z-index: 1001;
+}
+/* .carousel-caption a.btn:hover {
   background-color: #ee8034;
   color: #fff;
   cursor: pointer;
-}
+} */
 
 
 .carousel-control-prev, .carousel-control-next {
@@ -253,7 +268,7 @@ padding-left: 12px;
   justify-content: center;
   transition: background-color 0.3s;
   pointer-events: auto;
-  z-index: 3; /* Ensure the controls are above other elements */
+  z-index: 1004; /* Ensure the controls are above other elements */
 }
 
 .carousel-control-prev:hover, .carousel-control-next:hover {
