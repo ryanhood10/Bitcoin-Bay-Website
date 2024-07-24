@@ -276,7 +276,7 @@ padding-left: 12px;
   padding-top: 60px;
   display: none;
   opacity: 0;
-  transition: opacity 1s ease-in-out;
+  transition: opacity 0.5s ease-in-out;
   position: relative; /* Ensure the carousel item is positioned correctly */
   z-index: 1; /* Set a base z-index */
 }
@@ -419,6 +419,25 @@ padding-left: 12px;
 
 .carousel-inner {
   overflow: hidden; /* Prevent content overflow */
+}
+.carousel-inner2 {
+  overflow: hidden; /* Prevent content overflow */
+  text-align: center; /* Center the text horizontally */
+}
+
+.carousel-inner2 .carousel-item {
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  height: 100%; /* Ensure it takes up the full height of the container */
+  min-height: 300px; /* Set a minimum height for the items */
+}
+
+.carousel-inner2 .carousel-caption {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center text vertically within the caption */
+  text-align: center; /* Ensure the text is centered */
 }
 
 
@@ -592,7 +611,134 @@ padding-left: 12px;
   box-shadow: 0 6px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
 }
 
-.banner2 .btn-custom svg {
+.sms-link {
+  color: #ED8437; /* Color of the link */
+  text-decoration: none; /* Remove underline */
+  font-weight: bold; /* Make the text bold */
+  padding: 10px 20px; /* Add some padding */
+  border: 2px solid #ED8437; /* Add a border */
+  border-radius: 5px; /* Round the corners */
+  transition: background-color 0.3s, color 0.3s; /* Smooth transition for background and text color */
+}
+
+.sms-link:hover {
+  background-color: #ED8437; /* Background color on hover */
+  color: white; /* Text color on hover */
+}
+
+ /************ Banner2 Css ************/
+ .banner3 {
+  margin-top: 0;
+  padding: 100px 0;
+  background-image: url('../newimages/BTCBanner1.webp');
+  background-position: top center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  position: relative;
+  color: white;
+}
+
+.banner3::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 50, 0.8); /* Navy blue overlay with 80% opacity */
+  z-index: 1;
+}
+
+.banner3 .content {
+  position: relative;
+  z-index: 2;
+}
+.banner3 h1 {
+font-size: 35px;
+font-weight: 700;
+letter-spacing: 0.8px;
+line-height: 1;
+margin-bottom: 100px;
+position: relative;
+z-index: 2;
+text-align: center;
+}
+
+.banner3 h2 {
+font-size: 35px;
+font-weight: 700;
+color: #ee8034;
+letter-spacing: 0.8px;
+line-height: 1;
+margin-bottom: 5px; /* Adjusted margin */
+}
+
+.banner3 h3 {
+font-size: 65px;
+font-weight: 700;
+letter-spacing: 0.8px;
+line-height: 1;
+margin-top: 5px; /* Adjusted margin */
+margin-bottom: 10px;
+position: relative;
+z-index: 2;
+}
+
+
+.banner3 p {
+  color: #B8B8B8;
+  font-size: 16px;
+  letter-spacing: 0.8px;
+  line-height: 1.5em;
+  width: 96%;
+  position: relative;
+  z-index: 2;
+}
+.banner3 .btn-custom2 {
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+  margin-top: 20px;
+  padding-right: 22px;
+  letter-spacing: 0.8px;
+  display: inline-block;
+  align-items: center;
+  border: 2px solid white;
+  background-color: #ee8034;
+  transition: background-color 0.3s, color 0.3s;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  border-radius: 12px; /* Adjust this value for more or less rounding */
+  box-shadow: 0 6px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
+}
+.banner3 .btn-custom2:hover {
+  background-color: transparent;
+  color: white;
+}
+.banner3 .btn-grey {
+  color: #B8B8B8;
+  font-weight: 700;
+  font-size: 20px;
+  margin-top: 20px;
+  letter-spacing: 0.8px;
+  display: inline-block;
+  align-items: center;
+  border: 2px solid #B8B8B8;
+  background-color: transparent;
+  transition: background-color 0.3s, color 0.3s;
+  position: relative;
+  z-index: 2;
+}
+
+.banner3 .btn-grey:hover {
+  background-color: #B8B8B8;
+  color: white;
+  cursor: pointer;
+
+}
+
+.banner3 .btn-custom svg {
     font-size: 25px;
     margin-left: 10px;
     transition: 0.3s ease-in-out;
