@@ -141,7 +141,7 @@ label {
                 <div class="content">
                     <h2>New Member?</h2>
                     <p>Sign up and get matched up to $100 Free Play on your first deposit!</p>
-                    <a href="#signup">
+                    <a data-toggle="modal" data-target="#JoinNow">
                         <button class="btn btn-custom2">
                             Sign Up
                             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-arrow-right-circle" viewBox="0 0 16 16">
@@ -151,13 +151,13 @@ label {
                     </a>
                     <br/>
 
-                    <!-- <br/>
+                    <br/>
                     <p>Refer a Friend for another $100 Freeplay!</p>
                     <a href="#referral">
                         <button class="btn btn-grey btn-referral">
                             Our referral program
                         </button>
-                    </a> -->
+                    </a>
                 </div>
             </div>
           </section>
@@ -315,7 +315,7 @@ label {
                   <br/>
                   <div style="display: flex; justify-content: center;">
                     <!-- Embed Local Video -->
-                    <video alt="deposit instructions" style="width: 100%; max-width: 1200px; height: auto;" controls>
+                    <video alt="deposit instructions" style="width: 55%; max-width: 1200px; height: auto;" controls>
                       <source src="videos/BitcoinBayDeposits.mp4" type="video/mp4">
                       Your browser does not support the video tag.
                     </video>
@@ -441,6 +441,8 @@ label {
               </div>
           </div>
       </div>
+      <div id="referral"></div>
+
   </div>
 </section>
 
@@ -498,47 +500,34 @@ label {
   }
 </script>
 
-<section>
-  <div class="container">
-
-    <div class="product-intro__wrapper container product-intro__image-left" id="sports">
-      <div class="product-intro__content col-12 col-md-6">
-        <div class="product-intro__content-items">
-          <div class="product-intro__content-item">
-            <div class="product-intro__content-item__image">
-              <img src="newimages/BTCLOGO2.webp" alt="Invite a Friend for More Free Play">
-            </div>
-            <div class="product-intro__content-item__text">
-              <h6 class="mdc-typography--headline6">Refer a Friend, Earn Free Play</h6>
-              <p class="mdc-typography--body2">
-                 Know someone interested in signing up? 
-                 <br>
-                 You both could earn $100 Free Play! 
-                 <br>
-                For more details,<br/>
-                <a href="/HowTo" class="HowToDeposit" style="color: #ED8437; text-decoration: underline;">Click Here</a>
-              </p> 
-            </div>
-          </div>
-          <div class="product-intro__content-item">
-            <div class="product-intro__content-item__image"></div>
-            <div class="product-intro__content-item__text"></div>
-          </div>
-        </div>
-      </div>
-      <div id="referral" class="product-intro__image col-12 col-md-6">
+<section >
+  <div class="container" >
+    <div class="referralProgram" >
+      <div >
         <h1>
           <i class="fab fa-bitcoin icon" style="color: #ED8437;"></i>
           Referral Program    
         </h1>
-        <p style="padding-left:58px; font:bold;">Want to earn more Free Play?</p> 
-       
+        <p class="caption">Want to earn more Free Play?</p>
+      </div>
+      <div class="details">
+        <h6 class="mdc-typography--headline6">How it Works</h6>
+        <ol class="mdc-typography--body2">
+          <li>Refer a friend to our platform.</li>
+          <li>Have your friend sign up for an account.</li>
+          <li>Your friend deposits and wagers up to $100 in any variety of bets.</li>
+          <li>Once the deposit is wagered, contact MY AGENT at 
+              <a href="sms:+17026258045" class="sms-link2">702-625-8045</a>
+          </li>
+          <li>Provide the name and account number of your friend who signed up.</li>
+          <li>The Agent will credit your account with Free Play.</li>
+        </ol>
       </div>
     </div>
-    
-</div>
-
+  </div>
 </section>
+
+
 
 <section class="section6">
   <div class="revamp-footer-logo container">

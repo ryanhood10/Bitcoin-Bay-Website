@@ -672,6 +672,57 @@ padding-left: 12px;
   background-color: #ED8437; /* Background color on hover */
   color: white; /* Text color on hover */
 }
+.sms-link2 {
+  color: #ED8437; /* Color of the link */
+  text-decoration: underline; /* Remove underline */
+  font-weight: bold; /* Make the text bold */
+  padding: 5px 10px; /* Add some padding */
+  transition: background-color 0.3s, color 0.3s; /* Smooth transition for background and text color */
+}
+
+.sms-link2:hover {
+  color: white; /* Text color on hover */
+}
+/* referral program css */
+.referralProgram {
+  text-align: center; /* Center all text within this section */
+}
+
+.referralProgram #referral {
+  margin-bottom: 20px;
+}
+
+.referralProgram .icon {
+  font-size: 2em;
+  vertical-align: middle;
+}
+
+.referralProgram .caption {
+  font-weight: bold;
+}
+
+.referralProgram .details {
+  margin-top: 20px;
+}
+
+.referralProgram .details h6 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.referralProgram .details ol {
+  text-align: left;
+  display: inline-block;
+  font-size: 1em;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 600px; /* Optional: restrict the width for better readability */
+  padding-left: 20px; /* Optional: space for list numbers */
+}
+
+.referralProgram .details ol li {
+  margin-bottom: 15px; /* Space between list items */
+}
 
  /************ Banner2 Css ************/
  .banner3 {
