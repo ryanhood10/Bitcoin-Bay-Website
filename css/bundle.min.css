@@ -68,6 +68,53 @@ padding-left: 12px;
     padding-top: 32px;
     background-color: ;
     }
+    .section7{
+      background-color: #151515;
+      padding: 20px;
+
+    }
+    .section7 .withdrawal-instructions {
+      display: flex;
+      justify-content: center;
+
+    }
+    .rounded-image {
+      width: 70%;
+      max-width: 70%;
+      height: auto;
+      border-radius: 10px; /* Makes the borders rounded */
+    }
+    
+    .section7 .image-container {
+      flex: 1;
+      max-width: 40%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+    }
+    
+    .section7 .instructions-container {
+      flex: 1;
+      max-width: 60%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    
+    @media (max-width: 840px) {
+      .section7 .withdrawal-instructions {
+        flex-direction: column;
+        align-items: center;
+      }
+    
+      .section7 .image-container,
+      .section7 .instructions-container {
+        max-width: 100%;
+        flex: none;
+        padding: 10px;
+      }
+    }
+    
 
     .section4{
       background-color: #151515;
