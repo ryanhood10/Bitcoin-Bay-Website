@@ -674,14 +674,13 @@ padding-left: 12px;
 }
 .sms-link2 {
   color: #ED8437; /* Color of the link */
-  text-decoration: underline; /* Remove underline */
   font-weight: bold; /* Make the text bold */
   padding: 5px 10px; /* Add some padding */
   transition: background-color 0.3s, color 0.3s; /* Smooth transition for background and text color */
 }
 
 .sms-link2:hover {
-  color: white; /* Text color on hover */
+  color: gray; /* Text color on hover */
 }
 /* referral program css */
 .referralProgram {
