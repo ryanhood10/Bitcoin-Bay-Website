@@ -682,6 +682,7 @@ padding-left: 12px;
   box-shadow: 0 6px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
 }
 
+
 .sms-link {
   color: #ED8437; /* Color of the link */
   text-decoration: none; /* Remove underline */
@@ -7837,7 +7838,8 @@ a.mdc-list-item {
 .auth-buttons {
   display: flex;
   align-items: center;
-  margin-right: 15px; /* Adjust this value as needed */
+  margin-right: 0px; /* Adjust this value as needed */
+  
 }
 
 .auth-buttons .mdc-button {
@@ -18786,11 +18788,13 @@ a {
     height: 49px;
   }
 }
+
 @media(max-width:599px) {
   .revamp .mdc-top-app-bar__section {
     /* margin-top: 16px; */
     /* margin-left: 26px; */
     justify-content: center;
+    width: 100%;
   }
   .revamp .mdc-top-app-bar__row {
     height: 38px;
