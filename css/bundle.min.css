@@ -15,7 +15,23 @@ padding-left: 12px;
   padding-left: 58px;
   font-weight: bold;
 }
+/* Media query for screen widths between 599px and 767px */
+@media (min-width: 599px) and (max-width: 767px) {
+  .section4 .product-intro__wrapper {
+    justify-content: center;
+    display: flex;
+  }
 
+  .product-intro__content,
+  .product-intro__image {
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .product-intro__content-item__text {
+    text-align: center;
+  }
+}
 @media (max-width: 767px) {
   .referral-text {
     padding-left: 0 !important;
@@ -274,38 +290,46 @@ padding-left: 12px;
 /* Media query for mobile view */
 @media (max-width: 767px) {
   .waysToPlay {
+    display: flex;
     flex-direction: column;
     align-items: center;
   }
 
   .play-card-wrapper {
-    flex: 1 1 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 
   .play-card {
-    min-width: 615px;
+    width: 90%; /* Adjust this percentage as needed */
+    min-width: 0; /* Ensure the card can shrink */
   }
-  .btn-referral{
+
+  .btn-referral {
     font-size: small;
   }
-  .section2{
+
+  .section2 {
     padding-bottom: 80px;
   }
-  .section4{
+
+  .section4 {
     padding-top: 20px;
     padding-bottom: 20px;
 
   }
-  .skill{
+
+  .skill {
     padding-top: 200px;
     padding-bottom: 20px;
   }
-  .product-intro__wrapper{
+
+  .product-intro__wrapper {
     display: flex;
-
   }
-
 }
+
 /* Carousel Styles */.carousel-container {
   position: relative;
   width: 100%;
@@ -20132,20 +20156,60 @@ a {
   /* margin-bottom: 176px; */
   position: relative;
 }
-}
-@media(max-width:839px) {
-  .product-intro__wrapper {
-    margin-bottom: 88px;
-    padding-top: 48px
-  }
-}
-@media(max-width:599px) {
-  .product-intro__wrapper {
+/* Media query for mobile view */
+@media (max-width: 767px) {
+  .section4 .product-intro__wrapper {
     flex-direction: column;
-    margin-bottom: 30px;
-    /* padding-top: 30px; */
+    align-items: center;
+    text-align: center;
+  }
+
+  .product-intro__content,
+  .product-intro__image {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .product-intro__content-items {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    
+  }
+
+  .product-intro__content-item {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .product-intro__content-item__image,
+  .product-intro__content-item__text {
+    display: block;
+    width: 100%;
+  }
+
+  .product-intro__content-item__text {
+    padding: 0 15px;
+  }
+
+  .product-intro__image img {
+    width: 100%;
+    height: auto;
+  }
+
+  .getIn {
+    text-align: center;
+  }
+
+  /* Hide all images on mobile */
+  .product-intro__content-item__image img,
+  .product-intro__image img {
+    display: none;
   }
 }
+
+
 @media(min-width:840px) {
   .product-intro__image {
     padding: 0 0 0 32px;
@@ -20181,7 +20245,7 @@ a {
     height: 350px;
     display: flex;
     align-items: center
-  }
+    }
   .product-intro__image img {
     max-width: 100%;
     max-height: 100%
@@ -20201,6 +20265,7 @@ a {
   }
 }
 .product-intro__content .mdc-typography--headline4 {
+  text-align: center;
   /* max-width: 584px; */
   margin-top: 0;
 }
@@ -20298,7 +20363,9 @@ a {
   .product-intro__content-item__text .mdc-typography--headline6 {
     min-height: 48px;
     display: flex;
-    align-items: center
+    align-items: center;
+    text-align: center;
+
   }
 }
 @media(max-width:599px) {
