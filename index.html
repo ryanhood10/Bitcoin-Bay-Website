@@ -150,17 +150,47 @@ label {
                             </svg>
                         </button>
                     </a>
-                    <p>Refer a Friend for another $100 Freeplay!</p>
-                    <a href="#referral">
-                        <button class="btn btn-grey btn-referral">
-                            Our referral program
-                        </button>
-                    </a>
-                </div>
+
+                    
+                   
+            <div class="d-flex flex-column flex-lg-row justify-content-between promo-section">
+              <div class="left">
+                <a href="#referral">
+                  <button class="btn btn-grey btn-referral">
+                    Our referral program
+                  </button>
+                </a>
+                <p>Refer a Friend for another $100 Freeplay!</p>
+              </div>
+              <div class="right">
+                <p>10% Free Play Bonus on all Bitcoin deposits!</p>
+                <p id="ast-time" class="mb-0"></p>
+              </div>
+            </div>
+                
                 
             </div>
 
           </section>
+
+
+       <script>
+  function updateASTTime() {
+    const astTimeElement = document.getElementById('ast-time');
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const astOffset = -4; // AST is UTC-4
+    const astTime = new Date(utc + (3600000 * astOffset));
+
+    // Format the time to exclude seconds
+    const options = { hour: '2-digit', minute: '2-digit' };
+    astTimeElement.textContent = `Atlantic Standard Time: ${astTime.toLocaleTimeString([], options)}`;
+  }
+
+  setInterval(updateASTTime, 60000); // Update every minute
+  updateASTTime(); // Initial call to set the time immediately
+</script>
+
          
           
           <section class="section2">
@@ -586,7 +616,28 @@ label {
       </div>
     </div>
   </div>
+  <div class="right">
+    <p>10% Free Play Bonus on all Bitcoin deposits!</p>
+    <p id="ast-time2" class="mb-0"></p>
+  </div>
 </section>
+<script>
+  function updateASTTime2() {
+    const astTimeElement = document.getElementById('ast-time2');
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const astOffset = -4; // AST is UTC-4
+    const astTime = new Date(utc + (3600000 * astOffset));
+
+    // Format the time to exclude seconds
+    const options = { hour: '2-digit', minute: '2-digit' };
+    astTimeElement.textContent = `Atlantic Standard Time: ${astTime.toLocaleTimeString([], options)}`;
+  }
+
+  setInterval(updateASTTime2, 60000); // Update every minute
+  updateASTTime2(); // Initial call to set the time immediately
+</script>
+
 
   
   <div class="container">

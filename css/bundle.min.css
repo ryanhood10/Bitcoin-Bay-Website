@@ -595,6 +595,23 @@ padding-left: 12px;
 
 
   /************ Banner2 Css ************/
+  .promo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .promo-section .left,
+  .promo-section .right {
+    margin-bottom: 1rem;
+  }
+
+  .promo-section .right {
+    text-align: right;
+    align-self: flex-end;
+  }
+
+  
   .banner2 {
     margin-top: 0;
     padding: 100px 0;
@@ -681,6 +698,49 @@ padding-left: 12px;
   border-radius: 12px; /* Adjust this value for more or less rounding */
   box-shadow: 0 6px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
 }
+@media (max-width: 767.98px) {
+  .banner2 {
+    margin-bottom: 0 !important; /* Remove bottom margin for the entire section */
+    padding-bottom: 0 !important; /* Remove bottom padding */
+  }
+
+  .banner2 .content {
+    margin-bottom: 0 !important; /* Remove bottom margin for the content */
+    padding-bottom: 0 !important; /* Remove bottom padding */
+  }
+
+  .banner2 h1 {
+    font-size: 24px;
+    margin-bottom: 50px; /* Reduced margin */
+  }
+
+  .banner2 h2 {
+    font-size: 24px;
+    margin-bottom: 3px; /* Reduced margin */
+  }
+
+  .banner2 h3 {
+    font-size: 45px;
+    margin-top: 3px; /* Reduced margin */
+    margin-bottom: 5px; /* Reduced margin */
+  }
+
+  .banner2 p {
+    font-size: 14px;
+    margin-bottom: 10px; /* Reduced margin */
+  }
+
+  .promo-section .left p,
+  .promo-section .right p {
+    font-size: 14px;
+    margin-bottom: 5px; /* Reduced margin */
+  }
+
+  .banner2 .btn-custom {
+    font-size: 16px;
+    margin-top: 10px; /* Reduced margin */
+  }
+}
 
 
 .sms-link {
@@ -748,7 +808,7 @@ padding-left: 12px;
   margin-bottom: 15px; /* Space between list items */
 }
 
- /************ Banner2 Css ************/
+ /************ Banner3 Css ************/
  .banner3 {
   margin-top: 0;
   padding: 100px 0;
