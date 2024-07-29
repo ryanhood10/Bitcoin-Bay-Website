@@ -700,13 +700,11 @@ padding-left: 12px;
 }
 @media (max-width: 767.98px) {
   .banner2 {
-    margin-bottom: 0 !important; /* Remove bottom margin for the entire section */
-    padding-bottom: 0 !important; /* Remove bottom padding */
+    margin-bottom: 0; /* Remove bottom margin for the entire section */
   }
 
   .banner2 .content {
-    margin-bottom: 0 !important; /* Remove bottom margin for the content */
-    padding-bottom: 0 !important; /* Remove bottom padding */
+    margin-bottom: 0; /* Remove bottom margin for the content */
   }
 
   .banner2 h1 {
@@ -808,7 +806,7 @@ padding-left: 12px;
   margin-bottom: 15px; /* Space between list items */
 }
 
- /************ Banner3 Css ************/
+ /************ Banner2 Css ************/
  .banner3 {
   margin-top: 0;
   padding: 100px 0;
