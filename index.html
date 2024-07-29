@@ -435,14 +435,14 @@ label {
                                   <p id="litecoin-price">Loading...</p>
                               </div>
                               <div>
-                                  <img src="newimages/xrpicon3.png" alt="XRP">
-                                  <p>XRP</p>
-                                  <p id="ripple-price">Loading...</p>
+                                  <img src="newimages/dashicon3.png" style="border-radius: 20px;" alt="Dash">
+                                  <p>Dash</p>
+                                  <p id="dash-price">Loading...</p>
                               </div>
                           </div>
                           <div class="carousel2-item">
                               <div>
-                                  <img src="newimages/btcCash2.webp" alt="Bitcoin Cash">
+                                  <img src="newimages/btcCash2.webp"  alt="Bitcoin Cash">
                                   <p>Bitcoin Cash</p>
                                   <p id="bitcoincash-price">Loading...</p>
                               </div>
@@ -452,15 +452,15 @@ label {
                                   <p id="cardano-price">Loading...</p>
                               </div>
                               <div>
-                                  <img src="newimages/polkadotIcon.png" alt="Polkadot">
-                                  <p>Polkadot</p>
-                                  <p id="polkadot-price">Loading...</p>
-                              </div>
-                              <div>
-                                  <img src="newimages/chainlinkIcon.png" alt="Chainlink">
-                                  <p>Chainlink</p>
-                                  <p id="chainlink-price">Loading...</p>
-                              </div>
+                                <img src="newimages/tronIcon.png" style="border-radius: 20px;" alt="Tron">
+                                <p>TRON</p>
+                                <p id="tron-price">Loading...</p>
+                            </div>
+                            <div>
+                              <img src="newimages/binanceLogo.svg" style="border-radius: 20px;" alt="Binance">
+                              <p>Binance</p>
+                              <p id="binancecoin-price">Loading...</p>
+                          </div>
                           </div>
                           <div class="carousel2-item">
                               <div>
@@ -474,10 +474,10 @@ label {
                                   <p id="dogecoin-price">Loading...</p>
                               </div>
                               <div>
-                                  <img src="newimages/uniswapicon1.png" alt="Uniswap">
-                                  <p>Uniswap</p>
-                                  <p id="uniswap-price">Loading...</p>
-                              </div>
+                                <img src="newimages/tether-usdt-logo.png" style="border-radius: 20px;" alt="Tether">
+                                <p>Tether</p>
+                                <p id="tether-price">Loading...</p>
+                            </div>
                               <div>
                                   <i class="fab fa-ethereum icon"></i>
                                   <p>Ethereum Classic</p>
@@ -506,7 +506,7 @@ label {
 <script>
   $(document).ready(function () {
       // Fetch cryptocurrency prices from CoinGecko API
-      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,litecoin,ripple,monero,bitcoin-cash,cardano,polkadot,chainlink,stellar,dogecoin,uniswap,ethereum-classic&vs_currencies=usd')
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,litecoin,ripple,monero,bitcoin-cash,cardano,polkadot,chainlink,stellar,dogecoin,uniswap,ethereum-classic,dash,tron,binancecoin,tether&vs_currencies=usd')
           .then(response => response.json())
           .then(data => {
               $('#bitcoin-price').text(`$${data.bitcoin.usd}`);
@@ -522,6 +522,10 @@ label {
               $('#dogecoin-price').text(`$${data.dogecoin.usd}`);
               $('#uniswap-price').text(`$${data.uniswap.usd}`);
               $('#ethereum-classic-price').text(`$${data["ethereum-classic"].usd}`);
+              $('#dash-price').text(`$${data.dash.usd}`);
+              $('#tron-price').text(`$${data.tron.usd}`);
+              $('#binancecoin-price').text(`$${data.binancecoin.usd}`);
+              $('#tether-price').text(`$${data.tether.usd}`);
           })
           .catch(error => {
               console.error('Error fetching cryptocurrency prices:', error);
@@ -553,6 +557,8 @@ label {
       showSlide2(currentIndex2);
   }
 </script>
+
+
 
 <section>
   <div class="container">
