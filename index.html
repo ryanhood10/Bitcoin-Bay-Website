@@ -650,7 +650,8 @@ label {
         <h5 class="modal-title" id="JoinNowLabel">JOIN NOW !!! </h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>
       </div>
-      <form id="create-account" target="iframecreate" class="" method="post" novalidate action="/sites/bitcoinbay.ag/createAccount.php">
+      <!-- <form id="create-account" target="iframecreate" class="" method="post" novalidate action="/sites/bitcoinbay.ag/createAccount.php"> -->
+        <form id="create-account" target="iframecreate" class="" method="post" novalidate action="https://wager.bitcoinbay.ag/createAccount.php">
         <div class="modal-body" style="min-height:400px;">
           <div style="display:none;text-align: center;" class="panel-request">
             <iframe id="iframecreate" name="iframecreate"> </iframe>
@@ -946,7 +947,9 @@ label {
         <h5 class="modal-title" id="LoginLabel">Login to your account?</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>
       </div>
-      <form class="needs-validation" data-security="form">
+      <!-- <form class="needs-validation" data-security="form"> -->
+        <form class="needs-validation" data-security="form" method="post" action="https://wager.bitcoinbay.ag/login.php">
+
         <div class="modal-body pb-0">
           <div class="form-row">
             <div class="col-md-6 mb-2">
