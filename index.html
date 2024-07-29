@@ -747,13 +747,27 @@ label {
 
                 function send() {
 
+                  const firstName = document.querySelector('input[name="firstname"]').value;
+                  const lastName = document.querySelector('input[name="lastname"]').value;
+                  const email = document.querySelector('input[name="email"]').value;
+                  const phone = document.querySelector('input[name="phone"]').value;
+                  const promo = document.querySelector('input[name="promo"]').value;
+
+                  const formData = {
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    promo
+                  };
+
                     $('.panel-request').css({display: 'block'});
                     $('.panel-form').css({display: 'none'});
 
                     $('#send-join-action').trigger('click');
 
                     $('#create-account').submit(function () {
-
+                      sendEmail(formData); // Call the function to send an email on account creation
                     });
 
                 }
