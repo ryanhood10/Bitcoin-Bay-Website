@@ -699,14 +699,6 @@ padding-left: 12px;
   box-shadow: 0 6px 8px rgba(238, 128, 52, 0.3); /* Shadow with orange color */
 }
 @media (max-width: 767.98px) {
-  .banner2 {
-    margin-bottom: 0; /* Remove bottom margin for the entire section */
-  }
-
-  .banner2 .content {
-    margin-bottom: 0; /* Remove bottom margin for the content */
-  }
-
   .banner2 h1 {
     font-size: 24px;
     margin-bottom: 50px; /* Reduced margin */
@@ -739,7 +731,7 @@ padding-left: 12px;
     margin-top: 10px; /* Reduced margin */
   }
 }
-
+Explanation
 
 .sms-link {
   color: #ED8437; /* Color of the link */
