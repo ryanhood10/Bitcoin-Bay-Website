@@ -752,33 +752,50 @@ label {
       </form>
       <script type="text/javascript">
 
-                function send() {
+function send() {
+  const firstName = document.querySelector('input[name="firstname"]').value;
+  const lastName = document.querySelector('input[name="lastname"]').value;
+  const email = document.querySelector('input[name="email"]').value;
+  const phone = document.querySelector('input[name="phone"]').value;
+  const promo = document.querySelector('input[name="promo"]').value;
 
-                  const firstName = document.querySelector('input[name="firstname"]').value;
-                  const lastName = document.querySelector('input[name="lastname"]').value;
-                  const email = document.querySelector('input[name="email"]').value;
-                  const phone = document.querySelector('input[name="phone"]').value;
-                  const promo = document.querySelector('input[name="promo"]').value;
+  const formData = {
+    firstName,
+    lastName,
+    email,
+    phone,
+    promo
+  };
 
-                  const formData = {
-                    firstName,
-                    lastName,
-                    email,
-                    phone,
-                    promo
-                  };
+  $('.panel-request').css({display: 'block'});
+  $('.panel-form').css({display: 'none'});
 
-                    $('.panel-request').css({display: 'block'});
-                    $('.panel-form').css({display: 'none'});
+  $('#send-join-action').trigger('click');
 
-                    $('#send-join-action').trigger('click');
+  // Call the sendEmail function to send the email
+  sendEmail(formData);
+}
 
-                    $('#create-account').submit(function () {
-                      sendEmail(formData); // Call the function to send an email on account creation
-                    });
-
-                }
-
+function sendEmail(formData) {
+  fetch('/send-email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(formData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('Email sent successfully');
+    } else {
+      console.log('Error sending email');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+}
 
                 function check() {
                     var isFormFilled = true;
