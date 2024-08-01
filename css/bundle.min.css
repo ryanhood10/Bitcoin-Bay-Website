@@ -731,9 +731,6 @@ padding-left: 12px;
     margin-top: 10px; /* Reduced margin */
   }
 }
-.card-img{
-  z-index: 999;
-}
 .sms-link {
   color: #ED8437; /* Color of the link */
   text-decoration: none; /* Remove underline */
