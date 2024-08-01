@@ -18687,6 +18687,7 @@ a {
 .revamp body {
   margin: 0
 }
+/* login button */
 .revamp .mdc-button {
   font-weight: 700;
   text-transform: uppercase;
@@ -18714,7 +18715,7 @@ a {
 }
 .revamp .mdc-button--outlined:not(.mdc-ripple-upgraded):focus::before, .revamp .mdc-button--outlined.mdc-ripple-upgraded--background-focused::before {
   transition-duration: 75ms;
-  opacity: .24
+  opacity: .24;
 }
 .revamp .mdc-button--outlined:not(.mdc-ripple-upgraded)::after {
   transition: opacity 150ms linear
