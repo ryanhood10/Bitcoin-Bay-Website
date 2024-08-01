@@ -476,6 +476,11 @@ padding-left: 12px;
   color: white;
   font-weight: bold;
 }
+.separator {
+  display: inline-block;
+  margin: 0 10px; /* Adjust as necessary */
+  color: #000; /* Adjust color as necessary */
+}
 
 .carousel-indicators p {
   font: bold;
