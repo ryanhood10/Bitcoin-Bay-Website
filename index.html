@@ -970,7 +970,7 @@ function sendEmail(formData) {
           <span aria-hidden="true">&times;</span> 
         </button>
       </div>
-      <form id="loginForm" class="needs-validation" data-security="form" novalidate>
+      <form id="loginForm" class="needs-validation" action="https://wager.bitcoinbay.ag/redirectlogin.php" method="POST" novalidate>
         <div class="modal-body pb-0">
           <div class="form-row">
             <div class="col-md-6 mb-2">
@@ -998,6 +998,8 @@ function sendEmail(formData) {
     </div>
   </div>
 </div>
+
+
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -1036,6 +1038,7 @@ function sendEmail(formData) {
               if (data.success) {
                   console.log('Login successful');
                   // Redirect or handle success
+                  window.location.href = data.redirect_url; // Adjust this to your needs
               } else {
                   console.log('Error during login');
                   // Handle error
@@ -1047,6 +1050,7 @@ function sendEmail(formData) {
       });
   });
 </script>
+
 
 
   
