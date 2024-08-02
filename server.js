@@ -2,11 +2,15 @@ const express = require('express');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
+const cors = require('cors'); // Import the cors package
 const app = express();
 const dotenv = require('dotenv');
 
 // Load environment variables from .env file
 dotenv.config();
+
+// Enable CORS for all routes
+app.use(cors()); // Use the cors middleware
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
@@ -33,10 +37,7 @@ app.post('/send-email', (req, res) => {
     service: 'gmail',
     auth: {
       user: process.env.EMAIL,
-      // user: "bitcoinbaynotifications@gmail.com",
       pass: process.env.PASSWORD,
-      // pass: "bdps rlea hgtw lygc",
-
     }
   });
 
