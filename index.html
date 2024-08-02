@@ -970,7 +970,7 @@ function sendEmail(formData) {
           <span aria-hidden="true">&times;</span> 
         </button>
       </div>
-      <form class="needs-validation" data-security="form" method="post" action="https://wager.bitcoinbay.ag/redirectlogin.php" novalidate>
+      <form id="loginForm" class="needs-validation" data-security="form" method="post" action="https://wager.bitcoinbay.ag/redirectlogin.php" novalidate>
         <div class="modal-body pb-0">
           <div class="form-row">
             <div class="col-md-6 mb-2">
@@ -998,7 +998,49 @@ function sendEmail(formData) {
     </div>
   </div>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const loginForm = document.getElementById('loginForm');
+  
+      loginForm.addEventListener('submit', function(event) {
+          event.preventDefault();
+          
+          const formData = new FormData(loginForm);
+          const customerID = formData.get('username');
+          const password = formData.get('password');
+          const multiaccount = '1';
+  
+          const payload = {
+              multiaccount: multiaccount,
+              customerID: customerID,
+              password: password
+          };
+  
+          fetch('https://wager.bitcoinbay.ag/redirectlogin.php', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(payload)
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  console.log('Login successful');
+                  // Redirect or handle success
+              } else {
+                  console.log('Error during login');
+                  // Handle error
+              }
+          })
+          .catch(error => {
+              console.error('Error:', error);
+          });
+      });
+  });
+</script>
 
+  
 </body>
 <!-- <script data-main="app/setting/config-login" src="js/require.js" type="text/javascript"></script> -->
 <!-- <script>
