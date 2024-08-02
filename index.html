@@ -970,15 +970,15 @@ function sendEmail(formData) {
           <span aria-hidden="true">&times;</span> 
         </button>
       </div>
-      <form id="loginForm" class="needs-validation" data-security="form" method="post" action="https://wager.bitcoinbay.ag/redirectlogin.php" novalidate>
+      <form id="loginForm" class="needs-validation" data-security="form" novalidate>
         <div class="modal-body pb-0">
           <div class="form-row">
             <div class="col-md-6 mb-2">
-              <input type="text" class="form-control" id="username" data-field="user" name="username" placeholder="Login ID" required>
+              <input type="text" class="form-control" id="customerID" name="customerID" placeholder="Login ID" required>
               <div class="invalid-feedback"> Please provide a valid Username. </div>
             </div>
             <div class="col-md-6 mb-1">
-              <input type="password" class="form-control" data-field="pass" id="password" name="password" placeholder="Password" required>
+              <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
               <div class="invalid-feedback"> Please provide a valid Password. </div>
             </div>
           </div>
@@ -992,12 +992,13 @@ function sendEmail(formData) {
         </div>
         <div class="modal-footer m-2">
           <button type="button" class="btn mdc-button--raised1 col-6" data-dismiss="modal">CLOSE</button>
-          <button class="btn mdc-button--raised2 col-6" data-action="login" type="submit">LOGIN</button>
+          <button class="btn mdc-button--raised2 col-6" type="submit">LOGIN</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
       const loginForm = document.getElementById('loginForm');
@@ -1006,7 +1007,7 @@ function sendEmail(formData) {
           event.preventDefault();
           
           const formData = new FormData(loginForm);
-          const customerID = formData.get('username');
+          const customerID = formData.get('customerID');
           const password = formData.get('password');
           const multiaccount = '1';
   
@@ -1019,11 +1020,18 @@ function sendEmail(formData) {
           fetch('https://wager.bitcoinbay.ag/redirectlogin.php', {
               method: 'POST',
               headers: {
-                  'Content-Type': 'application/json'
+                  'Content-Type': 'application/x-www-form-urlencoded'
               },
-              body: JSON.stringify(payload)
+              body: new URLSearchParams(payload)
           })
-          .then(response => response.json())
+          .then(response => {
+              if (response.ok) {
+                  // Handle successful response
+                  return response.json();
+              } else {
+                  throw new Error('Network response was not ok.');
+              }
+          })
           .then(data => {
               if (data.success) {
                   console.log('Login successful');
@@ -1039,6 +1047,7 @@ function sendEmail(formData) {
       });
   });
 </script>
+
 
   
 </body>
