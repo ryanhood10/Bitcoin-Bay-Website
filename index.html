@@ -971,7 +971,7 @@ function sendEmail(formData) {
         </button>
       </div>
       <form id="loginForm" class="needs-validation" action="https://wager.bitcoinbay.ag/redirectlogin.php" method="POST" novalidate>
-                <div class="modal-body pb-0">
+        <div class="modal-body pb-0">
           <div class="form-row">
             <div class="col-md-6 mb-2">
               <input type="text" class="form-control" id="customerID" name="customerID" placeholder="Login ID" required>
@@ -999,8 +999,6 @@ function sendEmail(formData) {
   </div>
 </div>
 
-
-
 <script>
   document.addEventListener('DOMContentLoaded', function() {
       const loginForm = document.getElementById('loginForm');
@@ -1026,15 +1024,16 @@ function sendEmail(formData) {
               },
               body: new URLSearchParams(payload)
           })
-          .then(response => {
-              if (response.ok) {
-                  // Handle successful response
-                  return response.json();
-              } else {
-                  throw new Error('Network response was not ok.');
+          .then(response => response.text())
+          .then(text => {
+              console.log('Raw response:', text);
+              let data;
+              try {
+                  data = JSON.parse(text);
+              } catch (error) {
+                  console.error('Response is not valid JSON:', text);
+                  throw error;
               }
-          })
-          .then(data => {
               if (data.success) {
                   console.log('Login successful');
                   // Redirect or handle success
@@ -1050,6 +1049,7 @@ function sendEmail(formData) {
       });
   });
 </script>
+
 
 
 
