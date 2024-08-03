@@ -1025,12 +1025,15 @@ function sendEmail(formData) {
               body: new URLSearchParams(payload)
           })
           .then(response => {
-              if (response.ok) {
-                  // Handle successful response
-                  return response.json();
-              } else {
-                  throw new Error('Network response was not ok.');
-              }
+              return response.text().then(text => {
+                  try {
+                      return JSON.parse(text);
+                  } catch (error) {
+                      // Log the response text to see the HTML content
+                      console.log('Response was not valid JSON:', text);
+                      throw new Error('Response was not valid JSON');
+                  }
+              });
           })
           .then(data => {
               if (data.success) {
@@ -1048,6 +1051,7 @@ function sendEmail(formData) {
       });
   });
 </script>
+
 
 
 
