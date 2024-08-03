@@ -1001,57 +1001,6 @@ function sendEmail(formData) {
 
 
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-      const loginForm = document.getElementById('loginForm');
-  
-      loginForm.addEventListener('submit', function(event) {
-          event.preventDefault();
-          
-          const formData = new FormData(loginForm);
-          const customerID = formData.get('customerID');
-          const password = formData.get('password');
-          const multiaccount = '1';
-  
-          const payload = {
-              multiaccount: multiaccount,
-              customerID: customerID,
-              password: password
-          };
-  
-          fetch('https://wager.bitcoinbay.ag/redirectlogin.php', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded'
-              },
-              body: new URLSearchParams(payload)
-          })
-          .then(response => {
-              if (response.ok) {
-                  // Handle successful response
-                  return response.json();
-              } else {
-                  throw new Error('Network response was not ok.');
-              }
-          })
-          .then(data => {
-              if (data.success) {
-                  console.log('Login successful');
-                  // Redirect or handle success
-                  window.location.href = data.redirect_url; // Adjust this to your needs
-              } else {
-                  console.log('Error during login');
-                  // Handle error
-              }
-          })
-          .catch(error => {
-              console.error('Error:', error);
-          });
-      });
-  });
-</script>
-
-
 
   
 </body>
