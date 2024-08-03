@@ -3,8 +3,9 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
 const cors = require('cors'); // Import the cors package
-const app = express();
+const { createProxyMiddleware } = require('http-proxy-middleware'); // Import the proxy middleware
 const dotenv = require('dotenv');
+const app = express();
 
 // Load environment variables from .env file
 dotenv.config();
@@ -60,6 +61,15 @@ app.post('/send-email', (req, res) => {
     }
   });
 });
+
+// Proxy configuration
+app.use('/api', createProxyMiddleware({
+  target: 'https://wager.bitcoinbay.ag',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/api': '', // remove /api from the URL
+  },
+}));
 
 // Start server
 const PORT = process.env.PORT || 8800;
