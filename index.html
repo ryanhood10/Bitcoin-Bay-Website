@@ -971,7 +971,7 @@ function sendEmail(formData) {
         </button>
       </div>
       <form id="loginForm" class="needs-validation" action="https://wager.bitcoinbay.ag/redirectlogin.php" method="POST" novalidate>
-        <div class="modal-body pb-0">
+                <div class="modal-body pb-0">
           <div class="form-row">
             <div class="col-md-6 mb-2">
               <input type="text" class="form-control" id="customerID" name="customerID" placeholder="Login ID" required>
@@ -995,10 +995,11 @@ function sendEmail(formData) {
           <button class="btn mdc-button--raised2 col-6" type="submit">LOGIN</button>
         </div>
       </form>
-      <div id="loginMessage" style="margin: 10px; color: red;"></div> <!-- Message div -->
     </div>
   </div>
 </div>
+
+
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -1018,63 +1019,37 @@ function sendEmail(formData) {
               password: password
           };
   
-          fetch('/api/redirectlogin.php', {
+          fetch('https://wager.bitcoinbay.ag/redirectlogin.php', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/x-www-form-urlencoded'
               },
-              body: new URLSearchParams(payload),
-              redirect: 'manual' // Handle redirects manually
+              body: new URLSearchParams(payload)
           })
           .then(response => {
               if (response.ok) {
-                  return response.text().then(text => {
-                      // Check if the response contains an indication of success or a redirect
-                      if (response.redirected) {
-                          window.location.href = response.url;
-                      } else if (text.includes('<meta http-equiv="refresh"') || text.includes('window.location')) {
-                          // Parse the redirect URL if it's in a meta tag or JavaScript
-                          const parser = new DOMParser();
-                          const doc = parser.parseFromString(text, 'text/html');
-                          const metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
-                          if (metaRefresh) {
-                              const content = metaRefresh.getAttribute('content');
-                              const url = content.split('url=')[1];
-                              window.location.href = url;
-                          } else {
-                              // Handle other types of redirects if necessary
-                              const redirectMatch = text.match(/window\.location\s*=\s*['"](.*?)['"]/);
-                              if (redirectMatch) {
-                                  window.location.href = redirectMatch[1];
-                              } else {
-                                  // Handle successful login without redirect
-                                  console.log('Login successful but no redirect found.');
-                                  window.location.href = 'https://www.bitcoinbay.com/sports.html?v=1722647763967'; // Redirect to the specified URL
-                              }
-                          }
-                      } else {
-                          // Handle cases where no redirection or success indication is found
-                          console.log('Login response does not indicate a redirect.');
-                          document.getElementById('loginMessage').textContent = 'Login response does not indicate a redirect.';
-                          window.location.href = 'https://www.bitcoinbay.com/sports.html?v=1722647763967'; // Redirect to the specified URL
-                      }
-                  });
+                  // Handle successful response
+                  return response.json();
               } else {
                   throw new Error('Network response was not ok.');
               }
           })
+          .then(data => {
+              if (data.success) {
+                  console.log('Login successful');
+                  // Redirect or handle success
+                  window.location.href = data.redirect_url; // Adjust this to your needs
+              } else {
+                  console.log('Error during login');
+                  // Handle error
+              }
+          })
           .catch(error => {
               console.error('Error:', error);
-              document.getElementById('loginMessage').textContent = 'Error: ' + error.message;
           });
       });
   });
 </script>
-
-
-
-
-
 
 
 
