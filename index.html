@@ -1028,11 +1028,11 @@ function sendEmail(formData) {
           .then(response => {
               if (response.ok) {
                   return response.text().then(text => {
-                      // Log the response text to see the HTML content
-                      console.log('Response text:', text);
-                      // Assuming the server redirects, check for <meta http-equiv="refresh">
-                      if (response.redirected || text.includes('<meta http-equiv="refresh"')) {
-                          // Parse the redirect URL if it's in a meta tag
+                      // Check if the response contains an indication of success or a redirect
+                      if (response.redirected) {
+                          window.location.href = response.url;
+                      } else if (text.includes('<meta http-equiv="refresh"') || text.includes('window.location')) {
+                          // Parse the redirect URL if it's in a meta tag or JavaScript
                           const parser = new DOMParser();
                           const doc = parser.parseFromString(text, 'text/html');
                           const metaRefresh = doc.querySelector('meta[http-equiv="refresh"]');
@@ -1042,27 +1042,22 @@ function sendEmail(formData) {
                               window.location.href = url;
                           } else {
                               // Handle other types of redirects if necessary
+                              const redirectMatch = text.match(/window\.location\s*=\s*['"](.*?)['"]/);
+                              if (redirectMatch) {
+                                  window.location.href = redirectMatch[1];
+                              } else {
+                                  // Handle successful login without redirect
+                                  console.log('Login successful but no redirect found.');
+                                  // You can add additional logic here if needed
+                              }
                           }
                       } else {
-                          try {
-                              return JSON.parse(text);
-                          } catch (error) {
-                              throw new Error('Response was not valid JSON');
-                          }
+                          // Handle cases where no redirection or success indication is found
+                          console.log('Login response does not indicate a redirect.');
                       }
                   });
               } else {
                   throw new Error('Network response was not ok.');
-              }
-          })
-          .then(data => {
-              if (data && data.success) {
-                  console.log('Login successful');
-                  // Redirect or handle success
-                  window.location.href = data.redirect_url; // Adjust this to your needs
-              } else {
-                  console.log('Error during login');
-                  // Handle error
               }
           })
           .catch(error => {
@@ -1071,6 +1066,7 @@ function sendEmail(formData) {
       });
   });
 </script>
+
 
 
 
