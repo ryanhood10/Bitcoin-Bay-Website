@@ -961,38 +961,41 @@ function sendEmail(formData) {
     </div>
   </div>
 </div>
-<div class="modal fade show" id="Login" tabindex="-1" role="dialog" aria-labelledby="LoginLabel" style="padding-right: 15px; display: block;">
-<div class="modal-dialog" role="document">
-<div class="modal-content">
-<div class="modal-header">
-<h5 class="modal-title" id="LoginLabel">Login to your account?</h5>
-<button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">×</span> </button>
+<div class="modal fade" id="Login" tabindex="-1" role="dialog" aria-labelledby="LoginLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="LoginLabel">Login to your account?</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"> 
+          <span aria-hidden="true">&times;</span> 
+        </button>
+      </div>
+      <form class="needs-validation" data-security="form">
+        <div class="modal-body pb-0">
+        <div class="form-row">
+        <div class="col-md-6 mb-2">
+        <input type="text" class="form-control" id="username" data-field="user" name="username" placeholder="Login ID" required="">
+        <div class="invalid-feedback"> Please provide a valid Username. </div>
+        </div>
+        <div class="col-md-6 mb-1">
+        <input type="password" class="form-control" data-field="pass" id="password" name="password" placeholder="Password" required="">
+        <div class="invalid-feedback"> Please provide a valid Password. </div>
+        </div>
+        </div>
+        <div class="form-group">
+        <div class="form-check text-dark pl-0 pt-3"> Don't have an account? <a href="#join" class="prepare-join" data-dismiss="modal" data-toggle="modal" data-target="#JoinNow" style="text-decoration: underline; color: blue;margin: 0px">Join Here !!!</a> </div>
+        </div>
+        <input type="hidden" name="multiaccount" id="multiaccount" value="1">
+        </div>
+        <div class="modal-footer m-2">
+        <button type="button" class="btn mdc-button--raised1 col-6" data-dismiss="modal">CLOSE</button>
+        <button class="btn mdc-button--raised2 col-6" data-action="login" type="submit">LOGIN</button>
+        </div>
+        </form>
+    </div>
+  </div>
 </div>
-<form class="needs-validation" data-security="form">
-<div class="modal-body pb-0">
-<div class="form-row">
-<div class="col-md-6 mb-2">
-<input type="text" class="form-control" id="username" data-field="user" name="username" placeholder="Login ID" required="">
-<div class="invalid-feedback"> Please provide a valid Username. </div>
-</div>
-<div class="col-md-6 mb-1">
-<input type="password" class="form-control" data-field="pass" id="password" name="password" placeholder="Password" required="">
-<div class="invalid-feedback"> Please provide a valid Password. </div>
-</div>
-</div>
-<div class="form-group">
-<div class="form-check text-dark pl-0 pt-3"> Don't have an account? <a href="#join" class="prepare-join" data-dismiss="modal" data-toggle="modal" data-target="#JoinNow" style="text-decoration: underline; color: blue;margin: 0px">Join Here !!!</a> </div>
-</div>
-<input type="hidden" name="multiaccount" id="multiaccount" value="1">
-</div>
-<div class="modal-footer m-2">
-<button type="button" class="btn mdc-button--raised1 col-6" data-dismiss="modal">CLOSE</button>
-<button class="btn mdc-button--raised2 col-6" data-action="login" type="submit">LOGIN</button>
-</div>
-</form>
-</div>
-</div>
-</div>
+
 
 
 
