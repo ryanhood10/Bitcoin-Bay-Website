@@ -121,6 +121,7 @@ padding-left: 12px;
         flex-direction: column;
         align-items: center;
         max-width: 100%;
+        min-width: 100%;
 
       }
     
@@ -507,6 +508,9 @@ padding-left: 12px;
 
 .carousel-inner {
   overflow: hidden; /* Prevent content overflow */
+  padding: 0 40px; /* Add horizontal padding to create space for the buttons */
+
+
 }
 .carousel-inner2 {
   overflow: hidden; /* Prevent content overflow */
@@ -541,6 +545,7 @@ padding-left: 12px;
   display: none;
   text-align: center;
   transition: transform 1.5s ease-in-out; /* Add transition for sliding effect */
+
 }
 .carousel2-item img {
   filter: grayscale(100%); /* Convert the image to grayscale */
