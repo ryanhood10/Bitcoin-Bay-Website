@@ -130,12 +130,11 @@ padding-left: 12px;
       }
     
       .section7 .instructions-container {
-        max-width: 90%; /* Increased max-width to avoid too narrow text */
-        padding: 10px 20px; /* Added horizontal padding for better readability */
+        max-width: 100%; /* Increased max-width to avoid too narrow text */
       }
     
       .section7 .instructions-container ol {
-        padding-left: 20px; /* Ensure the list items are indented properly */
+        padding-left: 0px; /* Ensure the list items are indented properly */
       }
     }
     
