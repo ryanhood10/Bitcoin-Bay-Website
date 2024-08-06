@@ -120,11 +120,14 @@ padding-left: 12px;
       .section7 .withdrawal-instructions {
         flex-direction: column;
         align-items: center;
+        max-width: 100%;
+
       }
     
       .section7 .image-container,
       .section7 .instructions-container {
         max-width: 100%;
+        min-width: 100%;
         flex: none;
         padding: 10px;
       }
