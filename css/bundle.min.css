@@ -87,13 +87,13 @@ padding-left: 12px;
     .section7{
       background-color: #151515;
       padding: 20px;
-
     }
+    
     .section7 .withdrawal-instructions {
       display: flex;
       justify-content: center;
-
     }
+    
     .rounded-image {
       width: 70%;
       max-width: 70%;
@@ -107,7 +107,6 @@ padding-left: 12px;
       display: flex;
       justify-content: center;
       align-items: center;
-
     }
     
     .section7 .instructions-container {
@@ -128,6 +127,15 @@ padding-left: 12px;
         max-width: 100%;
         flex: none;
         padding: 10px;
+      }
+    
+      .section7 .instructions-container {
+        max-width: 90%; /* Increased max-width to avoid too narrow text */
+        padding: 10px 20px; /* Added horizontal padding for better readability */
+      }
+    
+      .section7 .instructions-container ol {
+        padding-left: 20px; /* Ensure the list items are indented properly */
       }
     }
     
