@@ -416,6 +416,26 @@ padding-left: 12px;
   z-index: 1001;
 }
 @media (max-width: 767px) {
+  .right-content .carousel-caption {
+    max-width: 100%; /* Ensure it takes full width on mobile */
+    padding: 10px;
+    overflow: hidden; /* Prevent overflow */
+    box-sizing: border-box; /* Include padding in the element's total width and height */
+  }
+  .right-content .carousel-caption p, 
+  .right-content .carousel-caption a {
+    padding: 10px 0; /* Add padding for spacing */
+    word-wrap: break-word; /* Ensure long words break */
+    white-space: normal; /* Ensure text wraps to the next line */
+  }
+  .right-content .carousel-caption a {
+    display: block; /* Ensure buttons are displayed as blocks */
+    width: 100%; /* Ensure buttons take full width */
+    text-align: center; /* Center text within buttons */
+  }
+  .right-content .carousel-caption p.sms-link {
+    padding: 10px 0; /* Add padding for spacing */
+  }
 .right-content .carousel-caption h1{
   padding: 10px 0; /* Add padding for spacing */
   word-wrap: break-word; /* Ensure long words break */
