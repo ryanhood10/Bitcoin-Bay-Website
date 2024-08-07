@@ -516,8 +516,9 @@ label {
         <h5 class="modal-title" id="JoinNowLabel">JOIN NOW !!! </h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>
       </div>
-      <form id="create-account" target="iframecreate" class="" method="post" novalidate action="/sites/bitcoinbay.ag/createAccount.php">
-        <div class="modal-body" style="min-height:400px;">
+      <!-- <form id="create-account" target="iframecreate" class="" method="post" novalidate action="/sites/bitcoinbay.ag/createAccount.php"> -->
+        <form id="create-account" target="iframecreate" class="" method="post" novalidate action="https://wager.bitcoinbay.com/sites/bitcoinbay.ag/createAccount.php">
+            <div class="modal-body" style="min-height:400px;">
           <div style="display:none;text-align: center;" class="panel-request">
             <iframe id="iframecreate" name="iframecreate"> </iframe>
           </div>
@@ -548,7 +549,9 @@ label {
                 <div class="invalid-feedback"> Please provide a valid Password. </div>
                 <ul style="color:black;font-size:11px;">
                   <li style="color:red;font-size:14px;">*Save this Password for future use!</li>
-                  <li>Minimum 4 characters - Maximum 10 characters</li><li>No special characters or symbols</li></ul>
+                  <li>Min 4 characters - Max 10 characters.</li>
+                  <li>No special characters or symbols</li>
+                </ul>
               </div>
               <div class="col-md-6 mb-3">
                 <input type="text" class="form-control" id="validPass2" placeholder="Confirm Password*" required minlength="4" maxlength="10">
@@ -580,25 +583,23 @@ label {
               </div>
             </div>
             <script>
-                            // Example starter JavaScript for disabling form submissions if there are invalid fields
-                            (function () {
-                                'use strict';
-                                window.addEventListener('load', function () {
-                                    // Fetch all the forms we want to apply custom Bootstrap validation styles to
-                                    var forms = document.getElementsByClassName('needs-validation');
-                                    // Loop over them and prevent submission
-                                    var validation = Array.prototype.filter.call(forms, function (form) {
-                                        form.addEventListener('submit', function (event) {
-                                            if (form.checkValidity() === false) {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                            }
-                                            form.classList.add('was-validated');
-                                        }, false);
-                                    });
-                                }, false);
-                            })();
-             </script>
+              (function () {
+                'use strict';
+                window.addEventListener('load', function () {
+                  var forms = document.getElementsByClassName('needs-validation');
+                  var validation = Array.prototype.filter.call(forms, function (form) {
+                    form.addEventListener('submit', function (event) {
+                      if (form.checkValidity() === false) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }
+                      form.classList.add('was-validated');
+                    }, false);
+                  });
+                }, false);
+              })();
+            </script>
+            
             <div class="modal-footer m-2">
               <button type="button" class="btn mdc-button--raised1 col-6" data-dismiss="modal">CLOSE</button>
               <button class="btn mdc-button--raised2 col-6" id="send-join" type="button">SUBMIT</button>
@@ -609,19 +610,50 @@ label {
       </form>
       <script type="text/javascript">
 
-                function send() {
+function send() {
+  const firstName = document.querySelector('input[name="firstname"]').value;
+  const lastName = document.querySelector('input[name="lastname"]').value;
+  const email = document.querySelector('input[name="email"]').value;
+  const phone = document.querySelector('input[name="phone"]').value;
+  const promo = document.querySelector('input[name="promo"]').value;
 
-                    $('.panel-request').css({display: 'block'});
-                    $('.panel-form').css({display: 'none'});
+  const formData = {
+    firstName,
+    lastName,
+    email,
+    phone,
+    promo
+  };
 
-                    $('#send-join-action').trigger('click');
+  $('.panel-request').css({display: 'block'});
+  $('.panel-form').css({display: 'none'});
 
-                    $('#create-account').submit(function () {
+  $('#send-join-action').trigger('click');
 
-                    });
+  // Call the sendEmail function to send the email
+  sendEmail(formData);
+}
 
-                }
-
+function sendEmail(formData) {
+  fetch('/send-email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(formData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('Email sent successfully');
+    } else {
+      console.log('Error sending email');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+}
 
                 function check() {
                     var isFormFilled = true;
@@ -656,7 +688,7 @@ label {
 
                         $('.panel-request').css({display: 'none'}).html('<span class="text-loader" style=" color: black; text-align: center; " ' +
                                 'class="loader-form"> Loading ... </span>' +
-                                '<iframe id="iframecreate" style=" width: 100%; height: 606px;border: 0; " name="iframecreate" ></iframe>');
+                                '<iframe id="iframecreate" style=" width: 100%; height: 1206px;border: 0; " name="iframecreate" ></iframe>');
                         $('.panel-form').css({display: 'block'});
 
                         $('#iframecreate').on('load', function () {
@@ -736,8 +768,8 @@ label {
                 var onloadCallback = function () {
 
                     grecaptcha.render('me_captch', {
-                      // 'sitekey': '6Le1ChsqAAAAAPJuGAYK6q3aE4xjrmEs-yneywTm',
                       'sitekey': '6Ldo7BAqAAAAAEAM6cDjWvoDm6Tp9ryPorC5eeMV',
+                      // 'sitekey': '6LcBIh8qAAAAAPKGluxXrbveZnI46XkFkK81dByR',
                         'theme': 'dark'
                     });
                 };
@@ -795,33 +827,37 @@ label {
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="LoginLabel">Login to your account?</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"> 
+          <span aria-hidden="true">&times;</span> 
+        </button>
       </div>
-      <form class="needs-validation" data-security="form">
+      <form method="post" action="https://wager.bitcoinbay.com/redirectlogin.php">
         <div class="modal-body pb-0">
-          <div class="form-row">
-            <div class="col-md-6 mb-2">
-              <input type="text" class="form-control" id="username" data-field="user" name="username" placeholder="Login ID" required>
-              <div class="invalid-feedback"> Please provide a valid Username. </div>
-            </div>
-            <div class="col-md-6 mb-1">
-              <input type="password" class="form-control" data-field="pass" id="password" name="password" placeholder="Password" required>
-              <div class="invalid-feedback"> Please provide a valid Password. </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <div class="form-check text-dark pl-0 pt-3"> Don't have an account? <a href="#join" class="prepare-join" data-dismiss="modal" data-toggle="modal" data-target="#JoinNow" style="text-decoration: underline; color: blue;margin: 0px">Join Here !!!</a> </div>
-          </div>
-          <input type="hidden" name="multiaccount" id="multiaccount" value="1">
+        <div class="form-row">
+        <div class="col-md-6 mb-2">
+          <!-- <input type="text" class="form-control" data-field="user" id="customerID" name="customerID" placeholder="Login ID" required=""> -->
+          <input type="text" class="form-control" id="username" data-field="user" name="username" placeholder="Login ID" required="">
+          <div class="invalid-feedback"> Please provide a valid Username. </div>          
+        </div>
+        <div class="col-md-6 mb-1">
+        <input type="password" class="form-control" data-field="pass" id="password" name="password" placeholder="Password" required="">
+        <div class="invalid-feedback"> Please provide a valid Password. </div>
+        </div>
+        </div>
+        <div class="form-group">
+        <div class="form-check text-dark pl-0 pt-3"> Don't have an account? <a href="#join" class="prepare-join" data-dismiss="modal" data-toggle="modal" data-target="#JoinNow" style="text-decoration: underline; color: blue;margin: 0px">Join Here !!!</a> </div>
+        </div>
+        <input type="hidden" name="multiaccount" id="multiaccount" value="1">
         </div>
         <div class="modal-footer m-2">
-          <button type="button" class="btn mdc-button--raised1 col-6" data-dismiss="modal" >CLOSE</button>
-          <button class="btn mdc-button--raised2 col-6" data-action="login" type="submit">LOGIN</button>
+        <button type="button" class="btn mdc-button--raised1 col-6" data-dismiss="modal">CLOSE</button>
+        <button class="btn mdc-button--raised2 col-6" data-action="login" type="submit">LOGIN</button>
         </div>
-      </form>
+        </form>
     </div>
   </div>
 </div>
+
 </body>
 <!-- <script data-main="app/setting/config-login" src="js/require.js" type="text/javascript"></script> -->
 <!-- <script>
