@@ -415,6 +415,14 @@ padding-left: 12px;
   pointer-events: auto;
   z-index: 1001;
 }
+@media (max-width: 767px) {
+.right-content .carousel-caption h1{
+  padding: 10px 0; /* Add padding for spacing */
+  word-wrap: break-word; /* Ensure long words break */
+  white-space: normal; /* Ensure text wraps to the next line */
+  font-size: x-large;
+}
+}
 /* .carousel-caption a.btn:hover {
   background-color: #ee8034;
   color: #fff;
