@@ -515,6 +515,7 @@ padding-left: 12px;
 .carousel-inner2 {
   overflow: hidden; /* Prevent content overflow */
   text-align: center; /* Center the text horizontally */
+  width: 90%;
 }
 
 .carousel-inner2 .carousel-item {
@@ -532,8 +533,6 @@ padding-left: 12px;
   text-align: center; /* Ensure the text is centered */
 }
 
-
-
 /* for second carousel items */
 .carousel2-item.active {
   display: flex;
@@ -545,7 +544,6 @@ padding-left: 12px;
   display: none;
   text-align: center;
   transition: transform 1.5s ease-in-out; /* Add transition for sliding effect */
-
 }
 .carousel2-item img {
   filter: grayscale(100%); /* Convert the image to grayscale */
@@ -566,7 +564,6 @@ padding-left: 12px;
   margin-top: 100px;
   margin-bottom: 100px;
   position: relative;
-
 }
 
 
