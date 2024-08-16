@@ -381,7 +381,7 @@ padding-left: 12px;
 /* Media query for smaller screens */
 @media (max-width: 767px) {
   .carousel-item img {
-    max-width: 25%; /* Set image width to 1/4 of the container on smaller screens */
+    max-width: 50%; /* Set image width to 1/4 of the container on smaller screens */
     padding-bottom: 50px;
   }
 }
