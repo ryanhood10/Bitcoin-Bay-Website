@@ -648,7 +648,7 @@ function sendEmail(formData) {
     if (data.success) {
       console.log('Email sent successfully');
     } else {
-      console.log('Error sending email');
+      console.log('Error sending email'); 
     }
   })
   .catch(error => {
@@ -689,7 +689,7 @@ function sendEmail(formData) {
 
                         $('.panel-request').css({display: 'none'}).html('<span class="text-loader" style=" color: black; text-align: center; " ' +
                                 'class="loader-form"> Loading ... </span>' +
-                                '<iframe id="iframecreate" style=" width: 100%; height: 1206px;border: 0; " name="iframecreate" ></iframe>');
+                                '<iframe id="iframecreate" style=" width: 100%; height: 806px;border: 0; " name="iframecreate" ></iframe>');
                         $('.panel-form').css({display: 'block'});
 
                         $('#iframecreate').on('load', function () {
