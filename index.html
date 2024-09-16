@@ -794,12 +794,21 @@ function sendEmail(formData) {
     },
     body: JSON.stringify(formData)
   })
-  .then(response => response.json())
+  .then(response => {
+    // Check if the response type is JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    } else {
+      return response.text(); // Handle plain text responses
+    }
+  })
   .then(data => {
-    if (data.success) {
+    // Check if it's JSON or text
+    if (typeof data === 'object' && data.success) {
       console.log('Email sent successfully');
     } else {
-      console.log('Error sending email');
+      console.log(data); // Log the plain text message, e.g., "Email sent"
     }
   })
   .catch(error => {
