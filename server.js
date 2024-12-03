@@ -46,7 +46,7 @@ app.post('/send-email', (req, res) => {
     from: process.env.EMAIL,
     to: 'bitcoinbaynotifications@gmail.com', // Replace with the recipient's email 
     subject: 'New Account Created',
-    text: `First Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nPromo Code: ${promo}`
+    text: `First Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nReferred By: ${promo}`
   };
 
   // Send the email

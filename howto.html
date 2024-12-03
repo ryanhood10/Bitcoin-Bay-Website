@@ -139,9 +139,10 @@ label {
         <div class="row">
             <div class="col-12 col-md-8">
                 <div class="content">
-                    <h2>New Member?</h2>
-                    <p>Sign up and get matched up to $100 Free Play on your first deposit!</p>
-                    <a data-toggle="modal" data-target="#JoinNow">
+                  <h2>All Members</h2>
+                  <h3>10% Free Play Bonus on ALL Bitcion Deposits!</h3>
+                  <p>Know others that want to play? Look at our Cash Back Program to start earning!</p>
+                  <a data-toggle="modal" data-target="#JoinNow">
                         <button class="btn btn-custom2">
                             Sign Up
                             <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor" class="bi bi-arrow-right-circle" viewBox="0 0 16 16">
@@ -149,15 +150,21 @@ label {
                             </svg>
                         </button>
                     </a>
-                    <br/>
 
-                    <br/>
-                    <p>Refer a Friend for another $100 Freeplay!</p>
-                    <a href="#referral">
-                        <button class="btn btn-grey btn-referral">
-                            Our referral program
-                        </button>
-                    </a>
+                 
+                    <div class="d-flex flex-column flex-lg-row justify-content-between promo-section">
+                      <div class="left">
+                        <a href="#referral">
+                          <button class="btn btn-grey btn-referral">
+                            Cash Back Program
+                          </button>
+                        </a>
+                        <p>Up to 40% Commission!</p>
+                      </div>
+                      <div class="right">
+                        <p>10% Free Play Bonus on all Bitcoin deposits!</p>
+                        <p id="ast-time" class="mb-0"></p>
+                      </div>
                 </div>
             </div>
           </section>
@@ -447,13 +454,13 @@ label {
   }
 </script>
 
-<section >
-  <div class="container" >
-    <div class="referralProgram" >
-      <div >
+<section>
+  <div class="container">
+    <div class="referralProgram">
+      <div>
         <h1>
           <i class="fab fa-bitcoin icon" style="color: #ED8437;"></i>
-          Referral Program    
+          Referral Program
         </h1>
         <p class="caption">Want to earn more Free Play?</p>
       </div>
@@ -461,18 +468,82 @@ label {
         <h6 class="mdc-typography--headline6">How it Works</h6>
         <ol class="mdc-typography--body2">
           <li>Refer a friend to our platform.</li>
-          <li>Have your friend sign up for an account.</li>
-          <li>Your friend deposits and wagers up to $100 in any variety of bets.</li>
-          <li>Once the deposit is wagered, text MY AGENT at 
-              <a href="sms:+17026258045" class="sms-link2">787-531-3642</a>
+          <li>
+            Have your friend sign up for an account using your account number in
+            the "Referred By" section of the signup form.
           </li>
-          <li>Provide the name and account number of your friend who signed up.</li>
-          <li>The Agent will credit your account with Free Play.</li>
+          <li>Start Earning Commission on every player you bring in.</li>
+          <li>
+            Weekly cash credit will be added to your account based off of your
+            referrals' wager activity.
+          </li>
         </ol>
       </div>
+
+      <style>
+        @media (min-width: 768px) {
+          .commission-chart-container {
+            padding-left: 4rem;
+            padding-right: 4rem;
+          }
+        }
+      
+        @media (min-width: 992px) {
+          .commission-chart-container {
+            padding-left: 8rem;
+            padding-right: 8rem;
+          }
+        }
+      </style>
+      
+      <!-- Commission Chart -->
+      <div class="commission-chart-container">
+        <div class="d-flex justify-content-center align-items-center">
+          <div class="mt-10 text-center" style="max-width: 800px; width: 100%;">
+            <h2 class="mb-4 text-warning">Commission Chart</h2>
+            <div class="table-responsive">
+              <table class="table table-bordered text-light mx-auto" style="width: 100%;">
+                <thead class="bg-dark">
+                  <tr>
+                    <th scope="col" class="text-center">Net Gross Revenue (NGR)</th>
+                    <th scope="col" class="text-center">Commission Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="text-center">$0 - $5,000</td>
+                    <td class="text-center">20%</td>
+                  </tr>
+                  <tr>
+                    <td class="text-center">$5,001 - $10,000</td>
+                    <td class="text-center">25%</td>
+                  </tr>
+                  <tr>
+                    <td class="text-center">$10,001 - $15,000</td>
+                    <td class="text-center">30%</td>
+                  </tr>
+                  <tr>
+                    <td class="text-center">$15,001 - $20,000</td>
+                    <td class="text-center">35%</td>
+                  </tr>
+                  <tr>
+                    <td class="text-center">$20,001 - $25,000</td>
+                    <td class="text-center">40%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="mt-3 text-secondary small">
+              *All commissions are based on Net Gross Revenue (NGR)
+            </p>
+          </div>
+        </div>
+      </div>
+      
     </div>
   </div>
 </section>
+
 
 
 
@@ -567,8 +638,8 @@ label {
             </div>
             <div class="form-row">
               <div class="col-md-6 mb-2">
-                <input type="text" class="form-control" name="promo" id="validationCustom04" placeholder="Promo Code (optional)">
-                <div class="invalid-feedback"> Please enter your promo code. </div>
+                <input type="text" class="form-control" name="promo" id="validationCustom04" placeholder="Referred by (optional)">
+                <div class="invalid-feedback"> ACC# you were referred by. </div>
               </div>
             </div>
             <div class="form-row">
