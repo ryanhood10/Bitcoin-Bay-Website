@@ -651,15 +651,28 @@ padding-left: 12px;
     align-items: stretch;
   }
 
-  .promo-section .left,
-  .promo-section .right {
-    margin-bottom: 1rem;
+  .promo-section .left {
+    white-space: nowrap;      /* Prevent text wrapping */
+    overflow: hidden;         /* Prevent overflow if the container is too narrow */
+    text-overflow: ellipsis;  /* Add ellipsis if text is clipped */
+    max-width: 100%;          /* Ensure it doesn't exceed the container's width */
+
   }
 
   .promo-section .right {
-    text-align: right;
-    align-self: flex-end;
+    white-space: nowrap;      /* Prevent text wrapping */
+    overflow: hidden;         /* Prevent overflow if the container is too narrow */
+    text-overflow: ellipsis;  /* Add ellipsis if text is clipped */
+    max-width: 100%;          /* Ensure it doesn't exceed the container's width */
+    text-align: right;        /* Align the text to the right */
+
   }
+  
+  .promo-section .right p {
+    font-size: 14px;          /* Ensure a smaller font for mobile */
+    margin-bottom: 0;         /* Remove bottom margin */
+  }
+  
 
   
   .banner2 {
@@ -770,11 +783,17 @@ padding-left: 12px;
     margin-bottom: 10px; /* Reduced margin */
   }
 
-  .promo-section .left p,
-  .promo-section .right p {
+  .promo-section .left p {
     font-size: 14px;
     margin-bottom: 5px; /* Reduced margin */
   }
+  .promo-section .right p {
+    white-space: nowrap;
+    font-size: 14px; /* Ensure smaller font on mobile */
+    max-width: 100%; /* Prevent overflow */
+
+  }
+  
 
   .banner2 .btn-custom {
     font-size: 16px;
