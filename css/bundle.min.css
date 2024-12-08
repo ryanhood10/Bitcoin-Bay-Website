@@ -586,7 +586,7 @@ padding-left: 12px;
   padding: 0 0 50px 0;
   position: relative;
 }
-
+/* Ensure the container and content adapt for mobile screens */
 .skill-bx {
   background: #151515;
   border-radius: 64px;
@@ -598,9 +598,24 @@ padding-left: 12px;
 }
 
 
-.skill h1 {
+
+/* Responsive title styling */
+.skill-bx h1 {
   font-size: 45px;
   font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 767.98px) {
+  .skill-bx {
+    padding: 30px 20px;        /* Reduce padding on mobile */
+    border-radius: 20px;       /* Smaller border radius */
+  }
+  .skill-bx h1 {
+    font-size: 32px;           /* Reduce title font size on mobile */
+    line-height: 1.2;          /* Adjust line height for better spacing */
+  }
 }
 
 .background-image-left {
