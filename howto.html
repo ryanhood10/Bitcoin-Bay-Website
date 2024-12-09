@@ -133,38 +133,47 @@ label {
   
       links.forEach(link => {
         link.addEventListener('click', function (e) {
-          e.preventDefault();
+          const href = this.getAttribute('href');
   
-          const targetId = this.getAttribute('href').split('#')[1];
-          const targetElement = document.getElementById(targetId);
+          // Check if the link is for the current page
+          if (href.startsWith('#')) {
+            e.preventDefault();
   
-          if (targetElement) {
-            const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY;
-            const startPosition = window.scrollY;
-            const distance = targetPosition - startPosition;
-            const duration = 600; // Faster scrolling with a duration of 600 milliseconds
-            let startTime = null;
+            const targetId = href.slice(1);
+            const targetElement = document.getElementById(targetId);
   
-            function animation(currentTime) {
-              if (startTime === null) startTime = currentTime;
-              const timeElapsed = currentTime - startTime;
-              const progress = Math.min(timeElapsed / duration, 1); // Ensure progress doesn't exceed 1
-              const run = startPosition + distance * progress;
-              window.scrollTo(0, run);
+            if (targetElement) {
+              const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY;
+              const startPosition = window.scrollY;
+              const distance = targetPosition - startPosition;
+              const duration = 600; // Duration in milliseconds
+              let startTime = null;
   
-              if (timeElapsed < duration) {
-                requestAnimationFrame(animation);
-              } else {
-                window.scrollTo(0, targetPosition); // Ensure exact final position
+              function animation(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const progress = Math.min(timeElapsed / duration, 1);
+                const run = startPosition + distance * progress;
+                window.scrollTo(0, run);
+  
+                if (timeElapsed < duration) {
+                  requestAnimationFrame(animation);
+                } else {
+                  window.scrollTo(0, targetPosition);
+                }
               }
-            }
   
-            requestAnimationFrame(animation);
+              requestAnimationFrame(animation);
+            }
+          } else {
+            // Allow default behavior for links pointing to other pages
+            return;
           }
         });
       });
     });
   </script>
+  
   
 <div class="mdc-drawer-app-content">
 <main class="main-content" id="main-content">
