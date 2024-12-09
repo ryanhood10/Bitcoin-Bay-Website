@@ -146,6 +146,45 @@ label {
     </div>
   </header>
   
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const links = document.querySelectorAll('a[href^="#"], a[href*="#"]');
+  
+      links.forEach(link => {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+  
+          const targetId = this.getAttribute('href').split('#')[1];
+          const targetElement = document.getElementById(targetId);
+  
+          if (targetElement) {
+            const targetPosition = targetElement.getBoundingClientRect().top + window.scrollY;
+            const startPosition = window.scrollY;
+            const distance = targetPosition - startPosition;
+            const duration = 600; // Faster scrolling with a duration of 600 milliseconds
+            let startTime = null;
+  
+            function animation(currentTime) {
+              if (startTime === null) startTime = currentTime;
+              const timeElapsed = currentTime - startTime;
+              const progress = Math.min(timeElapsed / duration, 1); // Ensure progress doesn't exceed 1
+              const run = startPosition + distance * progress;
+              window.scrollTo(0, run);
+  
+              if (timeElapsed < duration) {
+                requestAnimationFrame(animation);
+              } else {
+                window.scrollTo(0, targetPosition); // Ensure exact final position
+              }
+            }
+  
+            requestAnimationFrame(animation);
+          }
+        });
+      });
+    });
+  </script>
+  
   
 <div class="mdc-drawer-app-content">
 <main class="main-content" id="main-content">
@@ -577,13 +616,13 @@ label {
 
 
 
-<section>
+<section id="referral2">
   <div class="container">
 
     <div class="product-intro__wrapper" id="sports">
       
       <!-- Left Section -->
-      <div id="referral2" class="product-intro__image">
+      <div  class="product-intro__image">
         <h1>
           <i class="fab fa-bitcoin icon" style="color: #ED8437;"></i>
           Referral Program    
