@@ -20,6 +20,9 @@ padding-left: 12px;
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
 
 /* General Wrapper Styles */
 .product-intro__wrapper {
