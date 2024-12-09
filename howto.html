@@ -214,7 +214,22 @@ label {
                 </div>
             </div>
           </section>
-
+          <script>
+            function updateASTTime() {
+              const astTimeElement = document.getElementById('ast-time');
+              const now = new Date();
+              const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+              const astOffset = -4; // AST is UTC-4
+              const astTime = new Date(utc + (3600000 * astOffset));
+          
+              // Format the time to exclude seconds
+              const options = { hour: '2-digit', minute: '2-digit' };
+              astTimeElement.textContent = `Atlantic Standard Time: ${astTime.toLocaleTimeString([], options)}`;
+            }
+          
+            setInterval(updateASTTime, 60000); // Update every minute
+            updateASTTime(); // Initial call to set the time immediately
+          </script>
           <section class="section2">
             <div class="container">
               <div class="depositProgram">
@@ -508,7 +523,7 @@ label {
           <i  class="fab fa-bitcoin icon" style="color: #ED8437;"></i>
           Referral Program
         </h1>
-        <p class="caption">Want to earn more Free Play?</p>
+        <p class="caption">Ready to Start Earning?</p>
       </div>
       <div class="details">
         <h6 class="mdc-typography--headline6">How it Works</h6>
