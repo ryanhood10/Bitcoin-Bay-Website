@@ -253,7 +253,6 @@
             data.leaderboard.forEach(account => {
               console.log('Processing account:', account);
               const li = document.createElement('li');
-              li.className = 'list-group-item';
               li.textContent = account;
               leaderboardList.appendChild(li);
             });
@@ -261,13 +260,13 @@
             console.log('Volume needed set to:', data.volumeNeeded);
           } else {
             console.warn('No leaderboard data available');
-            leaderboardList.innerHTML = '<li class="list-group-item">No data available</li>';
+            leaderboardList.innerHTML = '<li>No data available</li>';
             document.getElementById('thresholdDisplay').textContent = 'N/A';
           }
         })
         .catch(error => {
           console.error('Error fetching leaderboard data:', error);
-          document.getElementById('leaderboardList').innerHTML = '<li class="list-group-item text-danger">Error loading data</li>';
+          document.getElementById('leaderboardList').innerHTML = '<li class="text-danger">Error loading data</li>';
           document.getElementById('thresholdDisplay').textContent = 'Error';
         });
     });
