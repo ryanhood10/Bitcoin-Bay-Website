@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html class="revamp" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="IE=edge" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>BitcoinBay | Leaderboards</title>
+  <meta name="description" content="BitcoinBay Leaderboards" />
+  <meta property="og:title" content="BitcoinBay Leaderboards" />
+  <meta property="og:description" content="See if you have what it takes to be in the top performers!" />
+  <meta name="MobileOptimized" content="320" />
+  <meta name="viewport" content="width=device-width,minimum-scale=1" />
+  
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+        integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" crossorigin="anonymous" />
+  <!-- Custom CSS Bundle -->
+  <link rel="stylesheet" href="css/bundle.min.css" />
+  
+  <style>
+    /* Overall Dark Theme */
+    body {
+      font-family: 'Play', sans-serif !important;
+      background-color: #121212;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 0;
+    }
+    a { 
+      color: #ED8437; 
+    }
+    a:hover { 
+      color: #f9a26c; 
+      text-decoration: none; 
+    }
+    /* Navbar (exact copy from HowTo page) */
+    .mdc-top-app-bar { 
+      background-color: #222133; 
+    }
+    .header-logo { 
+      max-height: 50px; 
+    }
+    /* Leaderboard container: add top margin so content isn’t hidden by the navbar */
+    .leaderboard-container { 
+      margin-top: 100px;
+      padding-left: 4rem;
+      padding-right: 4rem;
+    }
+    @media (min-width: 992px) {
+      .leaderboard-container {
+        padding-left: 16rem;
+        padding-right: 16rem;
+      }
+    }
+    .leaderboard-header { 
+      text-align: center; 
+      margin-bottom: 2rem; 
+    }
+    .leaderboard-header h1 { 
+      font-size: 2.5rem; 
+    }
+    /* Card styling for dark theme */
+    .card {
+      background-color: #1e1e2f;
+      border: 1px solid #333;
+    }
+    .card .card-header {
+      background-color: #27293d;
+      border-bottom: 1px solid #444;
+      color: #ED8437;
+      font-weight: bold;
+    }
+    .card .card-body,
+    .card .card-title,
+    .card .card-text {
+      color: #e0e0e0;
+    }
+    /* Leaderboard list styling */
+    #leaderboardList {
+      list-style-type: none;
+      padding-left: 0;
+      font-size: 0.9rem;
+    }
+    #leaderboardList .list-group-item {
+      border: none;
+      text-align: center;
+      padding: 0.5rem 1rem;
+    }
+    /* How It Works Section */
+    .how-it-works {
+      background-color: #1e1e2f;
+      padding: 2rem;
+      margin-top: 2rem;
+      border: 1px solid #333;
+      border-radius: 5px;
+    }
+    .how-it-works h4 { 
+      color: #ED8437; 
+    }
+    .how-it-works ol { 
+      padding-left: 1.5rem; 
+    }
+    .how-it-works ol li {
+      margin-bottom: 0.5rem;
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body class="mainBody">
+  <!-- Navbar (exact copy from HowTo page) -->
+  <header class="mdc-top-app-bar" id="app-bar">
+    <div class="container-fluid p-0">
+      <div class="mdc-top-app-bar__row d-flex justify-content-between align-items-center">
+        <section class="header-logo-section">
+          <a href="/" class="d-flex align-items-center">
+            <img class="header-logo" src="images/logo.png" alt="Bitcoin Bay"> 
+          </a>
+        </section>
+        <section class="auth-buttons d-flex align-items-center">
+          <a href="" class="mdc-button mdc-button2--outlined" data-toggle="modal" data-target="#Login">
+            <span class="mdc-button__label">Log In</span>
+          </a>
+          <div class="ml-2">
+            <a href="" class="mdc-button mdc-button--outlined" data-toggle="modal" data-target="#JoinNow">
+              <span class="mdc-button__label text-center">Sign Up</span>
+            </a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Main Content -->
+  <div class="container leaderboard-container">
+    <!-- Leaderboard Header -->
+    <div class="row">
+      <div class="col-12 text-center mb-4">
+        <h1>
+          <i class="fab fa-bitcoin" style="color: #ED8437;"></i> Top 20% Leaderboard
+        </h1>
+        <p class="lead">See if you have what it takes to be among the top performers!</p>
+      </div>
+    </div>
+    <!-- Two-column layout: Leaderboard List and Volume Needed Display -->
+    <div class="row">
+      <!-- Leaderboard List (8 columns) -->
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header bg-dark text-white">Leaderboard</div>
+          <ul class="list-group list-group-flush" id="leaderboardList">
+            <li class="list-group-item">Loading...</li>
+          </ul>
+        </div>
+      </div>
+      <!-- Volume Needed Display (4 columns) -->
+      <div class="col-md-4">
+        <div class="card text-center">
+          <div class="card-header bg-warning text-dark">
+            Volume Needed to Enter Top 20%
+          </div>
+          <div class="card-body">
+            <h3 id="thresholdDisplay" class="card-title">Loading...</h3>
+            <p class="card-text">Achieve this volume to earn your bonus share!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    
+  </div>
+  
+  <!-- Footer (exact copy from HowTo page) -->
+  <section class="section6">
+    <div class="revamp-footer-logo container">
+      <h4 class="mdc-typography--headline4">The No.1 Bitcoin sportsbook &amp; casino</h4>
+      <p class="mdc-typography--body2">
+        Follow Us for News, Updates, and Free Play Promotions!<br>
+        Need Help? Contact Support Directly
+      </p>
+      <br/>
+      <a href="https://www.instagram.com/bitcoin_bay/" style="color: #e1306c" target="_blank">
+        <i class="fa-brands fa-instagram"></i>BitcoinBay_com
+      </a><br>
+    </div>
+    <div class="revamp-footer container">
+      <div class="revamp-footer__left">
+        <div class="revamp-footer-logo">
+          <img src="images/logo.png" alt="The Number 1 CryptoCurrency SportsBook">
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="container">
+    <div class="divider"></div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  
+  <!-- Leaderboard Data Fetch Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Document loaded. Fetching leaderboard data...');
+      fetch('http://localhost:8800/api/leaderboard')
+        .then(response => {
+          console.log('API response received:', response);
+          return response.json();
+        })
+        .then(data => {
+          console.log('Parsed JSON data:', data);
+          const leaderboardList = document.getElementById('leaderboardList');
+          leaderboardList.innerHTML = ''; // Clear the loading message
+          
+          if (data.leaderboard && data.leaderboard.length > 0) {
+            data.leaderboard.forEach(account => {
+              console.log('Processing account:', account);
+              const li = document.createElement('li');
+              li.className = 'list-group-item';
+              li.textContent = account;
+              leaderboardList.appendChild(li);
+            });
+            document.getElementById('thresholdDisplay').textContent = data.volumeNeeded;
+            console.log('Volume needed set to:', data.volumeNeeded);
+          } else {
+            console.warn('No leaderboard data available');
+            leaderboardList.innerHTML = '<li class="list-group-item">No data available</li>';
+            document.getElementById('thresholdDisplay').textContent = 'N/A';
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching leaderboard data:', error);
+          document.getElementById('leaderboardList').innerHTML = '<li class="list-group-item text-danger">Error loading data</li>';
+          document.getElementById('thresholdDisplay').textContent = 'Error';
+        });
+    });
+  </script>
+  
+  <!-- Additional Scripts (e.g., modals, recaptcha) from your HowTo page -->
+  <script src="js/newBundle.min.js"></script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+</body>
+</html>
