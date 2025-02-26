@@ -238,7 +238,8 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       console.log('Document loaded. Fetching leaderboard data...');
-      fetch('http://localhost:8800/api/leaderboard')
+      fetch('https://www.bitcoinbay.com/api/leaderboard')
+    //   fetch('http://localhost:8800/api/leaderboard')
         .then(response => {
           console.log('API response received:', response);
           return response.json();
