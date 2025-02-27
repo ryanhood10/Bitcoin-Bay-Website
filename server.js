@@ -71,12 +71,10 @@ app.post('/send-email', (req, res) => {
 
 
 // New API route for Leaderboard data using csv-parse in array mode
+// New API route for Leaderboard data using csv-parse in array mode
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    // Use dynamic import for node-fetch
     const { default: fetch } = await import('node-fetch');
-
-    // Your published Google Sheet CSV URL
     const googleSheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhLDCWHWkHOWYMRGoCc9CP3tHyt04d_CIRf5ydJFqo0rbAQ6Wu45XzCwyaRgElVeile0Noe3BM-vDh/pub?output=csv';
     const response = await fetch(googleSheetUrl);
     const csvText = await response.text();
@@ -89,21 +87,23 @@ app.get('/api/leaderboard', async (req, res) => {
     });
     console.log('Records (array of arrays):', records);
 
-    // The first row is the header (but it contains extra columns). We only care about the first 3 columns.
+    // Extract subheading from cell G18 and user date from cell G19
+    const subheading = (records.length >= 18 && records[17].length >= 7) ? records[17][6].trim() : "";
+    const userDate = (records.length >= 19 && records[18].length >= 7) ? records[18][6].trim() : "";
+    console.log('Subheading (G18):', subheading);
+    console.log('User Date (G19):', userDate);
+
+    // Process data for leaderboard as before…
     const header = records[0].slice(0, 3);
     console.log('Header:', header);
 
-    // Use the remaining rows and map only the first three columns into objects
-    const dataRows = records.slice(1).map(row => {
-      return {
-        ID: row[0] ? row[0].trim() : '',
-        Count: row[1] ? row[1].trim() : '',
-        Volume: row[2] ? row[2].trim() : ''
-      };
-    });
+    const dataRows = records.slice(1).map(row => ({
+      ID: row[0] ? row[0].trim() : '',
+      Count: row[1] ? row[1].trim() : '',
+      Volume: row[2] ? row[2].trim() : ''
+    }));
     console.log('Data Rows:', dataRows);
 
-    // Filter rows that have a valid Volume (removing commas for numeric conversion)
     const validData = dataRows.filter(row => {
       if (!row.Volume) return false;
       const vol = parseFloat(row.Volume.replace(/,/g, ''));
@@ -111,33 +111,35 @@ app.get('/api/leaderboard', async (req, res) => {
     });
     console.log('Valid Data:', validData);
 
-    // Sort validData in descending order by Volume
     validData.sort((a, b) => {
       return parseFloat(b.Volume.replace(/,/g, '')) - parseFloat(a.Volume.replace(/,/g, ''));
     });
     console.log('Sorted Data:', validData);
 
-    // Calculate top 20% using Math.floor (so for 72 rows, Math.floor(72*0.2) = 14)
     const topCount = Math.floor(validData.length * 0.2);
     console.log('Total valid rows:', validData.length, 'Top count:', topCount);
 
     const topRows = validData.slice(0, topCount);
     console.log('Top 20% Rows:', topRows);
 
-    // Extract the account IDs (from column "ID")
     const leaderboardIDs = topRows.map(row => row.ID);
     console.log('Leaderboard IDs:', leaderboardIDs);
 
-    // "Volume needed" is the Volume value from the last person in the top group
     const volumeNeeded = topRows[topRows.length - 1].Volume;
     console.log('Volume Needed to Enter top 20%:', volumeNeeded);
 
-    res.json({ leaderboard: leaderboardIDs, volumeNeeded: volumeNeeded });
+    res.json({ 
+      leaderboard: leaderboardIDs, 
+      volumeNeeded: volumeNeeded,
+      subheading: subheading,
+      userDate: userDate
+    });
   } catch (error) {
     console.error('Error retrieving leaderboard data:', error);
     res.status(500).json({ error: 'Error retrieving leaderboard data' });
   }
 });
+
 
 
 
