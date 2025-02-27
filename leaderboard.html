@@ -192,9 +192,12 @@
       color: #ED8437;
     }
     .card .card-body,
-    .card .card-title,
     .card .card-text {
       color: #e0e0e0;
+    }
+    .card .card-title {
+        color: #e0e0e0;
+        font:bold;
     }
     /* Leaderboard list styling */
     #leaderboardList {
@@ -289,7 +292,10 @@
         </div>
       </div>
       <p class="mt-2 ml-2" style="font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; font-weight: bold;">
-        Last updated: <span id="userDate" style="color: #ED8437;"></span>
+        Last updated:
+        <br class="d-block d-md-none mb-1" />
+        
+        <span id="userDate" style="color: #ED8437;"></span>
       </p>
     </div>
   </div>
