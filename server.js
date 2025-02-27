@@ -71,7 +71,6 @@ app.post('/send-email', (req, res) => {
 
 
 // New API route for Leaderboard data using csv-parse in array mode
-// New API route for Leaderboard data using csv-parse in array mode
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const { default: fetch } = await import('node-fetch');
@@ -88,8 +87,9 @@ app.get('/api/leaderboard', async (req, res) => {
     console.log('Records (array of arrays):', records);
 
     // Extract subheading from cell G18 and user date from cell G19
-    const subheading = (records.length >= 18 && records[17].length >= 7) ? records[17][6].trim() : "";
-    const userDate = (records.length >= 19 && records[18].length >= 7) ? records[18][6].trim() : "";
+const subheading = (records.length >= 19 && records[18].length >= 7) ? records[18][6].trim() : "";
+const userDate = (records.length >= 20 && records[19].length >= 7) ? records[19][6].trim() : "";
+
     console.log('Subheading (G18):', subheading);
     console.log('User Date (G19):', userDate);
 
