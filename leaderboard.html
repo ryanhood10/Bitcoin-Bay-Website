@@ -253,7 +253,6 @@
     const topTen = data.leaderboard.slice(0, 10);
     topTen.forEach((account, index) => {
       const li = document.createElement('li');
-      li.className = 'list-group-item';
       let medal = '';
       // For top three positions, add the appropriate medal
       if (index === 0) {
