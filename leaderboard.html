@@ -74,6 +74,11 @@
   max-width: 33.33%;
   min-width: 200px;
 }
+.threshold-title {
+  font-size: 1.5rem;  /* Larger than the default card-title */
+  font-weight: bold;
+}
+
 
 /* For extra-small and small screens (up to 767.98px) */
 @media (max-width: 767.98px) {
@@ -81,6 +86,9 @@
   font-size: 1rem; /* Smaller than the main h1 */
   padding: 0.5rem 1rem;
 }
+.threshold-title {
+    font-size: 1.2rem;  /* Adjust to desired size on smaller screens */
+  }
       /* Reduce header font sizes */
   .leaderboard-container h1 {
     font-size: 1.8rem;
@@ -102,6 +110,9 @@
 @media (max-width: 575.98px) {
     #leadText {
     font-size: 0.9rem;
+  }
+  .threshold-title {
+    font-size: 1rem;  /* Adjust as needed for extra-small screens */
   }
     .leaderboard-container {
     max-width: 320px;
@@ -293,7 +304,7 @@
           Enter the Top 20%
         </div>
         <div class="card-body p-3">
-          <h3 id="thresholdDisplay" class="card-title">Loading...</h3>
+          <h3 id="thresholdDisplay" class="threshold-title">Loading...</h3>
           <p class="card-text">Achieve this weekly volume to earn your VIP bonus!</p>
         </div>
       </div>
