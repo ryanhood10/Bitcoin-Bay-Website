@@ -392,11 +392,10 @@
   console.log('Document loaded. Fetching leaderboard data...');
   fetch('https://www.bitcoinbay.com/api/leaderboard')
     .then(response => {
-      console.log('API response received:', response);
+      // console.log('API response received:', response);
       return response.json();
     })
     .then(data => {
-      console.log('Parsed JSON data:', data);
       const leaderboardList = document.getElementById('leaderboardList');
       leaderboardList.innerHTML = ''; // Clear the loading message
       
@@ -417,7 +416,7 @@
           leaderboardList.appendChild(li);
         });
         document.getElementById('thresholdDisplay').textContent = data.volumeNeeded;
-        console.log('Volume needed set to:', data.volumeNeeded);
+        // console.log('Volume needed set to:', data.volumeNeeded);
       } else {
         console.warn('No leaderboard data available');
         leaderboardList.innerHTML = '<li class="list-group-item">No data available</li>';
