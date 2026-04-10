@@ -116,6 +116,27 @@
       text-align: center;
       padding: 60px 24px 40px;
       position: relative;
+      overflow: hidden;
+    }
+
+    .lb-info-callout {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      text-align: left;
+      padding: 12px 18px;
+      background: rgba(86,204,242,0.06);
+      border: 1px solid rgba(86,204,242,0.15);
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .lb-info-callout span {
+      color: #B0C4DE;
+      font-size: 11px;
+      line-height: 1.7;
+    }
+    .lb-info-callout strong {
+      color: #F7941D;
     }
 
     .lb-hero::before {
@@ -433,6 +454,14 @@
         padding: 7px 14px;
         font-size: 12px;
       }
+
+      .lb-info-callout {
+        position: static;
+        display: inline-block;
+        margin-top: 16px;
+        white-space: normal;
+        max-width: 280px;
+      }
     }
   </style>
 </head>
@@ -450,14 +479,14 @@
   </header>
 
   <!-- Hero -->
-  <div class="lb-hero" style="position:relative;">
-    <div style="position:absolute;top:24px;right:24px;text-align:left;padding:12px 18px;background:rgba(86,204,242,0.06);border:1px solid rgba(86,204,242,0.15);border-radius:10px;white-space:nowrap;">
-      <span style="color:#B0C4DE;font-size:11px;line-height:1.7;">Based on Total Volume<br>Casino wagers are <strong style="color:#F7941D;">NOT</strong> included</span>
-    </div>
+  <div class="lb-hero">
     <div class="lb-badge">🏆 Weekly Rankings</div>
     <h1 class="lb-title">VIP Top 10</h1>
     <p class="lb-subtitle">This week's top performing players on Bitcoin Bay.</p>
     <div class="lb-week" id="lbWeek">📅 Loading week…</div>
+    <div class="lb-info-callout">
+      <span>Based on Total Volume<br>Casino wagers are <strong>NOT</strong> included</span>
+    </div>
   </div>
 
   <!-- Leaderboard -->
