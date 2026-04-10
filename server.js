@@ -14,26 +14,57 @@ dotenv.config();
 // Enable CORS for all routes
 app.use(cors());
 
-// Serve static files
-app.use(express.static(path.join(__dirname)));
+// Serve static files. IMPORTANT: pass {index: false} so express.static does
+// NOT auto-serve index.html for "/" — that would shadow the explicit
+// app.get('/') route below and keep serving the OLD design.
+app.use(express.static(path.join(__dirname), { index: false }));
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
 
-// Serve your index.html
+// -----------------------------------------------------------------------------
+// LIVE ROUTES — now serving the redesigned pages.
+// The old designs are still on disk (index.html, leaderboard.html) and still
+// reachable via the /legacy/* rollback routes further down. To instantly
+// revert, just swap the sendFile targets here back to the old filenames.
+// -----------------------------------------------------------------------------
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.new.html'));
+});
+
+app.get('/leaderboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'leaderboard.new.html'));
+});
+
+app.get('/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'register.new.html'));
+});
+
+// -----------------------------------------------------------------------------
+// ROLLBACK ROUTES — the previous design is still reachable here in case the
+// new one needs to be rolled back or diffed against. Safe to delete after a
+// week or two of the new site being solid.
+// -----------------------------------------------------------------------------
+app.get('/legacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
-
-
-// Define route for HowTo
-app.get('/HowTo', (req, res) => {
-  res.sendFile(path.join(__dirname, 'howto.html'));
+app.get('/legacy/leaderboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'leaderboard.html'));
 });
 
-// Define route for Leaderboard
-app.get('/leaderboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'leaderboard.html'));
+// -----------------------------------------------------------------------------
+// PREVIEW ROUTES — kept alive as a second rollback escape hatch. These still
+// serve the new design, same as the live routes, so you can link-share a
+// preview URL without touching live traffic.
+// -----------------------------------------------------------------------------
+app.get('/preview', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.new.html'));
+});
+app.get('/preview/leaderboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'leaderboard.new.html'));
+});
+app.get('/preview/register', (req, res) => {
+  res.sendFile(path.join(__dirname, 'register.new.html'));
 });
 
 // Email sending route
@@ -145,6 +176,22 @@ app.get('/api/leaderboard', async (req, res) => {
 
 
 
+
+// 404 catch-all — anything not matched above or served by express.static
+// falls through here. Keep it last so it doesn't shadow real routes.
+app.use((req, res) => {
+  res.status(404).type('html').send(
+    '<!doctype html><html><head><meta charset="utf-8"><title>Not Found · Bitcoin Bay</title>' +
+    '<style>html,body{height:100%;margin:0;font-family:Inter,-apple-system,sans-serif;' +
+    'background:radial-gradient(at 60% 0%,#0E2245 0%,#091830 45%,#071225 100%);color:#fff;' +
+    'display:flex;align-items:center;justify-content:center;text-align:center}' +
+    'h1{font-size:48px;margin:0 0 8px;background:linear-gradient(135deg,#F7941D,#F26522);' +
+    '-webkit-background-clip:text;-webkit-text-fill-color:transparent}' +
+    'p{color:#6B8DB5;margin:8px 0 24px}a{color:#F7941D;text-decoration:none;font-weight:600}' +
+    '</style></head><body><div><h1>404</h1><p>That page doesn\u2019t exist.</p>' +
+    '<a href="/">\u2190 Back to Bitcoin Bay</a></div></body></html>'
+  );
+});
 
 // Start server
 const PORT = process.env.PORT || 8800;

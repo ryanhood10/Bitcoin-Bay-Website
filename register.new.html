@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Account | Bitcoin Bay</title>
+  <meta name="description" content="Create your Bitcoin Bay account — Bitcoin sports betting, casino, and rewards. Get 10% Free Play on every deposit."/>
+  <meta name="format-detection" content="telephone=no"/>
+  <!-- Open Graph / social share -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Bitcoin Bay"/>
+  <meta property="og:title" content="Create Account | Bitcoin Bay"/>
+  <meta property="og:description" content="Create your Bitcoin Bay account — Bitcoin sports betting, casino, and rewards. Get 10% Free Play on every deposit."/>
+  <meta property="og:image" content="/bb-logo.png"/>
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:title" content="Create Account | Bitcoin Bay"/>
+  <meta name="twitter:description" content="Create your Bitcoin Bay account — Bitcoin sports betting, casino, and rewards. Get 10% Free Play on every deposit."/>
+  <meta name="twitter:image" content="/bb-logo.png"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F7941D;
+      --gold-light: #FDCB6E;
+      --gold-dark: #D47812;
+      --orange: #F26522;
+      --bg-dark: #0A1628;
+      --bg-card: #0D2240;
+      --bg-card2: #112A4F;
+      --bg-surface: #163060;
+      --text-primary: #FFFFFF;
+      --text-secondary: #B0C4DE;
+      --text-muted: #6B8DB5;
+      --accent-blue: #56CCF2;
+      --accent-green: #22C55E;
+      --border: rgba(86,204,242,0.1);
+      --font-main: 'Inter', -apple-system, sans-serif;
+      --font-display: 'Space Grotesk', 'Inter', sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--bg-dark);
+      font-family: var(--font-main);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    body {
+      background: radial-gradient(ellipse at 50% 0%, #0E2245 0%, #091830 45%, #071225 100%);
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* Header */
+    .reg-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,22,40,0.95);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .reg-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .reg-logo img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+    }
+
+    .reg-logo-text {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 20px;
+    }
+
+    .reg-logo-text span:first-child { color: var(--gold); }
+    .reg-logo-text span:last-child { color: #fff; }
+
+    .reg-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 9999px;
+      padding: 9px 20px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    .reg-back:hover {
+      background: rgba(255,255,255,0.09);
+      color: #fff;
+    }
+
+    /* Hero */
+    .reg-hero {
+      text-align: center;
+      padding: 48px 24px 20px;
+      position: relative;
+    }
+
+    .reg-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(247,148,29,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .reg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(247,148,29,0.1);
+      border: 1px solid rgba(247,148,29,0.3);
+      border-radius: 9999px;
+      padding: 6px 18px;
+      font-size: 11px;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .reg-title {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, var(--orange) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .reg-subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* Form Container */
+    .reg-container {
+      max-width: 450px;
+      margin: 0 auto 60px;
+      padding: 0 24px;
+    }
+
+    .reg-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(247,148,29,0.18);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(247,148,29,0.06);
+      margin-top: 24px;
+    }
+
+    .reg-field {
+      margin-bottom: 18px;
+    }
+
+    .reg-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .reg-row .reg-field {
+      flex: 1;
+    }
+
+    .reg-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .reg-input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: #fff;
+      font-size: 15px;
+      font-family: var(--font-main);
+      outline: none;
+      transition: 0.2s;
+      box-sizing: border-box;
+    }
+
+    .reg-input:focus {
+      border-color: rgba(247,148,29,0.5);
+    }
+
+    .reg-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .reg-pass-wrap {
+      position: relative;
+    }
+
+    .reg-pass-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 18px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .reg-pass-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .reg-terms {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+
+    .reg-terms input[type="checkbox"] {
+      margin-top: 3px;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .reg-terms a {
+      color: var(--gold);
+      text-decoration: underline;
+    }
+
+    .reg-captcha-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .reg-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--gold), var(--orange));
+      color: #0A1628;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-main);
+      letter-spacing: 0.3px;
+      box-shadow: 0 8px 32px rgba(247,148,29,0.3);
+      transition: 0.25s;
+      margin-top: 6px;
+    }
+
+    .reg-submit:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 40px rgba(247,148,29,0.45);
+    }
+
+    .reg-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .reg-error {
+      display: none;
+      color: #FF5757;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    /* Success panel (shown after successful submit) */
+    .reg-success {
+      display: none;
+      text-align: center;
+    }
+
+    .reg-success-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .reg-success-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--gold-light);
+      margin-bottom: 10px;
+    }
+
+    .reg-success-text {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    /* Signin link */
+    .reg-signin-link {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .reg-signin-link a {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .reg-signin-link a:hover {
+      color: var(--gold-light);
+    }
+
+    /* Trust badge */
+    .reg-trust {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .reg-trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(247,148,29,0.28);
+      background: rgba(247,148,29,0.07);
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+    }
+
+    /* Bonus banner */
+    .reg-bonus {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(247,148,29,0.08);
+      border: 1px solid rgba(247,148,29,0.2);
+      border-radius: 12px;
+      padding: 12px 20px;
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .reg-bonus strong {
+      color: var(--gold);
+    }
+
+    /* Footer */
+    .reg-footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .reg-footer a {
+      color: var(--text-muted);
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .reg-header {
+        padding: 14px 16px;
+      }
+
+      .reg-logo-text {
+        font-size: 16px;
+      }
+
+      .reg-hero {
+        padding: 32px 16px 16px;
+      }
+
+      .reg-container {
+        padding: 0 16px;
+      }
+
+      .reg-card {
+        padding: 28px 20px;
+      }
+
+      .reg-row {
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .reg-back {
+        padding: 7px 14px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="reg-header">
+    <a href="/" class="reg-logo">
+      <img src="bb-logo.png" alt="Bitcoin Bay">
+      <div class="reg-logo-text">
+        <span>BITCOIN</span> <span>BAY</span>
+      </div>
+    </a>
+    <a href="/" class="reg-back">← Back to Sign In</a>
+  </header>
+
+  <!-- Hero -->
+  <div class="reg-hero">
+    <h1 class="reg-title">Create Your Account</h1>
+    <div class="reg-badge">⚡ Account Number will be sent to your email</div>
+  </div>
+
+  <!-- Form -->
+  <div class="reg-container">
+    <div class="reg-card">
+
+      <!--
+        IMPORTANT: This form posts to the wager backend using the same
+        action URL, field names, and hidden-iframe target as the live
+        site. Do not rename the inputs - the wager backend expects
+        exactly these field names: firstname, lastname, email, password,
+        phone, promo. A separate fetch to /send-email triggers the
+        Nodemailer notification (same as the current live site).
+      -->
+      <form id="createAccountForm"
+            method="post"
+            action="https://wager.bitcoinbay.com/sites/bitcoinbay.ag/createAccount.php"
+            target="iframecreate"
+            novalidate>
+
+        <div id="regFormPanel">
+
+          <!-- First / Last Name -->
+          <div class="reg-row">
+            <div class="reg-field">
+              <label class="reg-label" for="reg-firstname">First Name</label>
+              <input id="reg-firstname" class="reg-input" name="firstname" type="text" placeholder="First name" autocomplete="given-name" required>
+              <div class="reg-error" id="reg-err-firstname">First name is required</div>
+            </div>
+            <div class="reg-field">
+              <label class="reg-label" for="reg-lastname">Last Name</label>
+              <input id="reg-lastname" class="reg-input" name="lastname" type="text" placeholder="Last name" autocomplete="family-name" required>
+              <div class="reg-error" id="reg-err-lastname">Last name is required</div>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="reg-field">
+            <label class="reg-label" for="reg-email">Email Address</label>
+            <input id="reg-email" class="reg-input" name="email" type="text" placeholder="you@email.com" autocomplete="email" required>
+            <div class="reg-error" id="reg-err-email">Valid email is required</div>
+          </div>
+
+          <!-- Confirm Email -->
+          <div class="reg-field">
+            <label class="reg-label" for="reg-email2">Confirm Email</label>
+            <input id="reg-email2" class="reg-input" type="text" placeholder="Confirm your email" autocomplete="email" required>
+            <div class="reg-error" id="reg-err-email2">Emails must match</div>
+          </div>
+
+          <!-- Phone -->
+          <div class="reg-field">
+            <label class="reg-label" for="reg-phone">Phone Number</label>
+            <input id="reg-phone" class="reg-input" name="phone" type="tel" placeholder="(555) 123-4567" autocomplete="tel" required>
+            <div class="reg-error" id="reg-err-phone">10-digit phone number is required</div>
+          </div>
+
+          <!-- Password -->
+          <div class="reg-field">
+            <label class="reg-label" for="reg-pass">Password</label>
+            <div class="reg-pass-wrap">
+              <input id="reg-pass" class="reg-input" name="password" type="password" placeholder="Create a password" autocomplete="new-password" style="padding-right:48px;" minlength="4" maxlength="10" required>
+              <button class="reg-pass-toggle" id="reg-pass-toggle-btn" tabindex="-1" type="button" aria-label="Show password">👁</button>
+            </div>
+            <div class="reg-pass-hint">4–10 characters, letters and numbers only. Save this password!</div>
+            <div class="reg-error" id="reg-err-pass">Password must be 4–10 characters, letters and numbers only</div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="reg-field">
+            <label class="reg-label" for="reg-pass2">Confirm Password</label>
+            <div class="reg-pass-wrap">
+              <input id="reg-pass2" class="reg-input" type="password" placeholder="Confirm your password" autocomplete="new-password" style="padding-right:48px;" minlength="4" maxlength="10" required>
+              <button class="reg-pass-toggle" id="reg-pass2-toggle-btn" tabindex="-1" type="button" aria-label="Show password">👁</button>
+            </div>
+            <div class="reg-error" id="reg-err-pass2">Passwords must match</div>
+          </div>
+
+          <!-- Referred By (optional) -->
+          <div class="reg-field">
+            <label class="reg-label" for="reg-promo">Referred By <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+            <input id="reg-promo" class="reg-input" name="promo" type="text" placeholder="Referral account #" autocomplete="off">
+          </div>
+
+          <!-- Terms -->
+          <label class="reg-terms" for="reg-terms">
+            <input type="checkbox" id="reg-terms" required>
+            <span>I agree to the <a href="/termsandcond.html" target="_blank">Terms &amp; Conditions</a></span>
+          </label>
+          <div class="reg-error" id="reg-err-terms" style="margin-top:-10px;margin-bottom:12px;">You must agree to the terms</div>
+
+          <!-- reCAPTCHA -->
+          <div class="reg-captcha-wrap">
+            <div id="me_captch"></div>
+          </div>
+          <div class="reg-error" id="reg-err-captcha" style="text-align:center;margin-top:-10px;margin-bottom:12px;">Please verify you are not a robot</div>
+
+          <!-- Submit -->
+          <button class="reg-submit" id="reg-submit-btn" type="button">
+            Create Free Account →
+          </button>
+
+        </div>
+
+      </form>
+
+      <!-- Success panel (shown after successful submit) -->
+      <div class="reg-success" id="regSuccessPanel">
+        <div class="reg-success-icon">🎉</div>
+        <div class="reg-success-title">Account Submitted!</div>
+        <div class="reg-success-text">
+          Your account is being created. Watch your email for your login ID and details.
+          <br><br>
+          Once you've got your login, head back to the homepage to sign in.
+        </div>
+        <a href="/" class="reg-submit" style="display:inline-block;text-align:center;text-decoration:none;padding:14px 40px;width:auto;">
+          Back to Sign In
+        </a>
+      </div>
+
+      <!-- Sign In link -->
+      <div class="reg-signin-link">
+        Already have an account? <a href="/">Sign In</a>
+      </div>
+
+      <!-- Trust -->
+      <div class="reg-trust">
+        <div class="reg-trust-badge">
+          <span style="font-size:13px;">🔒</span> 256-bit SSL Encrypted
+        </div>
+      </div>
+    </div>
+
+    <!-- Bonus reminder -->
+    <div class="reg-bonus">
+      ⚡ Every Bitcoin deposit gets a <strong>&nbsp;10% Free Play Bonus</strong>
+    </div>
+
+    <!-- Need help -->
+    <div style="text-align:center;margin-top:16px;">
+      <span style="color:var(--text-muted);font-size:13px;">Need help? </span>
+      <a href="sms:17022136332" style="color:var(--gold);font-size:13px;font-weight:600;">💬 Text Us: 702-213-6332</a>
+    </div>
+  </div>
+
+  <!--
+    Hidden iframe that receives the wager backend's response.
+    The form above targets this iframe, so the POST does not navigate
+    the page away. Same pattern as the current live site.
+  -->
+  <iframe id="iframecreate" name="iframecreate" style="display:none;" aria-hidden="true"></iframe>
+
+  <!-- Footer -->
+  <div class="reg-footer">
+    <p>© 2026 Bitcoin Bay &nbsp;•&nbsp; <a href="/termsandcond.html">Terms &amp; Conditions</a> &nbsp;•&nbsp; <a href="https://www.instagram.com/bitcoin_bay/">@BitcoinBay_com</a></p>
+  </div>
+
+  <!-- reCAPTCHA (same site key + theme as the current live site) -->
+  <script>
+    var onloadCallback = function () {
+      if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+        grecaptcha.render('me_captch', {
+          sitekey: '6Ldo7BAqAAAAAEAM6cDjWvoDm6Tp9ryPorC5eeMV',
+          theme: 'dark'
+        });
+      }
+    };
+  </script>
+  <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit" async defer></script>
+
+  <!-- Form logic (vanilla JS — no jQuery) -->
+  <script>
+  (function () {
+    'use strict';
+
+    // --- Helpers ---------------------------------------------------------
+    function $(id) { return document.getElementById(id); }
+
+    function showError(inputId, errorId) {
+      var inp = $(inputId);
+      var err = $(errorId);
+      if (inp) inp.style.borderColor = 'rgba(255,87,87,0.5)';
+      if (err) err.style.display = 'block';
+    }
+
+    function clearError(inputId, errorId) {
+      var inp = $(inputId);
+      var err = $(errorId);
+      if (inp) inp.style.borderColor = 'rgba(255,255,255,0.08)';
+      if (err) err.style.display = 'none';
+    }
+
+    var EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+    var PASS_RE  = /^[a-zA-Z0-9 ]*$/; // letters + numbers + spaces (same as live)
+
+    // --- Password show/hide toggles --------------------------------------
+    $('reg-pass-toggle-btn').addEventListener('click', function () {
+      var p = $('reg-pass');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    });
+    $('reg-pass2-toggle-btn').addEventListener('click', function () {
+      var p = $('reg-pass2');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    });
+
+    // --- Phone auto-format: "(xxx) xxx - xxxx" (16 chars) ----------------
+    // Ported verbatim from the current live site so the wager backend
+    // receives the phone number in exactly the format it expects.
+    var phoneEl = $('reg-phone');
+
+    function isNumericInput(e) {
+      var k = e.keyCode;
+      return (k >= 48 && k <= 57) || (k >= 96 && k <= 105);
+    }
+    function isModifierKey(e) {
+      var k = e.keyCode;
+      return (e.shiftKey === true || k === 35 || k === 36) ||
+             (k === 8 || k === 9 || k === 13 || k === 46) ||
+             (k > 36 && k < 41) ||
+             ((e.ctrlKey === true || e.metaKey === true) &&
+              (k === 65 || k === 67 || k === 86 || k === 88 || k === 90));
+    }
+    function enforceFormat(e) {
+      if (!isNumericInput(e) && !isModifierKey(e)) e.preventDefault();
+    }
+    function formatToPhone(e) {
+      if (isModifierKey(e)) return;
+      var input = e.target.value.replace(/\D/g, '').substring(0, 10);
+      var area  = input.substring(0, 3);
+      var mid   = input.substring(3, 6);
+      var last  = input.substring(6, 10);
+      if (input.length > 6)      e.target.value = '(' + area + ') ' + mid + ' - ' + last;
+      else if (input.length > 3) e.target.value = '(' + area + ') ' + mid;
+      else if (input.length > 0) e.target.value = '(' + area;
+    }
+    phoneEl.addEventListener('keydown', enforceFormat);
+    phoneEl.addEventListener('keyup', formatToPhone);
+
+    // Clear error state as the user edits
+    ['reg-firstname','reg-lastname','reg-email','reg-email2','reg-phone','reg-pass','reg-pass2'].forEach(function (id) {
+      $(id).addEventListener('input', function () {
+        clearError(id, 'reg-err-' + id.replace('reg-', ''));
+      });
+    });
+    $('reg-terms').addEventListener('change', function () {
+      $('reg-err-terms').style.display = this.checked ? 'none' : 'block';
+    });
+
+    // --- Send email notification (same endpoint as the live site) -------
+    function sendEmail(formData) {
+      return fetch('/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      }).then(function (r) {
+        return r.text().then(function (t) {
+          console.log('[send-email]', r.status, t);
+        });
+      }).catch(function (err) {
+        // Non-fatal — the real account creation already happened via the
+        // hidden iframe form post. We just log and move on.
+        console.error('[send-email] error:', err);
+      });
+    }
+
+    // --- Full validation --------------------------------------------------
+    function validate() {
+      var ok = true;
+
+      var firstname = $('reg-firstname').value.trim();
+      var lastname  = $('reg-lastname').value.trim();
+      var email     = $('reg-email').value.trim();
+      var email2    = $('reg-email2').value.trim();
+      var phone     = $('reg-phone').value.trim();
+      var pass      = $('reg-pass').value;
+      var pass2     = $('reg-pass2').value;
+      var terms     = $('reg-terms').checked;
+
+      if (!firstname) { showError('reg-firstname', 'reg-err-firstname'); ok = false; }
+      if (!lastname)  { showError('reg-lastname',  'reg-err-lastname');  ok = false; }
+
+      if (!email || !EMAIL_RE.test(email)) {
+        showError('reg-email', 'reg-err-email'); ok = false;
+      }
+      if (!email2 || email !== email2) {
+        showError('reg-email2', 'reg-err-email2'); ok = false;
+      }
+
+      // Phone must be exactly 16 chars — same rule the live site enforces
+      // because the wager backend expects "(xxx) xxx - xxxx" format.
+      if (phone.length !== 16) {
+        showError('reg-phone', 'reg-err-phone'); ok = false;
+      }
+
+      if (!pass || pass.length < 4 || pass.length > 10 || !PASS_RE.test(pass)) {
+        showError('reg-pass', 'reg-err-pass'); ok = false;
+      }
+      if (!pass2 || pass !== pass2) {
+        showError('reg-pass2', 'reg-err-pass2'); ok = false;
+      }
+
+      if (!terms) {
+        $('reg-err-terms').style.display = 'block';
+        ok = false;
+      }
+
+      // reCAPTCHA
+      var captchaErr = $('reg-err-captcha');
+      var rcres = '';
+      try {
+        rcres = (typeof grecaptcha !== 'undefined' && grecaptcha.getResponse) ? grecaptcha.getResponse() : '';
+      } catch (e) { rcres = ''; }
+      if (!rcres) {
+        captchaErr.style.display = 'block';
+        ok = false;
+      } else {
+        captchaErr.style.display = 'none';
+      }
+
+      return ok;
+    }
+
+    // --- Submit handler ---------------------------------------------------
+    $('reg-submit-btn').addEventListener('click', function () {
+      if (!validate()) return;
+
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+
+      var formData = {
+        firstName: $('reg-firstname').value.trim(),
+        lastName:  $('reg-lastname').value.trim(),
+        email:     $('reg-email').value.trim(),
+        phone:     $('reg-phone').value.trim(),
+        promo:     $('reg-promo').value.trim()
+      };
+
+      // 1. Fire the email notification (non-blocking)
+      sendEmail(formData);
+
+      // 2. Submit the real form to the wager backend (loads into the
+      //    hidden iframe so the page does not navigate away).
+      $('createAccountForm').submit();
+
+      // 3. Swap the form for a success panel after a short delay so the
+      //    iframe has time to load the response.
+      setTimeout(function () {
+        $('regFormPanel').style.display = 'none';
+        $('regSuccessPanel').style.display = 'block';
+      }, 800);
+    });
+
+  })();
+  </script>
+
+</body>
+</html>

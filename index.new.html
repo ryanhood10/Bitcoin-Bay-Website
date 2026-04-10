@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bitcoin Bay | Bitcoin · Sports · Rewards</title>
+  <meta name="description" content="Bitcoin Bay - Bitcoin Sports Betting &amp; Casino. 10% Free Play on every deposit, 20-40% referral commission, free daily payouts guaranteed."/>
+  <meta name="format-detection" content="telephone=no"/>
+  <!-- Open Graph / social share -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Bitcoin Bay"/>
+  <meta property="og:title" content="Bitcoin Bay | Bitcoin · Sports · Rewards"/>
+  <meta property="og:description" content="Bitcoin Bay - Bitcoin Sports Betting &amp; Casino. 10% Free Play on every deposit, 20-40% referral commission, free daily payouts guaranteed."/>
+  <meta property="og:image" content="/bb-logo.png"/>
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:title" content="Bitcoin Bay | Bitcoin · Sports · Rewards"/>
+  <meta name="twitter:description" content="Bitcoin Bay - Bitcoin Sports Betting &amp; Casino. 10% Free Play on every deposit, 20-40% referral commission, free daily payouts guaranteed."/>
+  <meta name="twitter:image" content="/bb-logo.png"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; min-height: 100%; overflow-x: hidden; background: radial-gradient(ellipse at 60% 0%, #0E2245 0%, #091830 45%, #071225 100%); font-family: 'Inter', sans-serif; }
+    @keyframes bb-dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+    #bb-ticker-live-dot { animation: bb-dot-pulse 2s ease-in-out infinite; }
+    
+body {
+    color: inherit;
+    /* text-align: left; */
+    background-color: transparent;
+    font-family: 'Play', sans-serif !important;
+}
+/* a:hover {
+    color: white;
+    text-decoration: none;
+}
+a {
+    color: #ED8437;
+} */
+.modal-header {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    align-items: flex-start;
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    border-top-left-radius: .3rem;
+    border-top-right-radius: .3rem;
+    background-color: #112A4F;
+}
+/* .btn-primary {
+    color: #fff;
+    background-color: #ee8034;
+    border-color: white;
+    padding: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-weight: 600;
+    border-radius: 10px;
+}
+.btn-primary:hover {
+  background-color: #151515;
+}
+
+.btn-primary2 {
+    color: #fff;
+    background-color: rgba(128, 128, 128, 0.625);
+    border-color: white;
+    padding: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-weight: 600;
+    border-radius: 10px;
+  
+}
+.btn-primary2:hover {
+  background-color: #fff;
+  color: #151515;
+
+} */
+
+.close {
+    float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    opacity: .5;
+}
+.close:focus, .close:hover {
+    color: white;
+    text-decoration: none;
+}
+label {
+    color: #222233;
+}
+
+
+      @keyframes claude-pulse {
+        0% {
+          box-shadow: 
+            inset 0 0 10px rgba(247, 148, 29, 0.5),
+            inset 0 0 20px rgba(247, 148, 29, 0.3),
+            inset 0 0 30px rgba(247, 148, 29, 0.1);
+        }
+        50% {
+          box-shadow: 
+            inset 0 0 15px rgba(247, 148, 29, 0.7),
+            inset 0 0 25px rgba(247, 148, 29, 0.5),
+            inset 0 0 35px rgba(247, 148, 29, 0.2);
+        }
+        100% {
+          box-shadow: 
+            inset 0 0 10px rgba(247, 148, 29, 0.5),
+            inset 0 0 20px rgba(247, 148, 29, 0.3),
+            inset 0 0 30px rgba(247, 148, 29, 0.1);
+        }
+      }
+    
+
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #F7941D;
+    --gold-light: #FDCB6E;
+    --gold-dark: #D47812;
+    --orange: #F26522;
+    --bg-dark: #0A1628;
+    --bg-card: #0D2240;
+    --bg-card2: #112A4F;
+    --bg-surface: #163060;
+    --text-primary: #FFFFFF;
+    --text-secondary: #B0C4DE;
+    --text-muted: #6B8DB5;
+    --accent-blue: #56CCF2;
+    --accent-green: #22C55E;
+    --border: rgba(86,204,242,0.1);
+    --glow-gold: 0 0 40px rgba(247,148,29,0.3);
+    --glow-orange: 0 0 30px rgba(242,101,34,0.3);
+    --font-main: 'Inter', -apple-system, sans-serif;
+    --font-display: 'Space Grotesk', 'Inter', sans-serif;
+    --radius: 16px;
+    --radius-sm: 8px;
+    --radius-lg: 24px;
+    --radius-pill: 9999px;
+    --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-dark) !important;
+    color: var(--text-primary) !important;
+    font-family: var(--font-main) !important;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  img { max-width: 100%; height: auto; }
+  a { text-decoration: none; color: inherit; }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-dark); }
+  ::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 3px; }
+
+  /* ===== HEADER / NAV ===== */
+  header, [role="banner"] {
+    background: rgba(10,11,15,0.95) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid var(--border) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 9999 !important;
+    padding: 0 !important;
+  }
+
+  header > *, [role="banner"] > * {
+    display: flex;
+    align-items: center;
+  }
+
+  /* nav wrapper */
+  .bb-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Logo area */
+  header img, [role="banner"] img {
+    height: 44px !important;
+    width: auto !important;
+    filter: drop-shadow(0 0 12px rgba(86,204,242,0.4)) !important;
+  }
+
+  /* Nav button group */
+  .bb-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Hide original nav links and rebuild */
+  [role="banner"] [role="region"]:last-child {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 0 !important;
+    background: none !important;
+  }
+
+  [role="banner"] [role="region"]:last-child a {
+    padding: 8px 20px !important;
+    border-radius: var(--radius-pill) !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    letter-spacing: 0.3px !important;
+    transition: var(--transition) !important;
+  }
+
+  [role="banner"] [role="region"]:last-child a:first-child {
+    border: 1.5px solid rgba(247,148,29,0.5) !important;
+    color: var(--gold) !important;
+    background: transparent !important;
+  }
+  [role="banner"] [role="region"]:last-child a:first-child:hover {
+    background: rgba(247,148,29,0.1) !important;
+    border-color: var(--gold) !important;
+  }
+
+  [role="banner"] [role="region"]:last-child a:last-child {
+    background: linear-gradient(135deg, var(--gold), var(--orange)) !important;
+    color: #0A1628 !important;
+    box-shadow: var(--glow-gold) !important;
+  }
+  [role="banner"] [role="region"]:last-child a:last-child:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 0 50px rgba(247,148,29,0.45) !important;
+  }
+
+  /* ===== HERO SECTION ===== */
+  main > [role="region"]:first-child,
+  main > section:first-child {
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(247,148,29,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 80% 50%, rgba(242,101,34,0.08) 0%, transparent 50%),
+                var(--bg-dark) !important;
+    min-height: 85vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 80px 24px 60px !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  main > [role="region"]:first-child::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(247,148,29,0.03) 45deg, transparent 90deg);
+    animation: bb-spin 20s linear infinite;
+  }
+
+  @keyframes bb-spin { to { transform: rotate(360deg); } }
+  @keyframes bb-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes bb-pulse-glow { 0%,100%{box-shadow:var(--glow-gold)} 50%{box-shadow:0 0 60px rgba(247,148,29,0.5)} }
+  @keyframes bb-slide-up { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes bb-ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  main > [role="region"]:first-child > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Hero headings */
+  main > [role="region"]:first-child h1,
+  main > [role="region"]:first-child h2 {
+    font-family: var(--font-display) !important;
+    font-weight: 800 !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.03em !important;
+    animation: bb-slide-up 0.8s ease both !important;
+  }
+
+  main > [role="region"]:first-child h1:first-of-type {
+    font-size: clamp(28px, 6vw, 64px) !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
+  }
+
+  main > [role="region"]:first-child h2:first-of-type {
+    font-size: clamp(14px, 3vw, 18px) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 4px !important;
+    color: var(--gold) !important;
+    font-weight: 600 !important;
+    margin-bottom: 16px !important;
+    animation-delay: 0.1s !important;
+  }
+
+  main > [role="region"]:first-child h2:last-of-type {
+    font-size: clamp(36px, 8vw, 80px) !important;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, var(--orange) 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    margin-bottom: 24px !important;
+    animation-delay: 0.2s !important;
+  }
+
+  /* Hero subtext */
+  main > [role="region"]:first-child > div {
+    color: var(--text-secondary) !important;
+    font-size: 16px !important;
+    margin-bottom: 12px !important;
+    max-width: 500px !important;
+  }
+
+  /* Hero CTA buttons */
+  main > [role="region"]:first-child button,
+  main > [role="region"]:first-child .btn {
+    font-family: var(--font-main) !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    border-radius: var(--radius-pill) !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: var(--transition) !important;
+    letter-spacing: 0.3px !important;
+  }
+
+  main > [role="region"]:first-child a:has(button):first-of-type button {
+    background: linear-gradient(135deg, var(--gold), var(--orange)) !important;
+    color: #0A1628 !important;
+    padding: 14px 36px !important;
+    box-shadow: var(--glow-gold) !important;
+    animation: bb-pulse-glow 3s ease-in-out infinite !important;
+  }
+
+  main > [role="region"]:first-child a:has(button):last-of-type button {
+    background: transparent !important;
+    border: 1.5px solid rgba(255,255,255,0.2) !important;
+    color: var(--text-primary) !important;
+    padding: 13px 32px !important;
+  }
+  main > [role="region"]:first-child a:has(button):last-of-type button:hover {
+    border-color: var(--gold) !important;
+    color: var(--gold) !important;
+  }
+
+  /* Bonus badge */
+  .bb-bonus-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(247,148,29,0.1);
+    border: 1px solid rgba(247,148,29,0.3);
+    border-radius: var(--radius-pill);
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 20px !important;
+  }
+
+  /* AST Time pill */
+  main > [role="region"]:first-child > div:last-of-type {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-pill) !important;
+    padding: 6px 18px !important;
+    font-size: 12px !important;
+    color: var(--text-muted) !important;
+    margin-top: 8px !important;
+  }
+
+  /* ===== CRYPTO TICKER BAR ===== */
+  .bb-ticker-wrap {
+    background: var(--bg-card2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .bb-ticker-inner {
+    display: inline-flex;
+    gap: 40px;
+    animation: bb-ticker 30s linear infinite;
+  }
+  .bb-ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .bb-ticker-name { color: var(--text-primary); font-weight: 600; }
+  .bb-ticker-price { color: var(--gold); }
+
+  /* ===== STEPS CAROUSEL ===== */
+  main > [role="region"]:nth-child(2) {
+    background: var(--bg-card) !important;
+    padding: 80px 24px !important;
+    border-top: 1px solid var(--border) !important;
+  }
+
+  main > [role="region"]:nth-child(2) h2 {
+    font-family: var(--font-display) !important;
+    font-size: clamp(24px, 5vw, 40px) !important;
+    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    text-align: center !important;
+    margin-bottom: 48px !important;
+  }
+
+  /* Steps cards */
+  .bb-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .bb-step-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    text-align: center;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .bb-step-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--orange));
+    opacity: 0;
+    transition: var(--transition);
+  }
+  .bb-step-card:hover { transform: translateY(-6px); border-color: rgba(247,148,29,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+  .bb-step-card:hover::before { opacity: 1; }
+  .bb-step-num {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: #0A1628;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 20px rgba(247,148,29,0.35);
+  }
+  .bb-step-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  .bb-step-desc { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+
+  /* ===== WAYS TO PLAY ===== */
+  main > [role="region"]:nth-child(3) {
+    background: var(--bg-dark) !important;
+    padding: 80px 24px !important;
+    position: relative !important;
+  }
+
+  main > [role="region"]:nth-child(3) h2 {
+    font-family: var(--font-display) !important;
+    font-size: clamp(28px, 5vw, 44px) !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    margin-bottom: 12px !important;
+    background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+
+  main > [role="region"]:nth-child(3) > div:first-of-type {
+    text-align: center !important;
+    color: var(--text-secondary) !important;
+    font-size: 16px !important;
+    margin-bottom: 48px !important;
+    max-width: 600px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* Play cards grid */
+  .bb-play-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .bb-play-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+  }
+  .bb-play-card:hover { transform: translateY(-8px) scale(1.01); border-color: rgba(247,148,29,0.35); box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 30px rgba(247,148,29,0.1); }
+  .bb-play-img {
+    width: 100%; height: 160px; object-fit: cover;
+    filter: brightness(0.8) saturate(1.2);
+    transition: var(--transition);
+  }
+  .bb-play-card:hover .bb-play-img { filter: brightness(0.9) saturate(1.4); transform: scale(1.05); }
+  .bb-play-body { padding: 20px; }
+  .bb-play-tag {
+    display: inline-block;
+    background: rgba(247,148,29,0.12);
+    border: 1px solid rgba(247,148,29,0.25);
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: var(--radius-pill);
+    padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+  .bb-play-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .bb-play-desc { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+
+  /* ===== HOW TO / ACTION SECTION ===== */
+  main > [role="region"]:nth-child(4) {
+    background: linear-gradient(135deg, var(--bg-card2) 0%, var(--bg-card) 100%) !important;
+    padding: 80px 24px !important;
+    border-top: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  main > [role="region"]:nth-child(4) h2:first-of-type {
+    font-family: var(--font-display) !important;
+    font-size: clamp(24px, 4vw, 36px) !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    margin-bottom: 48px !important;
+    color: var(--gold) !important;
+  }
+
+  /* How-to cards */
+  .bb-howto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .bb-howto-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    transition: var(--transition);
+  }
+  .bb-howto-card:hover { border-color: rgba(247,148,29,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+  .bb-howto-icon {
+    width: 52px; height: 52px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, rgba(247,148,29,0.2), rgba(242,101,34,0.15));
+    border: 1px solid rgba(247,148,29,0.2);
+  }
+  .bb-howto-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--text-primary); }
+  .bb-howto-list { list-style: none; }
+  .bb-howto-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    color: var(--text-secondary); font-size: 14px; line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .bb-howto-list li::before {
+    content: '→';
+    color: var(--gold);
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .bb-howto-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--gold); font-size: 13px; font-weight: 600;
+    margin-top: 16px;
+    transition: var(--transition);
+  }
+  .bb-howto-link:hover { color: var(--gold-light); gap: 10px; }
+
+  /* ===== CRYPTO SECTION ===== */
+  main > [role="region"]:nth-child(5) {
+    background: var(--bg-dark) !important;
+    padding: 80px 24px !important;
+  }
+  main > [role="region"]:nth-child(5) h2 {
+    font-family: var(--font-display) !important;
+    font-size: clamp(24px, 4vw, 36px) !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    margin-bottom: 48px !important;
+  }
+
+  /* Crypto grid */
+  .bb-crypto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .bb-crypto-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 16px;
+    text-align: center;
+    transition: var(--transition);
+    position: relative;
+  }
+  .bb-crypto-card.featured {
+    border-color: rgba(247,148,29,0.4);
+    background: rgba(247,148,29,0.05);
+  }
+  .bb-crypto-card:hover { transform: translateY(-4px); border-color: rgba(247,148,29,0.35); box-shadow: 0 16px 32px rgba(0,0,0,0.3); }
+  .bb-crypto-badge {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    color: #0A1628; font-size: 10px; font-weight: 700;
+    padding: 3px 10px; border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .bb-crypto-name { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--text-primary); }
+  .bb-crypto-price { color: var(--gold); font-size: 16px; font-weight: 700; font-family: var(--font-display); }
+
+  /* ===== REFERRAL SECTION ===== */
+  main > [role="region"]:nth-child(6) {
+    background: linear-gradient(135deg, rgba(247,148,29,0.08) 0%, rgba(242,101,34,0.06) 100%) !important;
+    border-top: 1px solid rgba(247,148,29,0.15) !important;
+    padding: 80px 24px !important;
+    text-align: center !important;
+  }
+  main > [role="region"]:nth-child(6) h2 {
+    font-family: var(--font-display) !important;
+    font-size: clamp(28px, 5vw, 48px) !important;
+    font-weight: 800 !important;
+    margin-bottom: 12px !important;
+    background: linear-gradient(135deg, var(--gold-light), var(--orange)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
+  main > [role="region"]:nth-child(6) p,
+  main > [role="region"]:nth-child(6) > div {
+    color: var(--text-secondary) !important;
+    font-size: 16px !important;
+    max-width: 500px !important;
+    margin: 0 auto 24px !important;
+  }
+  .bb-referral-stat {
+    display: inline-flex; flex-direction: column;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 40px;
+    margin: 32px auto;
+  }
+  .bb-referral-stat-num {
+    font-family: var(--font-display);
+    font-size: 56px; font-weight: 900;
+    background: linear-gradient(135deg, var(--gold-light), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .bb-referral-stat-label { color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+
+  /* ===== FOOTER ===== */
+  main > [role="region"]:last-child,
+  footer {
+    background: var(--bg-card) !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 60px 24px 40px !important;
+    text-align: center !important;
+  }
+  main > [role="region"]:last-child h2 {
+    font-family: var(--font-display) !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+  }
+  main > [role="region"]:last-child p,
+  main > [role="region"]:last-child > div {
+    color: var(--text-secondary) !important;
+    font-size: 14px !important;
+    margin-bottom: 16px !important;
+  }
+  main > [role="region"]:last-child a {
+    color: var(--gold) !important;
+    font-weight: 600 !important;
+    transition: var(--transition) !important;
+  }
+  main > [role="region"]:last-child a:hover { color: var(--gold-light) !important; }
+
+  /* Copyright bar */
+  .bb-copyright {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  /* ===== FLOATING CTA ===== */
+  .bb-floating-cta {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    color: #0A1628;
+    font-weight: 700; font-size: 14px;
+    border: none; border-radius: var(--radius-pill);
+    padding: 14px 24px;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(247,148,29,0.45);
+    z-index: 9998;
+    transition: var(--transition);
+    animation: bb-float 3s ease-in-out infinite;
+    font-family: var(--font-main);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bb-floating-cta:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 16px 48px rgba(247,148,29,0.6);
+  }
+
+  /* ===== GENERAL TYPOGRAPHY OVERRIDES ===== */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display) !important;
+  }
+
+  /* ===== GLOBAL LINK STYLE ===== */
+  a:not([class]) {
+    color: var(--gold) !important;
+    transition: var(--transition) !important;
+  }
+  a:not([class]):hover { color: var(--gold-light) !important; }
+
+  /* ===== SECTION DIVIDER ===== */
+  .bb-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dark), transparent);
+    margin: 0;
+    opacity: 0.3;
+  }
+
+  /* ===== SMOOTH ENTRANCE ANIMATIONS ===== */
+  main > [role="region"] {
+    animation: bb-slide-up 0.6s ease both !important;
+  }
+  main > [role="region"]:nth-child(2) { animation-delay: 0.1s !important; }
+  main > [role="region"]:nth-child(3) { animation-delay: 0.15s !important; }
+  main > [role="region"]:nth-child(4) { animation-delay: 0.2s !important; }
+  main > [role="region"]:nth-child(5) { animation-delay: 0.25s !important; }
+  main > [role="region"]:nth-child(6) { animation-delay: 0.3s !important; }
+
+  /* ===== HIDE JS CODE LEAKING IN PAGE ===== */
+  script { display: none !important; }
+
+
+  body { background: #0A1628 !important; }
+  section.banner2 { background: #0A1628 !important; background-image: none !important; }
+  section.banner2::before { display: none !important; }
+  section.section2 { background: #0D2240 !important; }
+  section.section4 { background: linear-gradient(135deg, #0D2240 0%, #112A4F 100%) !important; }
+  section.skill { background: #0A1628 !important; }
+  section.section6 { background: linear-gradient(135deg,rgba(247,148,29,0.08) 0%,rgba(242,101,34,0.06) 100%) !important; }
+  div.container { background: #0D2240 !important; }
+
+
+    section.section6 { 
+      background: linear-gradient(135deg, rgba(247,148,29,0.09) 0%, rgba(242,101,34,0.06) 100%) !important;
+      color: #ffffff !important;
+    }
+    section.section6 * { color: inherit !important; }
+    section.section6 h2 { 
+      background: linear-gradient(135deg, #FDCB6E, #F26522) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      color: transparent !important;
+    }
+    section.section6 p { color: #B0C4DE !important; }
+    section.section6 > div > p { color: #B0C4DE !important; }
+    section.section6 a { 
+      color: #0A1628 !important;
+      background: linear-gradient(135deg, #F7941D, #F26522) !important;
+      -webkit-text-fill-color: #0A1628 !important;
+    }
+    section.section6 > div > div { color: #ffffff !important; }
+    section.section6 > div > div > div { color: inherit !important; }
+    section.section6 span { color: #F7941D !important; -webkit-text-fill-color: #F7941D !important; }
+    .bb-referral-percent { 
+      background: linear-gradient(135deg, #FDCB6E, #F26522) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+    }
+  
+
+  @media (max-width: 600px) {
+    #bb-signin-card {
+      padding: 0 16px !important;
+    }
+    #bb-center-logo span {
+      font-size: 38px !important;
+    }
+    #bb-signin-card > div[style*="background:#0D2240"],
+    #bb-signin-card > div[style*="background: #0D2240"] {
+      padding: 24px 20px !important;
+    }
+    #bb-topbar {
+      padding: 16px 20px !important;
+    }
+    #bb-explore-btn span:not(:first-child) {
+      display: none;
+    }
+    #bb-btc-ticker {
+      font-size: 11px !important;
+      padding: 6px 14px !important;
+    }
+    #bb-info-drawer > div {
+      padding-left: 20px !important;
+      padding-right: 20px !important;
+    }
+    .bb-steps-grid, .bb-play-grid, .bb-crypto-grid, .bb-howto-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (max-width: 480px) {
+    #bb-mode-tabs { gap: 2px; }
+    #bb-mode-tabs button { font-size: 12px !important; padding: 8px 6px !important; }
+  }
+
+  /* Smooth drawer transition */
+  #bb-info-drawer {
+    transition: transform 0.45s cubic-bezier(0.4,0,0.2,1), opacity 0.45s ease !important;
+  }
+
+  /* Focus rings for accessibility */
+  #bb-signin-landing input:focus,
+  #bb-signin-landing button:focus-visible {
+    outline: 2px solid rgba(247,148,29,0.6) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Input placeholder color */
+  #bb-signin-landing input::placeholder {
+    color: #6B8DB5 !important;
+  }
+
+  /* Smooth testimonial transition */
+  #bb-testimonial-text, #bb-testimonial-author {
+    transition: opacity 0.4s ease;
+  }
+
+
+  #bb-signin-submit {
+    transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+    box-shadow: 0 4px 20px rgba(247,148,29,0.3) !important;
+  }
+  #bb-signin-submit:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 30px rgba(247,148,29,0.5) !important;
+  }
+  #bb-signin-submit:active {
+    transform: translateY(0px) !important;
+    box-shadow: 0 2px 12px rgba(247,148,29,0.3) !important;
+  }
+  /* Create Account tab hover */
+  #bb-tab-signup {
+    transition: color 0.18s ease, border-bottom 0.18s ease !important;
+  }
+  #bb-tab-signup:hover {
+    color: rgba(255,255,255,0.75) !important;
+  }
+  /* Input focus glow */
+  #bb-signin-card input:focus {
+    border-color: rgba(247,148,29,0.6) !important;
+    box-shadow: 0 0 0 3px rgba(247,148,29,0.1) !important;
+  }
+
+
+      @keyframes bb-dot-pulse {
+        0%,100%{opacity:1;} 50%{opacity:0.3;}
+      }
+      #bb-ticker-live-dot { animation: bb-dot-pulse 2s ease-in-out infinite; }
+    
+
+    @keyframes bb-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+    @keyframes bb-drawer-in { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes bb-drawer-out { from{transform:translateX(0);opacity:1} to{transform:translateX(100%);opacity:0} }
+    @keyframes bb-signin-fadein { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    #bb-signin-card { animation: bb-signin-fadein 0.6s ease both; }
+    #bb-signin-landing input::placeholder { color: #6B8DB5; }
+  
+  /* ===== MOBILE RESPONSIVENESS ===== */
+  @media (max-width: 768px) {
+    /* Logo area - stack vertically */
+    #bb-center-logo a {
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+    #bb-center-logo a > div {
+      text-align: center !important;
+    }
+    #bb-center-logo a > div > div:first-child {
+      font-size: 28px !important;
+    }
+
+    /* Sign-in card */
+    #bb-signin-card {
+      padding: 0 16px !important;
+    }
+
+    /* Explore button */
+    #bb-explore-btn {
+      padding: 7px 14px !important;
+      font-size: 11px !important;
+    }
+
+    /* Top bar */
+    #bb-topbar {
+      padding: 12px 16px !important;
+    }
+
+    /* BTC ticker */
+    #bb-btc-ticker {
+      font-size: 11px !important;
+      padding: 8px 14px !important;
+      bottom: 12px !important;
+    }
+
+    /* Drawer padding */
+    #bb-info-drawer > div {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+
+    /* Drawer header */
+    #bb-info-drawer > div:first-child {
+      padding: 12px 16px !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+    }
+
+    /* Drawer hero */
+    #bb-info-drawer h1 {
+      font-size: 32px !important;
+    }
+    #bb-info-drawer h2 {
+      font-size: 22px !important;
+    }
+
+    /* Stat boxes - hero area (grid with dividers) */
+    #bb-info-drawer [style*="grid-template-columns:1fr auto 1fr auto 1fr"] {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+      padding: 20px !important;
+    }
+    #bb-info-drawer [style*="grid-template-columns:1fr auto 1fr auto 1fr"] > [style*="width:1px"] {
+      width: 100% !important;
+      height: 1px !important;
+      margin: 0 !important;
+    }
+
+    /* 2x2 grids → single column on mobile */
+    [style*="grid-template-columns:repeat(2,1fr)"] {
+      grid-template-columns: 1fr !important;
+      max-width: 100% !important;
+    }
+
+    /* Crypto grid */
+    [style*="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"] {
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 10px !important;
+    }
+
+    /* Payment method cards (Venmo/PayPal/Cash App) */
+    [style*="grid-template-columns:repeat(3,1fr)"][style*="max-width:500px"] {
+      grid-template-columns: repeat(3, 1fr) !important;
+      max-width: 100% !important;
+      gap: 10px !important;
+    }
+
+    /* Referral section stat boxes */
+    [style*="grid-template-columns:repeat(3,1fr)"][style*="max-width:600px"] {
+      grid-template-columns: 1fr !important;
+      max-width: 100% !important;
+    }
+
+    /* How to deposit/withdraw grid */
+    [style*="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Drawer bottom CTA buttons */
+    #drawer-signin-cta [style*="display:flex"][style*="flex-wrap:wrap"] {
+      flex-direction: column !important;
+      align-items: center !important;
+    }
+
+    /* Referral card padding */
+    #bb-referral-new {
+      margin: 0 0 40px !important;
+      padding: 32px 20px !important;
+    }
+
+    /* Drawer bonus banner */
+    #bb-info-drawer [style*="10% Free Play"] {
+      font-size: 10px !important;
+      padding: 4px 10px !important;
+    }
+
+    /* Get Started link in drawer header */
+    #bb-info-drawer > div:first-child a[style*="Get Started"] {
+      font-size: 12px !important;
+      padding: 7px 16px !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* Even smaller screens */
+    #bb-center-logo a > div > div:first-child {
+      font-size: 24px !important;
+    }
+
+    /* Crypto grid → 2 columns */
+    [style*="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Stack payment cards */
+    [style*="grid-template-columns:repeat(3,1fr)"][style*="max-width:500px"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Sign-in form card */
+    #bb-signin-landing [style*="border-radius: 20px"] {
+      padding: 24px 18px !important;
+    }
+  }
+
+  </style>
+</head>
+<body>
+<div id="bb-signin-landing" style="position: relative; min-height: 100vh; z-index: 1; background: radial-gradient(at 60% 0%, rgb(14, 34, 69) 0%, rgb(9, 24, 48) 45%, rgb(7, 18, 37) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 120px 20px 120px; font-family: Inter, -apple-system, sans-serif; overflow: visible;"><div id="bb-topbar" style="position: absolute;top: 0;left: 0;right: 0;display: flex;align-items: center;justify-content: center;padding: 20px 40px;z-index: 2">
+    <button id="bb-explore-btn" onclick="bbOpenDrawer()" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1.5px solid rgba(255, 255, 255, 0.15); border-radius: 9999px; padding: 9px 22px; color: rgba(255, 255, 255, 0.7); font-size: 13px; font-weight: 600; font-family: Inter, sans-serif; cursor: pointer; transition: 0.25s; letter-spacing: 0.3px;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.5)';this.style.color='#F7941D'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='rgba(255,255,255,0.7)'" fdprocessedid="w7jxvd" aria-label="Explore Bitcoin Bay features" tabindex="0">
+      Explore Bitcoin Bay
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </button>
+  </div>
+  <!-- Background glow effects -->
+  
+
+  <!-- Top bar with logo + explore link -->
+  
+  
+
+
+  <!-- Main sign-in card -->
+  <div id="bb-center-logo" style="text-align: center; margin-bottom: 24px; width: 100%;"><a href="/" style="display:inline-flex;align-items:center;gap:16px;text-decoration:none;justify-content:center;"><img id="bb-logo-img" src="bb-logo.png" alt="Bitcoin Bay" style="height:80px;width:80px;display:block;border-radius:50%;box-shadow:0 0 24px rgba(86,204,242,0.3);"><div style="text-align:left;"><div style="font-family:'Space Grotesk',Arial Black,sans-serif;font-weight:900;font-size:38px;line-height:1.05;letter-spacing:-0.02em;"><span style="color:#F7941D;">BITCOIN</span> <span style="color:#fff;">BAY</span></div><div style="font-size:11px;letter-spacing:3px;color:rgba(176,196,222,0.6);font-weight:500;margin-top:4px;">BITCOIN · SPORTS · REWARDS</div></div></a></div><div id="bb-signin-card" style="position: relative; z-index: 2; width: 100%; max-width: 420px; padding: 0px 24px; margin-top: 0px;">
+    
+    <!-- Live time badge -->
+    
+
+    <!-- Heading -->
+    <div style="text-align:center;margin-bottom:36px;">
+      
+      
+    </div>
+
+    <!-- Sign-in form card -->
+    <div style="background: rgb(13, 34, 64); border: 1px solid rgba(247, 183, 49, 0.22); border-radius: 20px; padding: 32px; box-shadow: rgba(0, 0, 0, 0.6) 0px 32px 80px, rgba(247, 183, 49, 0.07) 0px 0px 0px 1px, rgba(247, 183, 49, 0.08) 0px 1px 0px inset;">
+  <!-- Mode toggle tabs -->
+  <div id="bb-mode-tabs" style="display:flex;background:#0A1628;border-radius:10px;padding:4px;margin-bottom:24px;gap:4px;">
+    <button id="bb-tab-signin" style="flex: 1 1 0%; padding: 9px; border-radius: 8px; border: none; font-family: Inter, sans-serif; font-size: 13px; font-weight: 700; cursor: default; transition: 0.2s; background: linear-gradient(135deg, rgb(247, 148, 29), rgb(242, 101, 34)); color: rgb(10, 22, 40);">Sign In</button>
+    <a href="/register" style="flex: 1 1 0%; padding: 9px; border-radius: 8px; border: none; font-family: Inter, sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; background: transparent; color: rgba(176, 196, 222, 0.85); text-align:center; display:block;">Create Account</a>
+  </div>
+
+  <!-- SIGN IN PANEL -->
+  <div id="bb-panel-signin" style="display: block;">
+    <!--
+      IMPORTANT: This form posts to the same wager backend URL as the
+      current live site with the same field names. Do not rename the
+      inputs or change the action - wager.bitcoinbay.com/redirectlogin.php
+      expects exactly these names: username, password.
+    -->
+    <form id="bb-login-form" method="post" action="https://wager.bitcoinbay.com/redirectlogin.php">
+    <div style="margin-bottom:16px;">
+      <label style="display: block; font-size: 13px; font-weight: 600; color: rgb(176, 196, 222); text-transform: none; letter-spacing: 0px; margin-bottom: 8px;" for="bb-login-id">Login ID</label>
+      <input id="bb-login-id" name="username" type="text" placeholder="Enter your login ID" aria-label="Login ID" autocomplete="username" required style="width: 100%; background: rgb(22, 48, 96); border: 1.5px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 16px; color: rgb(255, 255, 255); font-size: 15px; font-family: Inter, sans-serif; outline: none; transition: 0.2s; box-sizing: border-box;" onfocus="this.style.borderColor='rgba(247,148,29,0.5)';document.getElementById('bb-err-id').style.display='none'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'" fdprocessedid="queyxe" aria-required="true" tabindex="0">
+      <div id="bb-err-id" style="display:none;color:#FF5757;font-size:12px;margin-top:6px;font-family:Inter,sans-serif;">⚠ Login ID is required</div>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <label style="font-size: 13px; font-weight: 600; color: rgb(176, 196, 222); text-transform: none; letter-spacing: 0px;" for="bb-login-pass">Password</label>
+        <a href="#" onclick="bbOpenDrawer();setTimeout(function(){document.getElementById('drawer-signin-cta').scrollIntoView({behavior:'smooth'});},500);return false;" style="font-size:12px;color:#F7941D;-webkit-text-fill-color:#F7941D;font-weight:500;text-decoration:none;font-family:Inter,sans-serif;opacity:0.8;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.8'">Forgot password?</a>
+      </div>
+      <div style="position:relative;">
+        <input id="bb-login-pass" name="password" type="password" placeholder="Enter your password" aria-label="Password" autocomplete="current-password" required style="width: 100%; background: rgb(22, 48, 96); border: 1.5px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 48px 14px 16px; color: rgb(255, 255, 255); font-size: 15px; font-family: Inter, sans-serif; outline: none; transition: 0.2s; box-sizing: border-box;" onfocus="this.style.borderColor='rgba(247,148,29,0.5)';document.getElementById('bb-err-pass').style.display='none'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'" fdprocessedid="o9wxrr" aria-required="true" tabindex="0">
+        <button type="button" onclick="const p=document.getElementById('bb-login-pass');p.type=p.type==='password'?'text':'password';" tabindex="-1" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#6B8DB5;font-size:18px;padding:0;display:flex;align-items:center;" aria-label="Show password">👁</button>
+      </div>
+      <div id="bb-err-pass" style="display:none;color:#FF5757;font-size:12px;margin-top:6px;font-family:Inter,sans-serif;">⚠ Password is required</div>
+    </div>
+
+    <div style="margin-bottom:24px;text-align:right;">
+    </div>
+
+    <button id="bb-signin-submit" type="submit" style="width:100%;background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;font-weight:800;font-size:16px;padding:16px;border-radius:12px;border:none;cursor:pointer;font-family:Inter,sans-serif;letter-spacing:0.3px;box-shadow:0 8px 32px rgba(247,148,29,0.3);transition:0.25s;margin-bottom:20px;" onmouseenter="this.style.transform='translateY(-1px)';this.style.boxShadow='0 12px 40px rgba(247,148,29,0.45)'" onmouseleave="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(247,148,29,0.3)'" fdprocessedid="7ya7am" aria-label="Sign in to Bitcoin Bay" tabindex="0">
+      Sign In →
+    </button>
+
+    <!-- Trust badges -->
+    <div style="display: flex; flex-flow: row; justify-content: center; align-items: center; gap: 8px; padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+      <div style="display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; border: 1px solid rgba(247, 183, 49, 0.28); background: rgba(247, 183, 49, 0.07); font-size: 10.5px; font-weight: 600; color: rgba(200, 208, 224, 0.85); font-family: Inter, sans-serif; letter-spacing: 0.2px; white-space: nowrap;">
+        <span style="font-size:13px;">🔒</span> 256-bit SSL Encrypted
+      </div>
+
+    </div>
+    </form>
+  </div>
+
+</div>
+
+    <!-- Bonus reminder -->
+    
+  </div>
+
+  <!-- Keyframes -->
+  <style>
+    @keyframes bb-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+    @keyframes bb-drawer-in { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes bb-drawer-out { from{transform:translateX(0);opacity:1} to{transform:translateX(100%);opacity:0} }
+    @keyframes bb-signin-fadein { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    #bb-signin-card { animation: bb-signin-fadein 0.6s ease both; }
+    #bb-signin-landing input::placeholder { color: #6B8DB5; }
+  </style>
+<div id="bb-btc-ticker" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 10px; background: rgba(10, 11, 15, 0.85); border: 1px solid rgba(247, 183, 49, 0.25); border-radius: 9999px; padding: 10px 20px; font-family: Inter, sans-serif; font-size: 13px; z-index: 2; white-space: nowrap; backdrop-filter: blur(8px); box-shadow: rgba(0, 0, 0, 0.4) 0px 4px 20px, rgba(247, 183, 49, 0.08) 0px 0px 0px 1px;"><span id="bb-ticker-live-dot" style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: rgb(34, 197, 94); margin-right: 8px; vertical-align: middle; box-shadow: rgba(34, 197, 94, 0.8) 0px 0px 6px;"></span>
+  <span style="color:#F7941D;font-size:14px;">₿</span>
+  <span style="color:#B0C4DE;font-weight:500;">Bitcoin</span>
+  <span id="bb-landing-btc" style="color:#ffffff;font-weight:700;font-family:'Space Grotesk',sans-serif;">$66,398</span>
+  <span id="bb-landing-btc-change" style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; background: rgba(255, 87, 87, 0.15); color: rgb(255, 87, 87);">▼ 0.61%</span>
+</div></div>
+<div id="bb-info-drawer" style="position: fixed; inset: 0px; z-index: 10001; background: rgb(10, 22, 40); overflow-y: auto; transform: translateX(100%); opacity: 0; transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s; font-family: Inter, -apple-system, sans-serif;">
+  <!-- Drawer header bar -->
+  <div style="position:sticky;top:0;z-index:100;background:rgba(10,11,15,0.97);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.07);padding:16px 40px;display:flex;align-items:center;justify-content:center;gap:14px;">
+      <button id="bb-drawer-close" onclick="bbCloseDrawer()" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9999px; padding: 8px 22px; color: rgb(176, 196, 222); font-size: 13px; font-weight: 600; font-family: Inter, sans-serif; cursor: pointer; transition: 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.09)';this.style.color='#fff'" onmouseleave="this.style.background='rgba(255,255,255,0.05)';this.style.color='#B0C4DE'" fdprocessedid="atix7v">
+        ← Back to Sign In
+      </button>
+      <a href="sms:17022136332" style="padding:9px 22px;border-radius:9999px;font-weight:700;font-size:13px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#fff;-webkit-text-fill-color:#fff;text-decoration:none;font-family:'Space Grotesk',Inter,sans-serif;transition:0.2s;">💬 Text Us</a>
+      <a href="/leaderboard" style="padding:9px 22px;border-radius:9999px;font-weight:700;font-size:13px;background:rgba(255,255,255,0.06);border:1px solid rgba(247,148,29,0.3);color:#F7941D;-webkit-text-fill-color:#F7941D;text-decoration:none;font-family:Inter,sans-serif;">🏆 VIP Top 10</a>
+      <a href="#drawer-signin-cta" style="padding:9px 22px;border-radius:9999px;font-weight:700;font-size:13px;background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;-webkit-text-fill-color:#0A1628;text-decoration:none;font-family:Inter,sans-serif;box-shadow:0 0 24px rgba(247,148,29,0.3);">Get Started →</a>
+  </div>
+
+  <!-- Drawer hero -->
+  <div style="background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(247,148,29,0.10) 0%,transparent 55%),#0A1628;padding:80px 40px 60px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <h1 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(36px,6vw,64px);font-weight:900;line-height:1.05;letter-spacing:-0.04em;background:linear-gradient(135deg,#FDCB6E 0%,#F7941D 40%,#F26522 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 10px;">10% Free Play</h1>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(20px,3.5vw,36px);font-weight:700;color:#fff;margin:0 0 20px;letter-spacing:-0.02em;">on ALL Bitcoin Deposits</h2>
+    <p style="color:#B0C4DE;font-size:16px;max-width:540px;margin:0 auto 36px;line-height:1.7;">Earn up to <strong style="color:#F7941D;">20-40% Commission</strong> through our Referral Program.</p>
+    <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:0;padding:24px 32px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:18px;max-width:600px;margin:0 auto;">
+      <div style="text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:900;color:#F7941D;">10%</div><div style="color:#6B8DB5;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;">Deposit Bonus</div></div>
+      <div style="width:1px;height:50px;background:rgba(255,255,255,0.08);margin:0 16px;"></div>
+      <div style="text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:900;color:#F7941D;">20-40%</div><div style="color:#6B8DB5;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;">Referral Commission</div></div>
+      <div style="width:1px;height:50px;background:rgba(255,255,255,0.08);margin:0 16px;"></div>
+      <div style="text-align:center;"><div style="font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:900;color:#F7941D;">24hr</div><div style="color:#6B8DB5;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-top:3px;">Payouts Guaranteed</div></div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div style="background:#0D2240;padding:72px 40px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="max-width:1100px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <div style="display:inline-block;background:rgba(247,148,29,0.1);border:1px solid rgba(247,148,29,0.25);border-radius:9999px;padding:5px 18px;font-size:11px;color:#F7941D;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:16px;">Get Started</div>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,4vw,38px);font-weight:800;color:#fff;letter-spacing:-0.02em;margin:0;">Four Simple Steps to Winning</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:700px;margin:0 auto;">
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:30px 22px;text-align:center;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="width:48px;height:48px;background:linear-gradient(135deg,#F7941D,#F26522);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0A1628;margin:0 auto 18px;box-shadow:0 6px 20px rgba(247,148,29,0.3);font-family:'Space Grotesk',sans-serif;">1</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;">Sign Up</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.65;">Create your Bitcoin Bay account in minutes. Confirm your email to unlock all features.</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:30px 22px;text-align:center;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="width:48px;height:48px;background:linear-gradient(135deg,#F7941D,#F26522);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0A1628;margin:0 auto 18px;box-shadow:0 6px 20px rgba(247,148,29,0.3);font-family:'Space Grotesk',sans-serif;">2</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;">Deposit</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.65;">Fund with Bitcoin and instantly get a<br><strong style="color:#F7941D;">10% Free Play Bonus</strong> on your deposit.</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:30px 22px;text-align:center;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="width:48px;height:48px;background:linear-gradient(135deg,#F7941D,#F26522);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0A1628;margin:0 auto 18px;box-shadow:0 6px 20px rgba(247,148,29,0.3);font-family:'Space Grotesk',sans-serif;">3</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;">Place Your Bet</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.65;">Thousands of sports, casino games, horse racing &amp; props available 24/7.</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:30px 22px;text-align:center;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="width:48px;height:48px;background:linear-gradient(135deg,#F7941D,#F26522);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#0A1628;margin:0 auto 18px;box-shadow:0 6px 20px rgba(247,148,29,0.3);font-family:'Space Grotesk',sans-serif;">4</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;">Get Paid</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.65;">Free Daily payouts are processed<br>between <strong style="color:#F7941D;">12-2pm AST</strong>.</div>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- Ways to play -->
+  <div style="background:#0A1628;padding:72px 40px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="max-width:1100px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <div style="display:inline-block;background:rgba(86,204,242,0.1);border:1px solid rgba(86,204,242,0.25);border-radius:9999px;padding:5px 18px;font-size:11px;color:#56CCF2;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:16px;">Betting Markets</div>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,4vw,38px);font-weight:800;color:#fff;letter-spacing:-0.02em;margin:0 0 12px;">Ways to Play</h2>
+        <p style="color:#B0C4DE;font-size:15px;max-width:500px;margin:0 auto;">More ways to win than ever — sports, casino, props, and horse racing all in one place.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:700px;margin:0 auto;">
+        
+          <div style="background:#0D2240;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 22px;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="display:inline-block;background:rgba(247,148,29,0.12);border:1px solid rgba(247,148,29,0.25);color:#F7941D;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:9999px;padding:3px 12px;margin-bottom:14px;">Sports</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;">Sportsbook</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.6;">Football, Basketball, Baseball, Soccer &amp; dozens more events live 24/7.</div>
+          </div>
+        
+          <div style="background:#0D2240;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 22px;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="display:inline-block;background:rgba(247,148,29,0.12);border:1px solid rgba(247,148,29,0.25);color:#F7941D;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:9999px;padding:3px 12px;margin-bottom:14px;">Casino</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;">Virtual Casino</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.6;">Blackjack, Roulette, Slots, Baccarat &amp; endless table games.</div>
+          </div>
+        
+          <div style="background:#0D2240;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 22px;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="display:inline-block;background:rgba(247,148,29,0.12);border:1px solid rgba(247,148,29,0.25);color:#F7941D;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:9999px;padding:3px 12px;margin-bottom:14px;">Parlays</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;">Prop Builder</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.6;">Custom player-prop parlays for maximum payouts.</div>
+          </div>
+        
+          <div style="background:#0D2240;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:28px 22px;transition:0.25s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.3)';this.style.transform='translateY(-4px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            <div style="display:inline-block;background:rgba(247,148,29,0.12);border:1px solid rgba(247,148,29,0.25);color:#F7941D;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;border-radius:9999px;padding:3px 12px;margin-bottom:14px;">Racing</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;">Horse Track</div>
+            <div style="color:#B0C4DE;font-size:13px;line-height:1.6;">Live horse track betting &amp; racing games anywhere, anytime.</div>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- Crypto accepted -->
+  <div style="background:#0D2240;padding:72px 40px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="max-width:1100px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,4vw,38px);font-weight:800;color:#fff;letter-spacing:-0.02em;margin:0;">Payment Methods We Accept</h2>
+      </div>
+
+      <div style="margin-bottom:32px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:500px;margin:0 auto;">
+          <div style="background:#163060;border:1px solid rgba(86,204,242,0.2);border-radius:14px;padding:22px 14px 18px;text-align:center;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(86,204,242,0.5)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(86,204,242,0.2)';this.style.transform=''">
+            <div style="margin-bottom:8px;width:40px;height:40px;background:#008CFF;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19.5 2.3c.7 1.2 1 2.4 1 3.9 0 4.9-4.2 11.2-7.6 15.7H6.3L4 3.7l5.4-.5 1.3 10.5c1.9-3.1 4.2-8 4.2-11.3 0-1.3-.2-2.2-.6-2.9L19.5 2.3z" fill="#fff"/></svg></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Venmo</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:0.5px;text-transform:none;font-style:italic;">Fees may apply</div>
+          </div>
+          <div style="background:#163060;border:1px solid rgba(86,204,242,0.2);border-radius:14px;padding:22px 14px 18px;text-align:center;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(86,204,242,0.5)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(86,204,242,0.2)';this.style.transform=''">
+            <div style="margin-bottom:8px;width:40px;height:40px;background:#003087;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><svg width="20" height="24" viewBox="0 0 20 24" fill="none"><path d="M16.3 3.3C15.3 2.1 13.4 1.5 11 1.5H4.6c-.5 0-.9.4-1 .8L1 19.5c-.1.4.2.7.6.7h4l1-6.5-.1.2c.1-.5.5-.8 1-.8h2c4 0 7-1.6 7.9-6.3v-.4c-.1 0-.1 0 0 0 .2-1.5 0-2.5-.8-3.4" fill="#27346A"/><path d="M17 6.7v.4c-.9 4.7-4 6.3-7.9 6.3h-2c-.5 0-.9.3-1 .8L5 20.7l-.3 2c-.1.3.2.6.5.6h3.5c.4 0 .8-.3.8-.7v-.2l.7-4.2v-.2c0-.4.4-.7.8-.7h.5c3.5 0 6.2-1.4 7-5.5.3-1.7.2-3.2-.7-4.2-.3-.3-.6-.5-.9-.7" fill="#2790C3"/><path d="M16 6.4c-.3-.1-.6-.2-.9-.2-.3-.1-.7-.1-1-.2H8.7c-.1 0-.3.1-.4.1-.3.1-.5.4-.5.7l-1.2 7.4v.2c.1-.5.5-.8 1-.8h2c4 0 7-1.6 7.9-6.3 0-.1 0-.3.1-.4-.2-.1-.5-.2-.7-.3 0-.1 0-.1-.1-.1" fill="#1F264F"/></svg></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">PayPal</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:0.5px;text-transform:none;font-style:italic;">Fees may apply</div>
+          </div>
+          <div style="background:#163060;border:1px solid rgba(86,204,242,0.2);border-radius:14px;padding:22px 14px 18px;text-align:center;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(86,204,242,0.5)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(86,204,242,0.2)';this.style.transform=''">
+            <div style="margin-bottom:8px;width:40px;height:40px;background:#00D632;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15.2 8.4c.3.3.3.8 0 1.1l-.7.7c-.3.3-.7.3-1 .1-.5-.4-1.2-.7-1.9-.7-.9 0-1.4.4-1.4.9 0 .6.5.9 1.8 1.4 1.8.7 3.2 1.5 3.2 3.4 0 2.2-1.7 3.6-4.1 3.9l-.2 1.1c-.1.3-.3.5-.6.5H8.8c-.4 0-.6-.3-.6-.6l.2-1.2c-1.2-.3-2.2-.9-2.8-1.5-.3-.3-.2-.8.1-1.1l.8-.7c.3-.3.7-.3 1-.1.7.6 1.6 1 2.5 1 1 0 1.6-.4 1.6-1.1 0-.6-.5-1-2-1.5-1.7-.6-3-1.4-3-3.3 0-2 1.5-3.4 3.8-3.7l.2-1c.1-.3.3-.5.6-.5h1.5c.4 0 .6.3.6.6l-.2 1.1c.9.2 1.7.6 2.3 1.1z" fill="#fff"/></svg></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Cash App</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:0.5px;text-transform:none;font-style:italic;">Fees may apply</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Crypto grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;">
+        
+          <div style="background:rgba(247,148,29,0.06);border:1px solid rgba(247,148,29,0.35);border-radius:14px;padding:24px 14px 18px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform=''">
+            <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;font-size:9px;font-weight:800;padding:2px 10px;border-radius:9999px;white-space:nowrap;font-family:Inter,sans-serif;">10% BONUS</div>
+            <div style="font-size:22px;margin-bottom:8px;margin-top:6px;"><img src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="BTC" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Bitcoin</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">BTC</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" alt="ETH" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Ethereum</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">ETH</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/2/small/litecoin.png" alt="LTC" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Litecoin</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">LTC</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/19/small/dash-logo.png" alt="DASH" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Dash</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">DASH</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png" alt="BCH" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Bitcoin Cash</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">BCH</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/975/small/cardano.png" alt="ADA" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Cardano</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">ADA</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/1094/small/tron-logo.png" alt="TRX" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">TRON</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">TRX</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" alt="BNB" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Binance</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">BNB</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/100/small/Stellar_symbol_black_RGB.png" alt="XLM" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Stellar</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">XLM</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/5/small/dogecoin.png" alt="DOGE" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Dogecoin</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">DOGE</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/325/small/Tether.png" alt="USDT" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">Tether</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">USDT</div>
+          </div>
+        
+          <div style="background:#163060;border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 14px;text-align:center;position:relative;transition:0.2s;" onmouseenter="this.style.borderColor='rgba(247,148,29,0.35)';this.style.transform='translateY(-3px)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.07)';this.style.transform=''">
+            
+            <div style="font-size:22px;margin-bottom:8px;margin-top:0;"><img src="https://assets.coingecko.com/coins/images/453/small/ethereum-classic-logo.png" alt="ETC" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;"></div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">ETH Classic</div>
+            <div style="color:#6B8DB5;font-size:10px;letter-spacing:1px;text-transform:uppercase;">ETC</div>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- How to deposit/withdraw -->
+  <div style="background:#0A1628;padding:72px 40px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <div style="max-width:900px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:48px;">
+        <div style="display:inline-block;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:9999px;padding:5px 18px;font-size:11px;color:#22C55E;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:16px;">Quick Guide</div>
+        <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,4vw,38px);font-weight:800;color:#F7941D;margin:0;">Get In The Action</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px;">
+        <div style="background:#0D2240;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;">
+          <div style="font-size:26px;margin-bottom:16px;">💳</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;">How to Deposit</div>
+          <ul style="list-style:none;padding:0;margin:0 0 16px;">
+            <li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Log in to Bitcoin Bay</li><li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Go to the Cashiers Tab</li><li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Select cryptocurrency</li><li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Complete deposit to fund account</li>
+          </ul>
+        </div>
+        <div style="background:#0D2240;border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:32px;">
+          <div style="font-size:26px;margin-bottom:16px;">💸</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;">How to Withdraw</div>
+          <ul style="list-style:none;padding:0;margin:0 0 16px;">
+            <li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Log in to Bitcoin Bay</li><li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Fill payout form before <strong style="color:#F7941D;">12pm AST</strong></li><li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Get paid in full before <strong style="color:#F7941D;">2pm AST</strong></li><li style="display:flex;align-items:flex-start;gap:10px;color:#B0C4DE;font-size:13px;line-height:1.6;margin-bottom:10px;"><span style="color:#F7941D;font-weight:700;flex-shrink:0;">→</span>Guaranteed payout within 24 hours</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top:28px;text-align:center;padding:18px;background:rgba(247,148,29,0.05);border:1px solid rgba(247,148,29,0.15);border-radius:12px;">
+        <span style="color:#B0C4DE;font-size:13px;">Payouts processed <strong style="color:#F7941D;">12pm–2pm Atlantic Standard Time</strong> daily &nbsp;•&nbsp; Text us: <a href="sms:+17022136332" style="color:#F7941D;-webkit-text-fill-color:#F7941D;font-weight:600;text-decoration:none;">702-213-6332</a></span>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22C55E;box-shadow:0 0 6px rgba(34,197,94,0.6);animation:bb-dot-pulse 2s ease-in-out infinite;"></span>
+          <span style="color:#B0C4DE;font-size:12px;font-weight:500;">Current AST Time:</span>
+          <span id="bb-ast-clock" style="font-family:'Space Grotesk',monospace;font-size:14px;font-weight:700;color:#fff;letter-spacing:0.5px;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Referral -->
+  
+
+  <!-- Bottom CTA -->
+  <div id="drawer-signin-cta" style="background:#0A1628;padding:72px 40px;text-align:center;">
+    <div id="bb-referral-new" style="background: linear-gradient(135deg, rgba(247, 183, 49, 0.08), rgba(255, 107, 43, 0.05)); border: 1px solid rgba(247, 183, 49, 0.15); border-radius: 20px; padding: 48px 40px; margin: 0px 40px 40px; text-align: center;">
+  <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(247,148,29,0.1);border:1px solid rgba(247,148,29,0.3);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;color:#F7941D;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">
+    💰 Referral Program
+  </div>
+  <h2 style="font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;color:#ffffff;margin-bottom:12px;line-height:1.2;">
+    Refer Friends.<br><span style="background:linear-gradient(135deg,#F7941D,#F26522);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Earn Commission.</span>
+  </h2>
+  <p style="color:#B0C4DE;font-size:1rem;margin-bottom:36px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.7;">
+    Earn <strong style="color:#F7941D;">20-40% commission</strong> on every referral — paid every Monday, guaranteed within 24 hours.
+  </p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:36px;max-width:600px;margin-left:auto;margin-right:auto;">
+    <div style="background:rgba(10,11,15,0.6);border:1px solid rgba(247,148,29,0.15);border-radius:16px;padding:24px 16px;">
+      <div style="font-size:2rem;font-weight:900;color:#F7941D;font-family:'Space Grotesk',sans-serif;">20-40%</div>
+      <div style="font-size:11px;font-weight:600;color:#6B8DB5;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Referral Commission</div>
+    </div>
+    <div style="background:rgba(10,11,15,0.6);border:1px solid rgba(247,148,29,0.15);border-radius:16px;padding:24px 16px;">
+      <div style="font-size:2rem;font-weight:900;color:#F7941D;font-family:'Space Grotesk',sans-serif;">24hr</div>
+      <div style="font-size:11px;font-weight:600;color:#6B8DB5;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Payouts Guaranteed</div>
+    </div>
+    <div style="background:rgba(10,11,15,0.6);border:1px solid rgba(247,148,29,0.15);border-radius:16px;padding:24px 16px;">
+      <div style="font-size:2rem;font-weight:900;color:#F7941D;font-family:'Space Grotesk',sans-serif;">Every<br>Monday</div>
+      <div style="font-size:11px;font-weight:600;color:#6B8DB5;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Payout Day</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <a href="sms:17022136332" style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.2);color:#fff;font-weight:700;font-size:15px;padding:14px 32px;border-radius:9999px;text-decoration:none;letter-spacing:0.3px;font-family:'Space Grotesk',Inter,sans-serif;transition:0.25s;">
+      💬 Text Us: 702-213-6332
+    </a>
+  </div>
+</div><div style="max-width:500px;margin:0 auto;">
+      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(26px,4vw,40px);font-weight:900;color:#fff;margin-bottom:14px;letter-spacing:-0.03em;">Ready to Start Winning?</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">
+        <button id="bb-drawer-signin" onclick="bbCloseDrawer()" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.15);border-radius:9999px;padding:14px 32px;color:#fff;-webkit-text-fill-color:#fff;font-weight:600;font-size:15px;font-family:Inter,sans-serif;cursor:pointer;" fdprocessedid="gxldha">← Back to Sign In</button>
+        <a href="/register" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;-webkit-text-fill-color:#0A1628;font-weight:800;font-size:15px;padding:14px 36px;border-radius:9999px;text-decoration:none;box-shadow:0 0 40px rgba(247,148,29,0.3);">Create Free Account →</a>
+      </div>
+      <div style="margin-top:32px;color:#6B8DB5;font-size:12px;">© 2026 Bitcoin Bay &nbsp;•&nbsp; <a href="/termsandcond.html" style="color:#6B8DB5;-webkit-text-fill-color:#6B8DB5;text-decoration:none;">Terms &amp; Conditions</a> &nbsp;•&nbsp; <a href="https://www.instagram.com/bitcoin_bay/" style="color:#6B8DB5;-webkit-text-fill-color:#6B8DB5;text-decoration:none;">@BitcoinBay_com</a></div>
+    </div>
+  </div>
+</div>
+<script>
+// AST Clock (Atlantic Standard Time = UTC-4)
+function updateASTClock() {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const ast = new Date(utc - 4 * 3600000);
+  const hours = ast.getHours();
+  const mins = String(ast.getMinutes()).padStart(2, '0');
+  const secs = String(ast.getSeconds()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const h12 = hours % 12 || 12;
+  const el = document.getElementById('bb-ast-clock');
+  if (el) el.textContent = h12 + ':' + mins + ':' + secs + ' ' + ampm + ' AST';
+}
+updateASTClock();
+setInterval(updateASTClock, 1000);
+
+
+function bbOpenDrawer() {
+  const d = document.getElementById('bb-info-drawer');
+  if (d) { d.style.transform = 'translateX(0)'; d.style.opacity = '1'; d.style.pointerEvents = 'all'; }
+}
+function bbCloseDrawer() {
+  const d = document.getElementById('bb-info-drawer');
+  if (d) { d.style.transform = 'translateX(100%)'; d.style.opacity = '0'; d.style.pointerEvents = 'none'; }
+}
+
+async function bbFetchBTCPrice() {
+  try {
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+    const data = await res.json();
+    const price = data.bitcoin.usd;
+    const change = data.bitcoin.usd_24h_change;
+    const priceEl = document.getElementById('bb-landing-btc');
+    const changeEl = document.getElementById('bb-landing-btc-change');
+    if (priceEl) priceEl.textContent = '$' + price.toLocaleString('en-US', {maximumFractionDigits: 0});
+    if (changeEl) {
+      const up = change >= 0;
+      changeEl.textContent = (up ? '▲ ' : '▼ ') + Math.abs(change).toFixed(2) + '%';
+      changeEl.style.color = up ? '#22c55e' : '#ef4444';
+      changeEl.style.background = up ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+    }
+  } catch(e) {}
+}
+bbFetchBTCPrice();
+setInterval(bbFetchBTCPrice, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VIP Top 10 | Bitcoin Bay</title>
+  <meta name="description" content="Bitcoin Bay Weekly VIP Top 10 Leaderboard - See this week's top players."/>
+  <meta name="format-detection" content="telephone=no"/>
+  <!-- Open Graph / social share -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Bitcoin Bay"/>
+  <meta property="og:title" content="VIP Top 10 | Bitcoin Bay"/>
+  <meta property="og:description" content="Bitcoin Bay Weekly VIP Top 10 Leaderboard - See this week's top players."/>
+  <meta property="og:image" content="/bb-logo.png"/>
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:title" content="VIP Top 10 | Bitcoin Bay"/>
+  <meta name="twitter:description" content="Bitcoin Bay Weekly VIP Top 10 Leaderboard - See this week's top players."/>
+  <meta name="twitter:image" content="/bb-logo.png"/>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F7941D;
+      --gold-light: #FDCB6E;
+      --gold-dark: #D47812;
+      --orange: #F26522;
+      --bg-dark: #0A1628;
+      --bg-card: #0D2240;
+      --bg-card2: #112A4F;
+      --bg-surface: #163060;
+      --text-primary: #FFFFFF;
+      --text-secondary: #B0C4DE;
+      --text-muted: #6B8DB5;
+      --accent-blue: #56CCF2;
+      --accent-green: #22C55E;
+      --border: rgba(86,204,242,0.1);
+      --font-main: 'Inter', -apple-system, sans-serif;
+      --font-display: 'Space Grotesk', 'Inter', sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--bg-dark);
+      font-family: var(--font-main);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    body {
+      background: radial-gradient(ellipse at 50% 0%, #0E2245 0%, #091830 45%, #071225 100%);
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* Header */
+    .lb-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,22,40,0.95);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .lb-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lb-logo img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+    }
+
+    .lb-logo-text {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 20px;
+    }
+
+    .lb-logo-text span:first-child { color: var(--gold); }
+    .lb-logo-text span:last-child { color: #fff; }
+
+    .lb-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 9999px;
+      padding: 9px 20px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    .lb-back:hover {
+      background: rgba(255,255,255,0.09);
+      color: #fff;
+    }
+
+    /* Hero */
+    .lb-hero {
+      text-align: center;
+      padding: 60px 24px 40px;
+      position: relative;
+    }
+
+    .lb-hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(247,148,29,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .lb-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(247,148,29,0.1);
+      border: 1px solid rgba(247,148,29,0.3);
+      border-radius: 9999px;
+      padding: 6px 18px;
+      font-size: 11px;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .lb-title {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, var(--orange) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .lb-subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .lb-week {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 9999px;
+      padding: 8px 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 20px;
+    }
+
+    /* Leaderboard Table */
+    .lb-container {
+      max-width: 700px;
+      margin: 0 auto 80px;
+      padding: 0 24px;
+    }
+
+    .lb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .lb-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      transition: 0.25s;
+    }
+
+    .lb-row:hover {
+      border-color: rgba(247,148,29,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    }
+
+    /* Top 3 special styles */
+    .lb-row.rank-1 {
+      background: linear-gradient(135deg, rgba(247,148,29,0.12), rgba(242,101,34,0.08));
+      border-color: rgba(247,148,29,0.35);
+      padding: 22px 24px;
+    }
+
+    .lb-row.rank-2 {
+      background: linear-gradient(135deg, rgba(176,196,222,0.08), rgba(86,204,242,0.05));
+      border-color: rgba(176,196,222,0.2);
+    }
+
+    .lb-row.rank-3 {
+      background: linear-gradient(135deg, rgba(205,127,50,0.08), rgba(205,127,50,0.04));
+      border-color: rgba(205,127,50,0.2);
+    }
+
+    .lb-rank {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 16px;
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .rank-1 .lb-rank {
+      background: linear-gradient(135deg, var(--gold), var(--orange));
+      color: #0A1628;
+      border: none;
+      box-shadow: 0 4px 16px rgba(247,148,29,0.4);
+      font-size: 18px;
+    }
+
+    .rank-2 .lb-rank {
+      background: linear-gradient(135deg, #C0C0C0, #A8A8A8);
+      color: #1a1a2e;
+      border: none;
+      box-shadow: 0 4px 12px rgba(192,192,192,0.3);
+    }
+
+    .rank-3 .lb-rank {
+      background: linear-gradient(135deg, #CD7F32, #A0622E);
+      color: #1a1a2e;
+      border: none;
+      box-shadow: 0 4px 12px rgba(205,127,50,0.3);
+    }
+
+    .lb-player {
+      flex: 1;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+
+    .rank-1 .lb-player {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+
+    /* Trophy icons for top 3 */
+    .lb-trophy {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Empty / error states */
+    .lb-status {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .lb-status.error { color: #FF5757; }
+
+    /* Footer */
+    .lb-footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .lb-footer a {
+      color: var(--text-muted);
+    }
+
+    .lb-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--gold), var(--orange));
+      color: #0A1628;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 14px 36px;
+      border-radius: 9999px;
+      margin-top: 32px;
+      box-shadow: 0 8px 32px rgba(247,148,29,0.3);
+      transition: 0.25s;
+    }
+
+    .lb-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(247,148,29,0.45);
+    }
+
+    /* Threshold (Top 20%) card */
+    .lb-threshold-card {
+      max-width: 480px;
+      margin: 40px auto 0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid rgba(247,148,29,0.25);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      text-align: center;
+    }
+    .lb-threshold-header {
+      background: linear-gradient(135deg, var(--gold), var(--orange));
+      color: #0A1628;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      padding: 12px 16px;
+      text-transform: uppercase;
+    }
+    .lb-threshold-body {
+      padding: 24px 20px 22px;
+    }
+    .lb-threshold-value {
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 38px;
+      line-height: 1.1;
+      color: var(--gold);
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+    .lb-threshold-sub {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    @media (max-width: 600px) {
+      .lb-threshold-value { font-size: 30px; }
+      .lb-threshold-card { margin: 32px 16px 0; }
+    }
+
+    /* Updated timestamp */
+    .lb-updated {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--accent-green);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .lb-updated-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .lb-header {
+        padding: 14px 16px;
+      }
+
+      .lb-logo-text {
+        font-size: 16px;
+      }
+
+      .lb-hero {
+        padding: 40px 16px 30px;
+      }
+
+      .lb-container {
+        padding: 0 16px;
+      }
+
+      .lb-row {
+        padding: 14px 16px;
+        gap: 12px;
+      }
+
+      .lb-rank {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+      }
+
+      .lb-player {
+        font-size: 14px;
+      }
+
+      .rank-1 .lb-player {
+        font-size: 15px;
+      }
+
+      .lb-back {
+        padding: 7px 14px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="lb-header">
+    <a href="/" class="lb-logo">
+      <img src="bb-logo.png" alt="Bitcoin Bay">
+      <div class="lb-logo-text">
+        <span>BITCOIN</span> <span>BAY</span>
+      </div>
+    </a>
+    <a href="/" class="lb-back">← Back to Bitcoin Bay</a>
+  </header>
+
+  <!-- Hero -->
+  <div class="lb-hero" style="position:relative;">
+    <div style="position:absolute;top:24px;right:24px;text-align:left;padding:12px 18px;background:rgba(86,204,242,0.06);border:1px solid rgba(86,204,242,0.15);border-radius:10px;white-space:nowrap;">
+      <span style="color:#B0C4DE;font-size:11px;line-height:1.7;">Based on Total Volume<br>Casino wagers are <strong style="color:#F7941D;">NOT</strong> included</span>
+    </div>
+    <div class="lb-badge">🏆 Weekly Rankings</div>
+    <h1 class="lb-title">VIP Top 10</h1>
+    <p class="lb-subtitle">This week's top performing players on Bitcoin Bay.</p>
+    <div class="lb-week" id="lbWeek">📅 Loading week…</div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="lb-container">
+    <div class="lb-updated">
+      <span class="lb-updated-dot"></span>
+      <span id="lbUpdated">Updated weekly</span>
+    </div>
+
+    <div class="lb-list" id="lbList">
+      <div class="lb-status">Loading leaderboard…</div>
+    </div>
+
+    <!-- Enter the Top 20% — weekly volume threshold -->
+    <div class="lb-threshold-card">
+      <div class="lb-threshold-header">Enter the Top 20%</div>
+      <div class="lb-threshold-body">
+        <div class="lb-threshold-value" id="lbThreshold">Loading…</div>
+        <div class="lb-threshold-sub">Achieve this weekly volume to earn your VIP bonus!</div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-top:48px;">
+      <p style="color:var(--text-secondary);font-size:15px;margin-bottom:8px;">Want to see your name on the board?</p>
+      <a href="/register" class="lb-cta">Join Bitcoin Bay →</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="lb-footer">
+    <p>© 2026 Bitcoin Bay &nbsp;•&nbsp; <a href="/termsandcond.html">Terms &amp; Conditions</a> &nbsp;•&nbsp; <a href="https://www.instagram.com/bitcoin_bay/">@BitcoinBay_com</a></p>
+  </div>
+
+  <!-- Leaderboard data fetch -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var listEl      = document.getElementById('lbList');
+      var weekEl      = document.getElementById('lbWeek');
+      var updatedEl   = document.getElementById('lbUpdated');
+      var thresholdEl = document.getElementById('lbThreshold');
+
+      function escapeHTML(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+        });
+      }
+
+      function renderRows(ids) {
+        if (!ids || !ids.length) {
+          listEl.innerHTML = '<div class="lb-status">No leaderboard data available.</div>';
+          return;
+        }
+        var topTen = ids.slice(0, 10);
+        var html = topTen.map(function (id, i) {
+          var rank = i + 1;
+          var rankClass = rank <= 3 ? ' rank-' + rank : '';
+          var trophy = '';
+          if (rank === 1) trophy = '<div class="lb-trophy">🥇</div>';
+          else if (rank === 2) trophy = '<div class="lb-trophy">🥈</div>';
+          else if (rank === 3) trophy = '<div class="lb-trophy">🥉</div>';
+          return (
+            '<div class="lb-row' + rankClass + '">' +
+              '<div class="lb-rank">' + rank + '</div>' +
+              '<div class="lb-player">' + escapeHTML(id) + '</div>' +
+              trophy +
+            '</div>'
+          );
+        }).join('');
+        listEl.innerHTML = html;
+      }
+
+      // Relative URL so this works on localhost (server.js serves /api/leaderboard)
+      // AND in production.
+      fetch('/api/leaderboard')
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          renderRows(data.leaderboard);
+
+          if (data.subheading) {
+            weekEl.textContent = '📅 Week of ' + data.subheading;
+          } else {
+            weekEl.textContent = '📅 This week';
+          }
+
+          if (data.userDate) {
+            updatedEl.textContent = 'Updated ' + data.userDate;
+          }
+
+          if (data.volumeNeeded) {
+            thresholdEl.textContent = data.volumeNeeded;
+          } else {
+            thresholdEl.textContent = '—';
+          }
+        })
+        .catch(function (err) {
+          console.error('Error fetching leaderboard data:', err);
+          listEl.innerHTML = '<div class="lb-status error">Error loading leaderboard. Please try again later.</div>';
+          weekEl.textContent = '📅 —';
+          updatedEl.textContent = 'Updated weekly';
+          thresholdEl.textContent = '—';
+        });
+    });
+  </script>
+
+</body>
+</html>
