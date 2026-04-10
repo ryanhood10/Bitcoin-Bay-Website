@@ -14,6 +14,17 @@ dotenv.config();
 // Enable CORS for all routes
 app.use(cors());
 
+// Explicit override BEFORE express.static: /termsandcond.html must serve
+// the redesigned terms page, not the old file on disk. If we register this
+// route after express.static, static wins because termsandcond.html exists
+// on disk. Putting it first makes our route handler run before static.
+app.get('/termsandcond.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'termsandcond.new.html'));
+});
+app.get('/legacy/termsandcond.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'termsandcond.html'));
+});
+
 // Serve static files. IMPORTANT: pass {index: false} so express.static does
 // NOT auto-serve index.html for "/" — that would shadow the explicit
 // app.get('/') route below and keep serving the OLD design.
