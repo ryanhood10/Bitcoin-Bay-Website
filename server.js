@@ -98,7 +98,7 @@ app.post('/send-email', (req, res) => {
   // Email options
   const mailOptions = {
     from: process.env.EMAIL,
-    to: 'bitcoinbaynotifications@gmail.com',
+    to: 'bitcoinbaynotification@gmail.com',
     subject: 'New Account Created',
     text: `First Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nReferred By: ${promo}`
   };
