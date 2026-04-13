@@ -849,6 +849,14 @@
         if (userEmail) $('regSuccessEmail').textContent = userEmail;
         $('regFormPanel').style.display = 'none';
         $('regSuccessPanel').style.display = 'block';
+
+        // GTM: fire signup conversion event for GA4 tracking
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          event: 'signup_complete',
+          method: 'form',
+          referral: $('reg-promo') ? $('reg-promo').value : ''
+        });
       }, 800);
     });
 
