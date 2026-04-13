@@ -21,6 +21,11 @@ app.use(express.static(path.join(__dirname), { index: false }));
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
 
+// Favicon fallback — browsers request /favicon.ico by default
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'favicon.png'));
+});
+
 // Page routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
