@@ -149,23 +149,96 @@ app.post('/send-email', (req, res) => {
     }
   });
 
-  // Email options
-  const mailOptions = {
-    from: process.env.EMAIL,
-    to: process.env.NOTIFY_EMAIL || process.env.EMAIL,
-    subject: 'New Account Created',
-    text: `First Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nReferred By: ${promo}`
+  // 1. Internal notification to track signups
+  const internalMail = {
+    from: `"Bitcoin Bay" <${process.env.EMAIL}>`,
+    to: process.env.EMAIL, // welcome@bitcoinbay.com
+    subject: `New Signup: ${firstName} ${lastName}`,
+    text: `New account signup:\n\nFirst Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nReferred By: ${promo || 'N/A'}\nTimestamp: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`
   };
 
-  // Send the email
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log('Error sending email:', error);
-      res.status(500).send('Error sending email');
-    } else {
-      console.log('Email sent:', info.response);
-      res.status(200).send('Email sent successfully');
-    }
+  // 2. Welcome email to the user
+  const welcomeMail = {
+    from: `"Bitcoin Bay" <${process.env.EMAIL}>`,
+    to: email,
+    subject: `Welcome to Bitcoin Bay, ${firstName}!`,
+    html: `
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0A1628;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 24px;">
+
+  <!-- Logo -->
+  <div style="text-align:center;margin-bottom:32px;">
+    <img src="https://www.bitcoinbay.com/bb-logo.png" alt="Bitcoin Bay" width="80" style="border-radius:50%;">
+  </div>
+
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="margin:0 0 8px;font-size:28px;color:#F7941D;">Welcome to Bitcoin Bay!</h1>
+    <p style="margin:0;color:#B0C4DE;font-size:16px;">Hey ${firstName}, we're glad you're here.</p>
+  </div>
+
+  <!-- Main card -->
+  <div style="background:#0D2240;border:1px solid rgba(86,204,242,0.1);border-radius:16px;padding:32px;margin-bottom:24px;">
+    <h2 style="margin:0 0 12px;font-size:18px;color:#fff;">What happens next?</h2>
+    <p style="color:#B0C4DE;font-size:15px;line-height:1.6;margin:0 0 20px;">
+      Your account is being created right now. You'll receive a separate email shortly with your <strong style="color:#fff;">Login ID</strong> and account details.
+    </p>
+    <p style="color:#B0C4DE;font-size:15px;line-height:1.6;margin:0 0 20px;">
+      Once you have your Login ID, head to our site to sign in and make your first deposit.
+    </p>
+
+    <!-- CTA button -->
+    <div style="text-align:center;margin:28px 0 8px;">
+      <a href="https://www.bitcoinbay.com" style="display:inline-block;background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;font-weight:800;font-size:15px;padding:14px 40px;border-radius:9999px;text-decoration:none;">Sign In to Bitcoin Bay &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Bonus reminder -->
+  <div style="background:linear-gradient(135deg,rgba(247,148,29,0.1),rgba(242,101,34,0.1));border:1px solid rgba(247,148,29,0.2);border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
+    <p style="margin:0 0 4px;font-size:13px;color:#F7941D;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Don't forget</p>
+    <p style="margin:0;color:#fff;font-size:18px;font-weight:700;">Every Bitcoin deposit gets a <span style="color:#F7941D;">10% Free Play Bonus</span></p>
+  </div>
+
+  <!-- Help -->
+  <div style="text-align:center;margin-bottom:32px;">
+    <p style="color:#6B8DB5;font-size:14px;margin:0;">
+      Need help? Text us anytime: <a href="sms:7022136332" style="color:#F7941D;text-decoration:none;font-weight:600;">702-213-6332</a>
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;border-top:1px solid rgba(86,204,242,0.1);padding-top:24px;">
+    <p style="color:#6B8DB5;font-size:12px;margin:0 0 8px;">
+      &copy; 2026 Bitcoin Bay &nbsp;&bull;&nbsp;
+      <a href="https://www.bitcoinbay.com/termsandcond.html" style="color:#6B8DB5;text-decoration:none;">Terms &amp; Conditions</a> &nbsp;&bull;&nbsp;
+      <a href="https://www.bitcoinbay.com/blog" style="color:#6B8DB5;text-decoration:none;">Blog</a>
+    </p>
+    <p style="margin:0;">
+      <a href="https://www.instagram.com/bitcoin_bay/" style="color:#6B8DB5;text-decoration:none;font-size:12px;">Instagram</a>
+      &nbsp;&nbsp;
+      <a href="https://x.com/bitcoinbay_com" style="color:#6B8DB5;text-decoration:none;font-size:12px;">X / Twitter</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`
+  };
+
+  // Send both emails (internal + welcome)
+  Promise.all([
+    transporter.sendMail(internalMail),
+    transporter.sendMail(welcomeMail),
+  ]).then(([internalInfo, welcomeInfo]) => {
+    console.log('Internal notification sent:', internalInfo.response);
+    console.log('Welcome email sent to:', email, welcomeInfo.response);
+    res.status(200).send('Email sent successfully');
+  }).catch((error) => {
+    console.log('Error sending email:', error);
+    res.status(500).send('Error sending email');
   });
 });
 
