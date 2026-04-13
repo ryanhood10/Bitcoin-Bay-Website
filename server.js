@@ -82,6 +82,58 @@ app.get('/blog/:slug', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// SEO: Dynamic sitemap.xml — includes static pages + all published blog posts
+// ---------------------------------------------------------------------------
+const SITE = 'https://www.bitcoinbay.com';
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    // Static pages
+    const staticPages = [
+      { loc: '/',                changefreq: 'weekly',  priority: '1.0' },
+      { loc: '/register',       changefreq: 'monthly', priority: '0.8' },
+      { loc: '/leaderboard',    changefreq: 'weekly',  priority: '0.8' },
+      { loc: '/blog',           changefreq: 'daily',   priority: '0.7' },
+      { loc: '/termsandcond.html', changefreq: 'yearly', priority: '0.3' },
+    ];
+
+    let blogEntries = [];
+    try {
+      const client = new MongoClient(process.env.MONGO_URI);
+      await client.connect();
+      const posts = await client.db('bcbay_automation').collection('bcb_blog_posts')
+        .find({ published: true }, { projection: { slug: 1, published_at: 1, updated_at: 1 } })
+        .sort({ published_at: -1 })
+        .toArray();
+      await client.close();
+      blogEntries = posts.map(p => ({
+        loc: `/blog/${p.slug}`,
+        changefreq: 'monthly',
+        priority: '0.6',
+        lastmod: (p.updated_at || p.published_at || new Date()).toISOString().split('T')[0],
+      }));
+    } catch (e) {
+      console.error('Sitemap blog fetch error:', e.message);
+    }
+
+    const urls = [...staticPages, ...blogEntries].map(u =>
+      `  <url>\n    <loc>${SITE}${u.loc}</loc>` +
+      (u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : '') +
+      `\n    <changefreq>${u.changefreq}</changefreq>` +
+      `\n    <priority>${u.priority}</priority>\n  </url>`
+    ).join('\n');
+
+    res.type('application/xml').send(
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`
+    );
+  } catch (err) {
+    console.error('Sitemap error:', err);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
 // Email sending route
 app.post('/send-email', (req, res) => {
   const { firstName, lastName, email, phone, promo } = req.body;
