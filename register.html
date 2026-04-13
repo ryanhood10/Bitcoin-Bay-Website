@@ -606,7 +606,9 @@
         <div class="reg-success-icon">🎉</div>
         <div class="reg-success-title">Account Submitted!</div>
         <div class="reg-success-text">
-          Your account is being created. Watch your email for your login ID and details.
+          Your account is being created. Check your inbox at
+          <strong id="regSuccessEmail" style="color:#F7941D;"></strong>
+          for a welcome email and your login ID.
           <br><br>
           Once you've got your login, head back to the homepage to sign in.
         </div>
@@ -843,6 +845,8 @@
       // 3. Swap the form for a success panel after a short delay so the
       //    iframe has time to load the response.
       setTimeout(function () {
+        var userEmail = $('reg-email') ? $('reg-email').value : '';
+        if (userEmail) $('regSuccessEmail').textContent = userEmail;
         $('regFormPanel').style.display = 'none';
         $('regSuccessPanel').style.display = 'block';
       }, 800);
