@@ -138,19 +138,21 @@ app.get('/sitemap.xml', async (req, res) => {
 app.post('/send-email', (req, res) => {
   const { firstName, lastName, email, phone, promo } = req.body;
 
-  // Create a transporter object
+  // Create a transporter object (Gandi SMTP)
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'mail.gandi.net',
+    port: 465,
+    secure: true, // SSL
     auth: {
       user: process.env.EMAIL,
-      pass: process.env.PASSWORD,
+      pass: process.env.EMAIL_PASSWORD,
     }
   });
 
   // Email options
   const mailOptions = {
     from: process.env.EMAIL,
-    to: 'bitcoinbaynotification@gmail.com',
+    to: process.env.NOTIFY_EMAIL || process.env.EMAIL,
     subject: 'New Account Created',
     text: `First Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nReferred By: ${promo}`
   };
