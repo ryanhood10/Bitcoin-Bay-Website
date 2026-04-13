@@ -563,8 +563,7 @@
           listEl.innerHTML = '<div class="lb-status">No leaderboard data available.</div>';
           return;
         }
-        var topTen = ids.slice(0, 10);
-        var html = topTen.map(function (id, i) {
+        var html = ids.map(function (id, i) {
           var rank = i + 1;
           var rankClass = rank <= 3 ? ' rank-' + rank : '';
           var trophy = '';
