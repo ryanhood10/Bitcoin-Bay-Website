@@ -335,13 +335,16 @@ function validateRegistration(body) {
 }
 
 async function verifyRecaptcha(token, remoteIp) {
-  if (!process.env.RECAPTCHA_SECRET) {
-    console.warn('[recaptcha] RECAPTCHA_SECRET not set — skipping verification (set this env var to enable bot protection)');
+  // Accept either env-var name so existing local .env files (GoogleCaptchaSecretKey)
+  // and Heroku-style names (RECAPTCHA_SECRET) both work.
+  const secret = process.env.GoogleCaptchaSecretKey || process.env.RECAPTCHA_SECRET;
+  if (!secret) {
+    console.warn('[recaptcha] No secret configured — skipping verification. Set GoogleCaptchaSecretKey (or RECAPTCHA_SECRET) on Heroku to enable bot protection.');
     return { ok: true, skipped: true };
   }
   if (!token) return { ok: false, error: 'Missing reCAPTCHA token' };
   try {
-    const params = new URLSearchParams({ secret: process.env.RECAPTCHA_SECRET, response: token });
+    const params = new URLSearchParams({ secret, response: token });
     if (remoteIp) params.set('remoteip', remoteIp);
     const r = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
