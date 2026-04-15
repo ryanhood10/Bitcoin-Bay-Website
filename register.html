@@ -854,6 +854,15 @@
               var errEl = $(errId);
               if (errEl) errEl.textContent = data.errors[field];
             });
+          } else if (data.code === 'duplicate_account') {
+            // Highlight the email field with the duplicate message so the
+            // user can see exactly which input is the problem.
+            showError('reg-email', 'reg-err-email');
+            var emailErr = $('reg-err-email');
+            if (emailErr) emailErr.textContent = data.error;
+            // Scroll the email field into view so they don't miss it.
+            var emailEl = $('reg-email');
+            if (emailEl && emailEl.scrollIntoView) emailEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else if (data.error) {
             alert(data.error);
           } else {

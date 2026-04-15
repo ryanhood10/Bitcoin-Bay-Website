@@ -376,6 +376,34 @@ function extractLoginId(html) {
   return null;
 }
 
+// When the wager backend doesn't return the success modal, classify the
+// response into something we can show to the user. Patterns observed:
+//   - "This information has already been used to sign up previously ." (200) → dup
+//   - empty body with 500 status → upstream crash
+function classifyUpstreamFailure(html, status) {
+  const text = (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
+  if (/already been used to sign up/.test(text) ||
+      /already exists/.test(text) ||
+      /duplicate/.test(text)) {
+    return {
+      code: 'duplicate_account',
+      userMessage: 'An account already exists with this email or phone number. ' +
+                   'If this is you, please use the Sign In page or contact support to recover your login.'
+    };
+  }
+  if (status >= 500) {
+    return {
+      code: 'upstream_5xx',
+      userMessage: 'Our gaming partner is having a brief issue creating accounts. Please try again in a few minutes.'
+    };
+  }
+  return {
+    code: 'unknown',
+    userMessage: 'Account may not have been created. Please contact support before trying again to avoid duplicate accounts.'
+  };
+}
+
 async function logSignupAttempt(record) {
   if (!process.env.MONGO_URI) return;
   let client;
@@ -439,12 +467,14 @@ app.post('/api/register', async (req, res) => {
 
   const loginId = extractLoginId(upstreamHtml);
   if (!loginId) {
-    console.error('[register] could not extract login ID. status=', upstreamStatus,
+    const failure = classifyUpstreamFailure(upstreamHtml, upstreamStatus);
+    console.error('[register]', failure.code, '— status=', upstreamStatus,
       ' body[0..500]=', upstreamHtml.slice(0, 500));
     await logSignupAttempt({ ...clean, password: '[redacted]', password2: undefined,
-      success: false, error: 'no_login_id_in_response', upstream_status: upstreamStatus, remote_ip: remoteIp });
-    return res.status(502).json({ success: false,
-      error: 'Account may not have been created. Please contact support before trying again to avoid duplicate accounts.' });
+      success: false, error: failure.code, upstream_status: upstreamStatus, remote_ip: remoteIp });
+    // 409 for duplicates so the frontend can detect it; 502 for upstream errors
+    const httpStatus = failure.code === 'duplicate_account' ? 409 : 502;
+    return res.status(httpStatus).json({ success: false, error: failure.userMessage, code: failure.code });
   }
 
   await logSignupAttempt({ ...clean, password: '[redacted]', password2: undefined,
