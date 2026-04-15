@@ -352,7 +352,12 @@ async function verifyRecaptcha(token, remoteIp) {
       body: params.toString()
     });
     const data = await r.json();
-    return data.success ? { ok: true } : { ok: false, error: 'reCAPTCHA verification failed' };
+    if (data.success) return { ok: true };
+    // Log Google's response so we can diagnose mismatched-secret / wrong-domain
+    // / expired-token issues. `error-codes` is the key field.
+    console.error('[recaptcha] Google rejected token. response=', JSON.stringify(data),
+      ' secret-prefix=', secret.slice(0, 6) + '…', ' secret-len=', secret.length);
+    return { ok: false, error: 'reCAPTCHA verification failed', codes: data['error-codes'] || [] };
   } catch (err) {
     console.error('[recaptcha] verify error:', err);
     return { ok: false, error: 'reCAPTCHA verification error' };
@@ -398,7 +403,7 @@ app.post('/api/register', async (req, res) => {
 
   const captcha = await verifyRecaptcha(req.body.captchaToken, remoteIp);
   if (!captcha.ok) {
-    return res.status(400).json({ success: false, error: captcha.error || 'reCAPTCHA failed' });
+    return res.status(400).json({ success: false, error: captcha.error || 'reCAPTCHA failed', codes: captcha.codes });
   }
 
   let upstreamHtml = '';
