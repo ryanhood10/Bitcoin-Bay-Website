@@ -604,13 +604,13 @@
       <!-- Success panel (shown after successful submit) -->
       <div class="reg-success" id="regSuccessPanel">
         <div class="reg-success-icon">🎉</div>
-        <div class="reg-success-title">Account Submitted!</div>
+        <div class="reg-success-title">Account Created!</div>
         <div class="reg-success-text">
-          Your account is being created. Check your inbox at
-          <strong id="regSuccessEmail" style="color:#F7941D;"></strong>
-          for a welcome email and your login ID.
+          Your Login ID is:
+          <div id="regSuccessLoginId" style="font-family:'Courier New',monospace;font-size:32px;font-weight:800;color:#F7941D;letter-spacing:2px;margin:12px 0;">—</div>
+          We've also sent it to <strong id="regSuccessEmail" style="color:#F7941D;"></strong>.
           <br><br>
-          Once you've got your login, head back to the homepage to sign in.
+          Save your Login ID and the password you chose, then head to the homepage to sign in.
         </div>
         <a href="/" class="reg-submit" style="display:inline-block;text-align:center;text-decoration:none;padding:14px 40px;width:auto;">
           Back to Sign In
@@ -745,20 +745,18 @@
       $('reg-err-terms').style.display = this.checked ? 'none' : 'block';
     });
 
-    // --- Send email notification (same endpoint as the live site) -------
-    function sendEmail(formData) {
-      return fetch('/send-email', {
+    // --- Server-proxied registration ------------------------------------
+    // POSTs JSON to our /api/register endpoint. The server validates,
+    // verifies reCAPTCHA, forwards to the wager backend, parses the
+    // assigned login ID from the response, and sends our welcome email
+    // with that login ID included.
+    function submitRegistration(payload) {
+      return fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       }).then(function (r) {
-        return r.text().then(function (t) {
-          console.log('[send-email]', r.status, t);
-        });
-      }).catch(function (err) {
-        // Non-fatal — the real account creation already happened via the
-        // hidden iframe form post. We just log and move on.
-        console.error('[send-email] error:', err);
+        return r.json().then(function (data) { return { status: r.status, data: data }; });
       });
     }
 
@@ -824,40 +822,69 @@
       if (!validate()) return;
 
       var btn = this;
+      var originalLabel = btn.textContent;
       btn.disabled = true;
       btn.textContent = 'Creating account…';
 
-      var formData = {
-        firstName: $('reg-firstname').value.trim(),
-        lastName:  $('reg-lastname').value.trim(),
+      var captchaToken = '';
+      try { captchaToken = (typeof grecaptcha !== 'undefined' && grecaptcha.getResponse) ? grecaptcha.getResponse() : ''; } catch (e) {}
+
+      var payload = {
+        firstname: $('reg-firstname').value.trim(),
+        lastname:  $('reg-lastname').value.trim(),
         email:     $('reg-email').value.trim(),
+        email2:    $('reg-email2').value.trim(),
         phone:     $('reg-phone').value.trim(),
-        promo:     $('reg-promo').value.trim()
+        password:  $('reg-pass').value,
+        password2: $('reg-pass2').value,
+        promo:     $('reg-promo').value.trim(),
+        captchaToken: captchaToken
       };
 
-      // 1. Fire the email notification (non-blocking)
-      sendEmail(formData);
+      submitRegistration(payload).then(function (result) {
+        var data = result.data || {};
+        if (!data.success) {
+          if (data.errors) {
+            Object.keys(data.errors).forEach(function (field) {
+              var inputId = 'reg-' + (field === 'password'  ? 'pass'  :
+                                       field === 'password2' ? 'pass2' : field);
+              var errId = 'reg-err-' + (field === 'password'  ? 'pass'  :
+                                         field === 'password2' ? 'pass2' : field);
+              showError(inputId, errId);
+              var errEl = $(errId);
+              if (errEl) errEl.textContent = data.errors[field];
+            });
+          } else if (data.error) {
+            alert(data.error);
+          } else {
+            alert('Account creation failed. Please try again.');
+          }
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+          try { grecaptcha.reset(); } catch (e) {}
+          return;
+        }
 
-      // 2. Submit the real form to the wager backend (loads into the
-      //    hidden iframe so the page does not navigate away).
-      $('createAccountForm').submit();
-
-      // 3. Swap the form for a success panel after a short delay so the
-      //    iframe has time to load the response.
-      setTimeout(function () {
-        var userEmail = $('reg-email') ? $('reg-email').value : '';
+        var userEmail = $('reg-email').value;
         if (userEmail) $('regSuccessEmail').textContent = userEmail;
+        if (data.loginId) $('regSuccessLoginId').textContent = data.loginId;
         $('regFormPanel').style.display = 'none';
         $('regSuccessPanel').style.display = 'block';
 
-        // GTM: fire signup conversion event for GA4 tracking
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
           event: 'signup_complete',
           method: 'form',
+          login_id: data.loginId || '',
           referral: $('reg-promo') ? $('reg-promo').value : ''
         });
-      }, 800);
+      }).catch(function (err) {
+        console.error('[register] network error:', err);
+        alert('Network error. Please check your connection and try again.');
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        try { grecaptcha.reset(); } catch (e) {}
+      });
     });
 
   })();

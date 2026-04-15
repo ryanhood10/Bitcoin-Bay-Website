@@ -139,34 +139,60 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-// Email sending route
-app.post('/send-email', (req, res) => {
-  const { firstName, lastName, email, phone, promo } = req.body;
-
-  // Create a transporter object (Gandi SMTP)
-  const transporter = nodemailer.createTransport({
+// ---------------------------------------------------------------------------
+// Shared email helpers — used by both /send-email (legacy) and /api/register.
+// `loginId` is optional. When present, the welcome email shows it prominently
+// so the user has their login even if the wager backend's email fails.
+// ---------------------------------------------------------------------------
+function getMailTransport() {
+  return nodemailer.createTransport({
     host: 'mail.gandi.net',
     port: 465,
-    secure: true, // SSL
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASSWORD,
-    }
+    secure: true,
+    auth: { user: process.env.EMAIL, pass: process.env.EMAIL_PASSWORD }
   });
+}
 
-  // 1. Internal notification to track signups
-  const internalMail = {
+function buildInternalMail({ firstName, lastName, email, phone, promo, loginId }) {
+  const lines = [
+    'New account signup:',
+    '',
+    `First Name: ${firstName}`,
+    `Last Name:  ${lastName}`,
+    `Email:      ${email}`,
+    `Phone:      ${phone}`,
+    `Referred By: ${promo || 'N/A'}`,
+    `Login ID:   ${loginId || '(not captured — wager backend response did not include one)'}`,
+    `Timestamp:  ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`
+  ];
+  return {
     from: `"Bitcoin Bay" <${process.env.EMAIL}>`,
-    to: process.env.EMAIL, // welcome@bitcoinbay.com
-    subject: `New Signup: ${firstName} ${lastName}`,
-    text: `New account signup:\n\nFirst Name: ${firstName}\nLast Name: ${lastName}\nEmail: ${email}\nPhone: ${phone}\nReferred By: ${promo || 'N/A'}\nTimestamp: ${new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })}`
+    to: process.env.EMAIL,
+    subject: loginId
+      ? `New Signup: ${firstName} ${lastName} (${loginId})`
+      : `New Signup: ${firstName} ${lastName}`,
+    text: lines.join('\n')
   };
+}
 
-  // 2. Welcome email to the user
-  const welcomeMail = {
+function buildWelcomeMail({ firstName, email, loginId }) {
+  const loginIdBlock = loginId ? `
+    <div style="background:linear-gradient(135deg,rgba(247,148,29,0.15),rgba(242,101,34,0.1));border:1px solid rgba(247,148,29,0.35);border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+      <p style="margin:0 0 8px;font-size:13px;color:#F7941D;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Your Login ID</p>
+      <p style="margin:0 0 8px;font-family:'Courier New',monospace;font-size:32px;font-weight:800;color:#fff;letter-spacing:2px;">${loginId}</p>
+      <p style="margin:0;color:#B0C4DE;font-size:13px;">Save this — you'll need it to sign in.</p>
+    </div>` : '';
+
+  const nextStepsCopy = loginId
+    ? `Your account is ready. Use the Login ID above and the password you chose to sign in. A separate email from our gaming backend will follow with additional account details.`
+    : `Your account is being created right now. You'll receive a separate email shortly with your <strong style="color:#fff;">Login ID</strong> and account details.`;
+
+  return {
     from: `"Bitcoin Bay" <${process.env.EMAIL}>`,
     to: email,
-    subject: `Welcome to Bitcoin Bay, ${firstName}!`,
+    subject: loginId
+      ? `Welcome to Bitcoin Bay, ${firstName}! Your Login ID: ${loginId}`
+      : `Welcome to Bitcoin Bay, ${firstName}!`,
     html: `
 <!doctype html>
 <html>
@@ -185,14 +211,13 @@ app.post('/send-email', (req, res) => {
     <p style="margin:0;color:#B0C4DE;font-size:16px;">Hey ${firstName}, we're glad you're here.</p>
   </div>
 
+  ${loginIdBlock}
+
   <!-- Main card -->
   <div style="background:#0D2240;border:1px solid rgba(86,204,242,0.1);border-radius:16px;padding:32px;margin-bottom:24px;">
     <h2 style="margin:0 0 12px;font-size:18px;color:#fff;">What happens next?</h2>
     <p style="color:#B0C4DE;font-size:15px;line-height:1.6;margin:0 0 20px;">
-      Your account is being created right now. You'll receive a separate email shortly with your <strong style="color:#fff;">Login ID</strong> and account details.
-    </p>
-    <p style="color:#B0C4DE;font-size:15px;line-height:1.6;margin:0 0 20px;">
-      Once you have your Login ID, head to our site to sign in and make your first deposit.
+      ${nextStepsCopy}
     </p>
 
     <!-- CTA button -->
@@ -232,8 +257,19 @@ app.post('/send-email', (req, res) => {
 </body>
 </html>`
   };
+}
 
-  // Send both emails (internal + welcome)
+// ---------------------------------------------------------------------------
+// Legacy email-only endpoint. Kept for backwards compatibility — the new
+// /api/register endpoint below proxies the wager backend AND sends the
+// welcome email with the captured login ID, which is the preferred flow.
+// ---------------------------------------------------------------------------
+app.post('/send-email', (req, res) => {
+  const { firstName, lastName, email, phone, promo } = req.body;
+  const transporter = getMailTransport();
+  const internalMail = buildInternalMail({ firstName, lastName, email, phone, promo });
+  const welcomeMail = buildWelcomeMail({ firstName, email });
+
   Promise.all([
     transporter.sendMail(internalMail),
     transporter.sendMail(welcomeMail),
@@ -245,6 +281,184 @@ app.post('/send-email', (req, res) => {
     console.log('Error sending email:', error);
     res.status(500).send('Error sending email');
   });
+});
+
+
+// ---------------------------------------------------------------------------
+// /api/register — proxy the wager-backend account-creation call so we can:
+//   1) validate the payload server-side (catch bad emails before they create
+//      orphaned accounts that never receive credentials)
+//   2) verify the reCAPTCHA token (client-side check is bypassable)
+//   3) parse the assigned login ID out of the wager backend's HTML response
+//   4) include that login ID in the welcome email we send
+//   5) log every signup attempt to MongoDB for our own audit trail
+// ---------------------------------------------------------------------------
+const WAGER_CREATE_URL = 'https://wager.bitcoinbay.com/sites/bitcoinbay.ag/createAccount.php';
+const REG_EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]{2,})+$/;
+const REG_PASS_RE = /^[a-zA-Z0-9 ]+$/;
+const REG_PHONE_RE = /^\(\d{3}\) \d{3} - \d{4}$/;
+// Reject obvious junk TLDs that wager backend currently accepts. This is the
+// single biggest source of "no credentials email arrived" support tickets —
+// users typo their address and the upstream silently creates the account.
+const REG_BAD_TLDS = ['invalid', 'test', 'example', 'localhost', 'local'];
+
+function validateRegistration(body) {
+  const errors = {};
+  const firstname = (body.firstname || '').trim();
+  const lastname  = (body.lastname  || '').trim();
+  const email     = (body.email     || '').trim().toLowerCase();
+  const email2    = (body.email2    || '').trim().toLowerCase();
+  const phone     = (body.phone     || '').trim();
+  const password  = body.password   || '';
+  const password2 = body.password2  || '';
+
+  if (!firstname) errors.firstname = 'First name is required';
+  if (!lastname)  errors.lastname  = 'Last name is required';
+
+  if (!email || !REG_EMAIL_RE.test(email)) {
+    errors.email = 'Valid email is required';
+  } else {
+    const tld = email.split('.').pop();
+    if (REG_BAD_TLDS.includes(tld)) errors.email = 'That email address is not deliverable';
+  }
+  if (email && email2 && email !== email2) errors.email2 = 'Emails must match';
+
+  if (!REG_PHONE_RE.test(phone)) errors.phone = 'Phone must be in format (xxx) xxx - xxxx';
+
+  if (!password || password.length < 4 || password.length > 10 || !REG_PASS_RE.test(password)) {
+    errors.password = 'Password must be 4–10 characters, letters and numbers only';
+  }
+  if (password && password2 && password !== password2) errors.password2 = 'Passwords must match';
+
+  return { errors, clean: { firstname, lastname, email, email2, phone, password, password2,
+    promo: (body.promo || '').trim() } };
+}
+
+async function verifyRecaptcha(token, remoteIp) {
+  if (!process.env.RECAPTCHA_SECRET) {
+    console.warn('[recaptcha] RECAPTCHA_SECRET not set — skipping verification (set this env var to enable bot protection)');
+    return { ok: true, skipped: true };
+  }
+  if (!token) return { ok: false, error: 'Missing reCAPTCHA token' };
+  try {
+    const params = new URLSearchParams({ secret: process.env.RECAPTCHA_SECRET, response: token });
+    if (remoteIp) params.set('remoteip', remoteIp);
+    const r = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+    const data = await r.json();
+    return data.success ? { ok: true } : { ok: false, error: 'reCAPTCHA verification failed' };
+  } catch (err) {
+    console.error('[recaptcha] verify error:', err);
+    return { ok: false, error: 'reCAPTCHA verification error' };
+  }
+}
+
+// Pull the assigned login ID out of the wager backend's HTML success modal.
+// Response contains: <input type="hidden" name="username" value="BTCB7578">
+// AND a visible "Your login ID is: <span ...>BTCB7578</span>"
+function extractLoginId(html) {
+  if (!html || typeof html !== 'string') return null;
+  const m1 = html.match(/name=["']username["']\s+value=["']([A-Z0-9]+)["']/i);
+  if (m1) return m1[1];
+  const m2 = html.match(/Your login ID is:\s*<span[^>]*>\s*([A-Z0-9]+)\s*<\/span>/i);
+  if (m2) return m2[1];
+  return null;
+}
+
+async function logSignupAttempt(record) {
+  if (!process.env.MONGO_URI) return;
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    await client.db('bcbay_automation').collection('bcb_signups').insertOne({
+      ...record,
+      created_at: new Date()
+    });
+  } catch (err) {
+    console.error('[signups] mongo log failed:', err.message);
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+}
+
+app.post('/api/register', async (req, res) => {
+  const remoteIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+
+  const { errors, clean } = validateRegistration(req.body);
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json({ success: false, errors });
+  }
+
+  const captcha = await verifyRecaptcha(req.body.captchaToken, remoteIp);
+  if (!captcha.ok) {
+    return res.status(400).json({ success: false, error: captcha.error || 'reCAPTCHA failed' });
+  }
+
+  let upstreamHtml = '';
+  let upstreamStatus = 0;
+  try {
+    const params = new URLSearchParams({
+      firstname: clean.firstname,
+      lastname:  clean.lastname,
+      email:     clean.email,
+      email2:    clean.email2,
+      phone:     clean.phone,
+      password:  clean.password,
+      password2: clean.password2,
+      promo:     clean.promo
+    });
+    const upstream = await fetch(WAGER_CREATE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin':       'https://www.bitcoinbay.com',
+        'Referer':      'https://www.bitcoinbay.com/register'
+      },
+      body: params.toString()
+    });
+    upstreamStatus = upstream.status;
+    upstreamHtml = await upstream.text();
+  } catch (err) {
+    console.error('[register] wager backend fetch failed:', err);
+    await logSignupAttempt({ ...clean, password: '[redacted]', password2: undefined,
+      success: false, error: 'upstream_fetch_failed', remote_ip: remoteIp });
+    return res.status(502).json({ success: false, error: 'Account creation service is unreachable. Please try again in a moment.' });
+  }
+
+  const loginId = extractLoginId(upstreamHtml);
+  if (!loginId) {
+    console.error('[register] could not extract login ID. status=', upstreamStatus,
+      ' body[0..500]=', upstreamHtml.slice(0, 500));
+    await logSignupAttempt({ ...clean, password: '[redacted]', password2: undefined,
+      success: false, error: 'no_login_id_in_response', upstream_status: upstreamStatus, remote_ip: remoteIp });
+    return res.status(502).json({ success: false,
+      error: 'Account may not have been created. Please contact support before trying again to avoid duplicate accounts.' });
+  }
+
+  await logSignupAttempt({ ...clean, password: '[redacted]', password2: undefined,
+    success: true, login_id: loginId, remote_ip: remoteIp });
+
+  try {
+    const transporter = getMailTransport();
+    await Promise.all([
+      transporter.sendMail(buildInternalMail({
+        firstName: clean.firstname, lastName: clean.lastname,
+        email: clean.email, phone: clean.phone, promo: clean.promo, loginId
+      })),
+      transporter.sendMail(buildWelcomeMail({
+        firstName: clean.firstname, email: clean.email, loginId
+      }))
+    ]);
+    console.log('[register] success for', clean.email, '→ loginId=', loginId);
+  } catch (err) {
+    console.error('[register] email send failed (account WAS created):', err.message);
+  }
+
+  return res.json({ success: true, loginId });
 });
 
 
