@@ -722,9 +722,49 @@ async function checkResetRateLimit({ email, loginId, remoteIp }) {
   }
 }
 
+// Upsert a legacy user into bcb_signups when we discover them via getPlayerInfo.
+// Only fires on the loginId path (since email path only reads our own Mongo).
+// Keyed on email so repeat resets don't create duplicates, and natural signups
+// aren't overwritten.
+async function backfillLegacyUser({ info, customerId, remoteIp }) {
+  if (!process.env.MONGO_URI || !info || !info.email) return;
+  const email = info.email.trim().toLowerCase();
+  if (!email) return;
+
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const coll = client.db('bcbay_automation').collection('bcb_signups');
+
+    // Skip if this email is already in our signup log (natural or prior backfill).
+    const existing = await coll.findOne({ email });
+    if (existing) return;
+
+    await coll.insertOne({
+      firstname:     (info.NameFirst || '').trim(),
+      lastname:      (info.NameLast  || '').trim(),
+      email,
+      phone:         (info.HomePhone || '').trim() || null,
+      promo:         null,
+      login_id:      customerId,
+      source:        'reset_backfill',
+      success:       true,
+      backfilled_at: new Date(),
+      created_at:    new Date(),
+      remote_ip:     remoteIp || null
+    });
+    console.log('[reset] backfilled legacy user into bcb_signups (email masked)');
+  } catch (err) {
+    console.error('[reset] backfill insert failed:', err.message);
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+}
+
 // Look up {customerId, email, firstName} starting from whatever the user gave us.
 // Returns null if no match found.
-async function resolveAccount({ email, loginId }) {
+async function resolveAccount({ email, loginId, remoteIp }) {
   if (!process.env.MONGO_URI && !loginId) return null;
 
   // Path 1: loginId provided → go straight to wager backend (authoritative).
@@ -732,6 +772,8 @@ async function resolveAccount({ email, loginId }) {
     try {
       const info = await agentClient.getPlayerInfo(loginId);
       if (info && info.email) {
+        // Fire-and-forget backfill — don't block the reset flow on this.
+        backfillLegacyUser({ info, customerId: loginId, remoteIp }).catch(() => {});
         return {
           customerId: loginId,
           email:      (info.email || '').trim().toLowerCase(),
@@ -807,7 +849,7 @@ app.post('/api/forgot-password', async (req, res) => {
     return res.json(GENERIC_RESPONSE);
   }
 
-  const account = await resolveAccount({ email: emailIn || null, loginId: loginIdIn || null });
+  const account = await resolveAccount({ email: emailIn || null, loginId: loginIdIn || null, remoteIp });
 
   if (!account) {
     await logResetAttempt({
