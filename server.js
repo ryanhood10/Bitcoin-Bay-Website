@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -7,6 +8,7 @@ const app = express();
 const dotenv = require('dotenv');
 const { parse } = require('csv-parse/sync');
 const { MongoClient } = require('mongodb');
+const agentClient = require('./agentClient');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -37,6 +39,14 @@ app.get('/leaderboard', (req, res) => {
 
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'register.html'));
+});
+
+app.get('/forgot-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'forgot-password.html'));
+});
+
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'reset-password.html'));
 });
 
 // Blog index — lists all published posts
@@ -250,6 +260,133 @@ function buildWelcomeMail({ firstName, email, loginId }) {
       <a href="https://www.instagram.com/bitcoin_bay/" style="color:#6B8DB5;text-decoration:none;font-size:12px;">Instagram</a>
       &nbsp;&nbsp;
       <a href="https://x.com/bitcoinbay_com" style="color:#6B8DB5;text-decoration:none;font-size:12px;">X / Twitter</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Password-reset email templates. The request email includes the Login ID
+// so users who forgot EITHER email or password are reminded of their ID.
+// The confirmation email is the post-change security notice.
+// ---------------------------------------------------------------------------
+function buildResetRequestMail({ firstName, email, loginId, resetUrl, expiresInMin }) {
+  const who = firstName ? firstName : 'there';
+  return {
+    from: `"Bitcoin Bay" <${process.env.EMAIL}>`,
+    to: email,
+    subject: `Bitcoin Bay password reset — ${loginId ? 'Login ID ' + loginId : 'requested'}`,
+    html: `
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0A1628;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 24px;">
+
+  <div style="text-align:center;margin-bottom:32px;">
+    <img src="https://www.bitcoinbay.com/bb-logo.png" alt="Bitcoin Bay" width="80" style="border-radius:50%;">
+  </div>
+
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="margin:0 0 8px;font-size:28px;color:#F7941D;">Reset your password</h1>
+    <p style="margin:0;color:#B0C4DE;font-size:16px;">Hey ${who}, we got your request.</p>
+  </div>
+
+  ${loginId ? `
+  <div style="background:linear-gradient(135deg,rgba(247,148,29,0.15),rgba(242,101,34,0.1));border:1px solid rgba(247,148,29,0.35);border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+    <p style="margin:0 0 8px;font-size:13px;color:#F7941D;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Your Login ID</p>
+    <p style="margin:0 0 8px;font-family:'Courier New',monospace;font-size:32px;font-weight:800;color:#fff;letter-spacing:2px;">${loginId}</p>
+    <p style="margin:0;color:#B0C4DE;font-size:13px;">Save this — you'll need it to sign in.</p>
+  </div>` : ''}
+
+  <div style="background:#0D2240;border:1px solid rgba(86,204,242,0.1);border-radius:16px;padding:32px;margin-bottom:24px;">
+    <p style="color:#B0C4DE;font-size:15px;line-height:1.6;margin:0 0 20px;">
+      Click the button below to set a new password. This link is single-use and expires in <strong style="color:#fff;">${expiresInMin} minutes</strong>.
+    </p>
+
+    <div style="text-align:center;margin:28px 0 16px;">
+      <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;font-weight:800;font-size:15px;padding:14px 40px;border-radius:9999px;text-decoration:none;">Set a New Password &rarr;</a>
+    </div>
+
+    <p style="color:#6B8DB5;font-size:13px;line-height:1.6;margin:16px 0 0;word-break:break-all;">
+      Button not working? Paste this into your browser:<br>
+      <span style="color:#B0C4DE;">${resetUrl}</span>
+    </p>
+  </div>
+
+  <div style="background:rgba(86,204,242,0.05);border:1px solid rgba(86,204,242,0.15);border-radius:12px;padding:20px;margin-bottom:24px;">
+    <p style="color:#B0C4DE;font-size:13px;line-height:1.6;margin:0;">
+      <strong style="color:#fff;">Didn't request this?</strong> You can safely ignore this email — nothing will change unless you click the link above. If you're worried about your account, text us at <a href="sms:7022136332" style="color:#F7941D;text-decoration:none;font-weight:600;">702-213-6332</a>.
+    </p>
+  </div>
+
+  <div style="text-align:center;border-top:1px solid rgba(86,204,242,0.1);padding-top:24px;">
+    <p style="color:#6B8DB5;font-size:12px;margin:0;">
+      &copy; 2026 Bitcoin Bay &nbsp;&bull;&nbsp;
+      <a href="https://www.bitcoinbay.com/termsandcond.html" style="color:#6B8DB5;text-decoration:none;">Terms &amp; Conditions</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`
+  };
+}
+
+function buildPasswordChangedMail({ firstName, email, loginId }) {
+  const who = firstName ? firstName : 'there';
+  return {
+    from: `"Bitcoin Bay" <${process.env.EMAIL}>`,
+    to: email,
+    subject: `Your Bitcoin Bay password was just changed`,
+    html: `
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0A1628;font-family:'Helvetica Neue',Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;padding:40px 24px;">
+
+  <div style="text-align:center;margin-bottom:32px;">
+    <img src="https://www.bitcoinbay.com/bb-logo.png" alt="Bitcoin Bay" width="80" style="border-radius:50%;">
+  </div>
+
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="margin:0 0 8px;font-size:26px;color:#22C55E;">Password changed</h1>
+    <p style="margin:0;color:#B0C4DE;font-size:16px;">Hey ${who}, just confirming this for you.</p>
+  </div>
+
+  ${loginId ? `
+  <div style="background:linear-gradient(135deg,rgba(247,148,29,0.15),rgba(242,101,34,0.1));border:1px solid rgba(247,148,29,0.35);border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+    <p style="margin:0 0 8px;font-size:13px;color:#F7941D;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Your Login ID</p>
+    <p style="margin:0 0 8px;font-family:'Courier New',monospace;font-size:32px;font-weight:800;color:#fff;letter-spacing:2px;">${loginId}</p>
+    <p style="margin:0;color:#B0C4DE;font-size:13px;">Use this with your new password to sign in.</p>
+  </div>` : ''}
+
+  <div style="background:#0D2240;border:1px solid rgba(86,204,242,0.1);border-radius:16px;padding:32px;margin-bottom:24px;">
+    <p style="color:#B0C4DE;font-size:15px;line-height:1.6;margin:0 0 20px;">
+      The password on your Bitcoin Bay account was just updated. You can sign in with your new password right away.
+    </p>
+
+    <div style="text-align:center;margin:28px 0 8px;">
+      <a href="https://www.bitcoinbay.com" style="display:inline-block;background:linear-gradient(135deg,#F7941D,#F26522);color:#0A1628;font-weight:800;font-size:15px;padding:14px 40px;border-radius:9999px;text-decoration:none;">Sign In &rarr;</a>
+    </div>
+  </div>
+
+  <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:20px;margin-bottom:24px;">
+    <p style="color:#fff;font-size:14px;line-height:1.6;margin:0 0 6px;font-weight:700;">Didn't do this?</p>
+    <p style="color:#B0C4DE;font-size:13px;line-height:1.6;margin:0;">
+      Text us immediately at <a href="sms:7022136332" style="color:#F7941D;text-decoration:none;font-weight:600;">702-213-6332</a> so we can help secure your account.
+    </p>
+  </div>
+
+  <div style="text-align:center;border-top:1px solid rgba(86,204,242,0.1);padding-top:24px;">
+    <p style="color:#6B8DB5;font-size:12px;margin:0;">
+      &copy; 2026 Bitcoin Bay &nbsp;&bull;&nbsp;
+      <a href="https://www.bitcoinbay.com/termsandcond.html" style="color:#6B8DB5;text-decoration:none;">Terms &amp; Conditions</a>
     </p>
   </div>
 
@@ -497,6 +634,345 @@ app.post('/api/register', async (req, res) => {
   }
 
   return res.json({ success: true, loginId });
+});
+
+
+// ---------------------------------------------------------------------------
+// Password reset — /api/forgot-password + /api/reset-password
+//
+// Flow:
+//   1) User POSTs email OR loginId to /api/forgot-password.
+//   2) Server resolves a customerId + email + firstName:
+//        - email path:   look up in bcb_signups (our own signups)
+//        - loginId path: fetch from wager via agentClient.getPlayerInfo()
+//   3) Generate a cryptographically-random 32-byte token, store in Mongo
+//      (collection bcb_reset_tokens) with 1-hour expiry + single-use flag.
+//   4) Email a reset link to the address on file. Response to client is
+//      ALWAYS the same — no enumeration of which emails/IDs exist.
+//   5) User clicks link, /reset-password page POSTs token + new password
+//      to /api/reset-password. Server validates token, calls
+//      agentClient.updatePlayerPassword(), marks token used, sends a
+//      confirmation email.
+//
+// Security posture:
+//   - Tokens are 256-bit random (2^256 unguessable), single-use, 1h expiry.
+//   - No response leaks whether an account exists for a given email/ID.
+//   - Rate limiting: 3 requests per email-or-IP per hour (soft-enforced).
+//   - Agent credentials never leave the server. This endpoint is the ONLY
+//     writer of passwords on the wager backend from our code.
+//   - Every attempt (success + failure) logged to bcb_reset_log.
+// ---------------------------------------------------------------------------
+const RESET_TOKEN_TTL_MIN = 60;
+const RESET_RATE_LIMIT    = 3;          // max requests per email/IP per window
+const RESET_RATE_WINDOW_MS = 60 * 60 * 1000;
+const PASS_RE = /^[a-zA-Z0-9]{4,10}$/;
+
+function maskEmail(addr) {
+  if (!addr || typeof addr !== 'string' || !addr.includes('@')) return '';
+  const [local, domain] = addr.split('@');
+  const head = local.slice(0, Math.min(2, local.length));
+  const dParts = domain.split('.');
+  const dHead = dParts[0].slice(0, 1);
+  const dTail = dParts.slice(1).join('.');
+  return `${head}${'*'.repeat(Math.max(1, local.length - head.length))}@${dHead}${'*'.repeat(Math.max(1, dParts[0].length - 1))}.${dTail}`;
+}
+
+function normalizeCustomerId(v) {
+  return (v || '').toString().trim().toUpperCase().replace(/\s+/g, '');
+}
+
+async function logResetAttempt(record) {
+  if (!process.env.MONGO_URI) return;
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    await client.db('bcbay_automation').collection('bcb_reset_log').insertOne({
+      ...record,
+      created_at: new Date()
+    });
+  } catch (err) {
+    console.error('[reset] log failed:', err.message);
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+}
+
+async function checkResetRateLimit({ email, loginId, remoteIp }) {
+  if (!process.env.MONGO_URI) return { ok: true };
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const coll = client.db('bcbay_automation').collection('bcb_reset_log');
+    const windowStart = new Date(Date.now() - RESET_RATE_WINDOW_MS);
+    const query = { phase: 'request', created_at: { $gte: windowStart } };
+    const ors = [];
+    if (email)    ors.push({ input_email: email });
+    if (loginId)  ors.push({ input_login_id: loginId });
+    if (remoteIp) ors.push({ remote_ip: remoteIp });
+    if (ors.length) query.$or = ors;
+    const count = await coll.countDocuments(query);
+    return { ok: count < RESET_RATE_LIMIT, count };
+  } catch (err) {
+    console.error('[reset] rate-limit check failed:', err.message);
+    return { ok: true };   // fail-open — don't lock users out on DB blip
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+}
+
+// Look up {customerId, email, firstName} starting from whatever the user gave us.
+// Returns null if no match found.
+async function resolveAccount({ email, loginId }) {
+  if (!process.env.MONGO_URI && !loginId) return null;
+
+  // Path 1: loginId provided → go straight to wager backend (authoritative).
+  if (loginId) {
+    try {
+      const info = await agentClient.getPlayerInfo(loginId);
+      if (info && info.email) {
+        return {
+          customerId: loginId,
+          email:      (info.email || '').trim().toLowerCase(),
+          firstName:  (info.NameFirst || '').trim() || null
+        };
+      }
+    } catch (err) {
+      console.error('[reset] getPlayerInfo failed for', loginId, '-', err.message);
+    }
+    return null;
+  }
+
+  // Path 2: email provided → look in our signup log.
+  if (email) {
+    let client;
+    try {
+      client = new MongoClient(process.env.MONGO_URI);
+      await client.connect();
+      const signup = await client.db('bcbay_automation').collection('bcb_signups')
+        .findOne(
+          { email: email, success: true, login_id: { $exists: true, $ne: null } },
+          { sort: { created_at: -1 } }
+        );
+      if (signup && signup.login_id) {
+        return {
+          customerId: signup.login_id,
+          email:      (signup.email || email).trim().toLowerCase(),
+          firstName:  (signup.firstname || '').trim() || null
+        };
+      }
+    } catch (err) {
+      console.error('[reset] signup lookup failed:', err.message);
+    } finally {
+      if (client) try { await client.close(); } catch (_) {}
+    }
+  }
+
+  return null;
+}
+
+app.post('/api/forgot-password', async (req, res) => {
+  const remoteIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const emailIn   = (req.body.email   || '').trim().toLowerCase();
+  const loginIdIn = normalizeCustomerId(req.body.loginId);
+
+  // Always respond with the same generic success message — never reveal
+  // whether an account was found. The user knows if they have an account.
+  const GENERIC_RESPONSE = {
+    success: true,
+    message: 'If an account matches, we just sent a reset link to the email on file. Check your inbox and spam folder.'
+  };
+
+  // Basic input shape check (not revealing — just stops empty submissions).
+  if (!emailIn && !loginIdIn) {
+    return res.status(400).json({ success: false, error: 'Please enter your email or Login ID.' });
+  }
+
+  // Verify reCAPTCHA (reuses same keys as register).
+  const captcha = await verifyRecaptcha(req.body.captchaToken, remoteIp);
+  if (!captcha.ok) {
+    return res.status(400).json({ success: false, error: captcha.error || 'reCAPTCHA failed' });
+  }
+
+  // Rate limit.
+  const rate = await checkResetRateLimit({ email: emailIn, loginId: loginIdIn, remoteIp });
+  if (!rate.ok) {
+    await logResetAttempt({
+      phase: 'request', outcome: 'rate_limited',
+      input_email: emailIn || null, input_login_id: loginIdIn || null,
+      remote_ip: remoteIp, recent_count: rate.count
+    });
+    // Still return the generic message — don't tell attackers they're being throttled.
+    return res.json(GENERIC_RESPONSE);
+  }
+
+  const account = await resolveAccount({ email: emailIn || null, loginId: loginIdIn || null });
+
+  if (!account) {
+    await logResetAttempt({
+      phase: 'request', outcome: 'no_match',
+      input_email: emailIn || null, input_login_id: loginIdIn || null,
+      remote_ip: remoteIp
+    });
+    return res.json(GENERIC_RESPONSE);
+  }
+
+  // Generate token: 32 random bytes → 64-char hex. 2^256 unguessable.
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MIN * 60 * 1000);
+
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    await client.db('bcbay_automation').collection('bcb_reset_tokens').insertOne({
+      token,
+      customer_id: account.customerId,
+      email:       account.email,
+      first_name:  account.firstName,
+      used:        false,
+      expires_at:  expiresAt,
+      remote_ip:   remoteIp,
+      created_at:  new Date()
+    });
+  } catch (err) {
+    console.error('[reset] token insert failed:', err.message);
+    await logResetAttempt({
+      phase: 'request', outcome: 'db_error',
+      input_email: emailIn || null, input_login_id: loginIdIn || null,
+      remote_ip: remoteIp, error: err.message
+    });
+    return res.json(GENERIC_RESPONSE);
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+
+  const resetUrl = `https://www.bitcoinbay.com/reset-password?token=${token}`;
+
+  try {
+    const transporter = getMailTransport();
+    await transporter.sendMail(buildResetRequestMail({
+      firstName:    account.firstName,
+      email:        account.email,
+      loginId:      account.customerId,
+      resetUrl,
+      expiresInMin: RESET_TOKEN_TTL_MIN
+    }));
+    console.log('[reset] request email sent to', maskEmail(account.email), '→ loginId=', account.customerId);
+  } catch (err) {
+    console.error('[reset] email send failed:', err.message);
+  }
+
+  await logResetAttempt({
+    phase: 'request', outcome: 'sent',
+    input_email: emailIn || null, input_login_id: loginIdIn || null,
+    customer_id: account.customerId,
+    sent_to_masked: maskEmail(account.email),
+    remote_ip: remoteIp
+  });
+
+  return res.json(GENERIC_RESPONSE);
+});
+
+app.post('/api/reset-password', async (req, res) => {
+  const remoteIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const token       = (req.body.token || '').toString().trim();
+  const newPassword = (req.body.password || '').toString();
+  const confirmPass = (req.body.password2 || '').toString();
+
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) {
+    return res.status(400).json({ success: false, error: 'Invalid or missing reset token. Please request a new reset link.' });
+  }
+  if (!newPassword || !PASS_RE.test(newPassword)) {
+    return res.status(400).json({ success: false, error: 'Password must be 4–10 characters, letters and numbers only.' });
+  }
+  if (newPassword !== confirmPass) {
+    return res.status(400).json({ success: false, error: 'Passwords must match.' });
+  }
+
+  let client;
+  let tokenDoc;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const coll = client.db('bcbay_automation').collection('bcb_reset_tokens');
+
+    // Atomically claim the token: mark as used ONLY if not already used and
+    // still within expiry. Prevents replay / double-click races.
+    const now = new Date();
+    const claim = await coll.findOneAndUpdate(
+      { token, used: false, expires_at: { $gt: now } },
+      { $set: { used: true, used_at: now, used_ip: remoteIp } },
+      { returnDocument: 'before' }
+    );
+    tokenDoc = claim && (claim.value || claim);  // driver version compat
+    if (!tokenDoc || !tokenDoc.customer_id) {
+      await logResetAttempt({
+        phase: 'reset', outcome: 'invalid_or_expired_token', remote_ip: remoteIp
+      });
+      return res.status(400).json({ success: false, error: 'This reset link is invalid or has expired. Please request a new one.' });
+    }
+  } catch (err) {
+    console.error('[reset] token claim failed:', err.message);
+    return res.status(500).json({ success: false, error: 'Something went wrong. Please try again.' });
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+
+  // Update password via wager backend.
+  try {
+    await agentClient.updatePlayerPassword({
+      customerId:  tokenDoc.customer_id,
+      newPassword,
+      auditTitle:  'Password Reset (website forgot-password)',
+      auditInfo:   `Self-service reset from ${remoteIp} via forgot-password flow`
+    });
+  } catch (err) {
+    console.error('[reset] updatePlayerPassword failed for', tokenDoc.customer_id, '-', err.message);
+    await logResetAttempt({
+      phase: 'reset', outcome: 'upstream_error',
+      customer_id: tokenDoc.customer_id, remote_ip: remoteIp, error: err.message
+    });
+    // Un-mark the token as used so the user can try again with the same link.
+    try {
+      const c2 = new MongoClient(process.env.MONGO_URI);
+      await c2.connect();
+      await c2.db('bcbay_automation').collection('bcb_reset_tokens').updateOne(
+        { token },
+        { $set: { used: false, used_at: null, used_ip: null } }
+      );
+      await c2.close();
+    } catch (_) {}
+
+    const msg = err && err.name === 'AgentAuthError'
+      ? 'Our password-reset service is temporarily unavailable. Please try again in a few minutes or contact support.'
+      : 'Could not update your password right now. Please try again or contact support.';
+    return res.status(502).json({ success: false, error: msg });
+  }
+
+  // Send confirmation email.
+  try {
+    const transporter = getMailTransport();
+    await transporter.sendMail(buildPasswordChangedMail({
+      firstName: tokenDoc.first_name,
+      email:     tokenDoc.email,
+      loginId:   tokenDoc.customer_id
+    }));
+  } catch (err) {
+    console.error('[reset] confirmation email failed (password WAS changed):', err.message);
+  }
+
+  await logResetAttempt({
+    phase: 'reset', outcome: 'success',
+    customer_id: tokenDoc.customer_id, remote_ip: remoteIp
+  });
+
+  return res.json({
+    success: true,
+    message: 'Your password has been updated. You can sign in with your new password now.',
+    loginId: tokenDoc.customer_id
+  });
 });
 
 
