@@ -1138,4 +1138,10 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 8800;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  // Keep the wager agent token warm even when the site is idle. Without
+  // this, the JWT expires after 21 min of no traffic and password resets
+  // fail cold. The background loop refreshes every 14 min.
+  try { agentClient.startBackgroundRefresh(); } catch (err) {
+    console.error('[startup] background refresh init failed:', err.message);
+  }
 });

@@ -289,10 +289,44 @@ async function getPlayerInfo(customerId) {
   return data && data.INFO && data.INFO.data ? data.INFO.data : null;
 }
 
+// Background refresh loop. Without this, on a low-traffic site the token
+// simply expires between user visits — because the passive refresh in
+// getValidToken only fires on incoming requests. The background loop keeps
+// a valid token warm at all times so forgot-password flows never hit a cold
+// token even if the site has been idle for hours.
+let _bgInterval = null;
+const BG_REFRESH_MS = 14 * 60 * 1000;  // every 14 min (tokens live 21)
+
+function startBackgroundRefresh() {
+  if (_bgInterval) return;
+  _bgInterval = setInterval(async () => {
+    try {
+      await getValidToken();
+    } catch (err) {
+      console.error('[agent] background refresh failed:', err.message);
+    }
+  }, BG_REFRESH_MS);
+  // Don't block process shutdown waiting for this timer.
+  if (_bgInterval.unref) _bgInterval.unref();
+  console.log('[agent] background refresh loop started (every', BG_REFRESH_MS/60000, 'min)');
+
+  // Fire one immediate refresh so boot doesn't rely on the seeded token
+  // being fresh — pulls a brand-new one right away if seed has life left.
+  getValidToken().catch(err =>
+    console.error('[agent] initial warm-up refresh failed:', err.message)
+  );
+}
+
+function stopBackgroundRefresh() {
+  if (_bgInterval) { clearInterval(_bgInterval); _bgInterval = null; }
+}
+
 module.exports = {
   getValidToken,
   updatePlayerPassword,
   getPlayerInfo,
+  startBackgroundRefresh,
+  stopBackgroundRefresh,
   AgentAuthError,
   AgentApiError
 };
