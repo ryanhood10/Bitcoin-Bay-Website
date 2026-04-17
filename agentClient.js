@@ -31,6 +31,7 @@
 
 const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const AGENT_ID       = 'BITCOINBAY';
 const AGENT_OWNER    = 'BITCOINBAY';
@@ -193,6 +194,38 @@ function generateTotp(secretB32, stepSec = 30, digits = 6, offsetSteps = 0) {
 // This is what makes the whole system self-healing. When any part of the
 // cache/refresh chain breaks, we come back here and mint a new chain.
 // ---------------------------------------------------------------------------
+// Consecutive fresh-login failures. Reset to 0 on success. When this crosses
+// ALERT_FAILURE_THRESHOLD, we email info@bitcoinbay.com so the operator knows
+// before users do (e.g. wager backend down, password changed, TOTP rotated).
+let _loginFailureStreak = 0;
+let _lastAlertAt = 0;
+const ALERT_FAILURE_THRESHOLD = 3;
+const ALERT_COOLDOWN_MS = 60 * 60 * 1000;  // one alert per hour max
+
+async function sendOpsAlert(subject, message) {
+  const to = process.env.EMAIL;        // info@bitcoinbay.com equivalent
+  const pass = process.env.EMAIL_PASSWORD;
+  if (!to || !pass) return;            // no transport configured
+  const now = Date.now();
+  if (now - _lastAlertAt < ALERT_COOLDOWN_MS) return;  // cooldown
+  _lastAlertAt = now;
+  try {
+    const t = nodemailer.createTransport({
+      host: 'mail.gandi.net', port: 465, secure: true,
+      auth: { user: to, pass }
+    });
+    await t.sendMail({
+      from: `"Bitcoin Bay Ops" <${to}>`,
+      to,
+      subject: `[BCB OPS] ${subject}`,
+      text: `${message}\n\nTime: ${new Date().toISOString()}\nHeroku app: bitcoin-bay\n`
+    });
+    console.log('[agent] ops alert sent:', subject);
+  } catch (err) {
+    console.error('[agent] ops alert send failed:', err.message);
+  }
+}
+
 async function performFreshLogin() {
   const user   = process.env.AGENT_USERNAME;
   const pass   = process.env.AGENT_PASSWORD;
@@ -204,7 +237,28 @@ async function performFreshLogin() {
     );
   }
 
-  console.log('[agent] performing fresh login for', user, '...');
+  console.log('[agent] performing fresh login...');
+
+  try {
+    return await _doFreshLoginSteps();
+  } catch (err) {
+    _loginFailureStreak++;
+    if (_loginFailureStreak >= ALERT_FAILURE_THRESHOLD) {
+      sendOpsAlert(
+        `Agent fresh-login failing (${_loginFailureStreak} in a row)`,
+        `The last error was: ${err.message}\n\n` +
+        `User-facing password resets will fail until this is resolved. ` +
+        `Check Heroku logs for details.`
+      );
+    }
+    throw err;
+  }
+}
+
+async function _doFreshLoginSteps() {
+  const user   = process.env.AGENT_USERNAME;
+  const pass   = process.env.AGENT_PASSWORD;
+  const secret = process.env.AGENT_TOTP_SECRET;
 
   // Step 1 — authenticateCustomer. The portal uppercases the password before
   // submitting; we mirror that exactly to match the captured browser flow.
@@ -276,6 +330,7 @@ async function performFreshLogin() {
 
     const exp = decodeJwtExp(realJwt) || (nowSec() + 20 * 60);
     console.log('[agent] fresh login succeeded, token exp in', Math.round((exp - nowSec()) / 60), 'min');
+    _loginFailureStreak = 0;
     return { code: realJwt, exp };
   }
 

@@ -739,7 +739,7 @@ async function resolveAccount({ email, loginId }) {
         };
       }
     } catch (err) {
-      console.error('[reset] getPlayerInfo failed for', loginId, '-', err.message);
+      console.error('[reset] getPlayerInfo failed:', err.message);
     }
     return null;
   }
@@ -869,7 +869,7 @@ app.post('/api/forgot-password', async (req, res) => {
       resetUrl,
       expiresInMin: RESET_TOKEN_TTL_MIN
     }));
-    console.log('[reset] request email sent to', maskEmail(account.email), '→ loginId=', account.customerId);
+    console.log('[reset] request email sent to', maskEmail(account.email));
   } catch (err) {
     console.error('[reset] email send failed:', err.message);
   }
@@ -939,7 +939,7 @@ app.post('/api/reset-password', async (req, res) => {
       auditInfo:   `Self-service reset from ${remoteIp} via forgot-password flow`
     });
   } catch (err) {
-    console.error('[reset] updatePlayerPassword failed for', tokenDoc.customer_id, '-', err.message);
+    console.error('[reset] updatePlayerPassword failed:', err.message);
     await logResetAttempt({
       phase: 'reset', outcome: 'upstream_error',
       customer_id: tokenDoc.customer_id, remote_ip: remoteIp, error: err.message
