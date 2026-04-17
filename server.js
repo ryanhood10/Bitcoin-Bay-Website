@@ -815,6 +815,16 @@ app.post('/api/forgot-password', async (req, res) => {
       input_email: emailIn || null, input_login_id: loginIdIn || null,
       remote_ip: remoteIp
     });
+    // Login IDs are not easily enumerable (random strings like BTCB1234), so
+    // a specific "not found" error is a UX win with minimal security cost.
+    // Emails ARE easily enumerable, so we keep that path generic.
+    if (loginIdIn && !emailIn) {
+      return res.status(404).json({
+        success: false,
+        code: 'login_id_not_found',
+        error: `We couldn't find an account with Login ID "${loginIdIn}". Double-check it and try again, or switch to the email tab.`
+      });
+    }
     return res.json(GENERIC_RESPONSE);
   }
 
