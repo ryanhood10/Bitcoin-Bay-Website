@@ -1,40 +1,44 @@
 // ---------------------------------------------------------------------------
 // agentClient.js — server-to-server client for the wager (PPH Insider) API.
 //
-// The agent portal issues a 21-minute JWT and exposes a /renewToken endpoint
-// that returns a fresh JWT when called with a still-valid Bearer token. As
-// long as we refresh before expiry, we can maintain a valid token indefinitely
-// without re-logging in (which would require 2FA).
+// Self-healing auth model (no manual JWT reseeding required):
 //
-// How auth is bootstrapped and kept alive
-//   1) Initial JWT is seeded from the AGENT_TOKEN env var (captured once from
-//      a browser session after a fresh agent login + 2FA).
-//   2) Every call goes through getValidToken(), which checks the cached JWT's
-//      `exp` claim and proactively refreshes if there's < REFRESH_SKEW_SEC
-//      left on the clock.
-//   3) The refreshed token is held in module memory AND persisted to Mongo
-//      (collection `bcb_agent_token`) so it survives dyno restarts.
-//   4) If the refresh chain ever breaks (missed refresh window, backend
-//      revoked, 401 on renew), callers get an AgentAuthError and the admin
-//      must reseed AGENT_TOKEN. This is intentional — we do NOT automate
-//      re-login, because that path requires 2FA.
+//   1) Try cached token (in-memory) → if valid, use it
+//   2) Else try persisted token (Mongo) → if valid, use it
+//   3) Else try AGENT_TOKEN env var seed → if valid, use it
+//   4) Else perform a FRESH LOGIN from scratch using AGENT_USERNAME,
+//      AGENT_PASSWORD, and AGENT_TOTP_SECRET. This is what unlocks indefinite
+//      uptime — the server logs in exactly like a human does (password +
+//      TOTP 2FA code), but generates the 2FA code itself from the shared
+//      TOTP secret. No human intervention needed.
+//   5) The real backend enforces a ~9-hour max lifetime on a JWT chain.
+//      When refreshToken() eventually hits that wall and returns 401, we
+//      automatically fall back to performFreshLogin() and mint a new chain.
+//
+// Fresh-login flow (two-step, matches what the browser portal does):
+//   a) POST /cloud/api/System/authenticateCustomer with customerID/password/etc.
+//      → returns { tokentemp: <short-lived temp JWT> }
+//   b) POST /cloud/api/System/OTPLoginWithCode with Bearer <temp JWT> and
+//      the current 6-digit TOTP code → returns { code: <full-access JWT> }
 //
 // Security notes
-//   - AGENT_USERNAME / AGENT_PASSWORD are stored as env vars but are NOT used
-//     by this module. They're reserved in case we ever need to bootstrap
-//     without a captured JWT (would require 2FA, so not automated today).
-//   - The only wager operation we expose is updatePlayerPassword(). Callers
-//     cannot use this module to modify arbitrary columns. `column=Password`
+//   - All three auth secrets (password, TOTP secret, JWT cache) live only in
+//     Heroku env vars or Mongo — never in code, never in logs.
+//   - The only wager WRITE we expose is updatePlayerPassword(). Callers
+//     cannot use this module to modify arbitrary columns — `column=Password`
 //     is hardcoded to minimize blast radius if our server is ever compromised.
 // ---------------------------------------------------------------------------
 
 const { MongoClient } = require('mongodb');
+const crypto = require('crypto');
 
 const AGENT_ID       = 'BITCOINBAY';
 const AGENT_OWNER    = 'BITCOINBAY';
 const AGENT_SITE     = '1';
 const WAGER_BASE     = 'https://wager.bitcoinbay.com';
 const RENEW_URL      = `${WAGER_BASE}/cloud/api/System/renewToken`;
+const AUTH_URL       = `${WAGER_BASE}/cloud/api/System/authenticateCustomer`;
+const OTP_URL        = `${WAGER_BASE}/cloud/api/System/OTPLoginWithCode`;
 const UPDATE_URL     = `${WAGER_BASE}/cloud/api/Manager/updateByColumn`;
 const GET_INFO_URL   = `${WAGER_BASE}/cloud/api/Manager/getInfoPlayer`;
 
@@ -129,16 +133,154 @@ async function getInitialToken() {
       await saveTokenToMongo(cachedToken);
       return cachedToken;
     }
-    console.error('[agent] AGENT_TOKEN env var is present but expired (exp=', exp, '). Reseed required.');
+    console.log('[agent] AGENT_TOKEN env var is expired — falling back to fresh login');
+  } else {
+    console.log('[agent] No cached token and no AGENT_TOKEN seed — performing fresh login');
   }
 
-  throw new AgentAuthError(
-    'No valid agent JWT available. Seed AGENT_TOKEN env var with a fresh JWT ' +
-    'from the agent portal session storage.'
-  );
+  // Final fallback: log in from scratch using username + password + TOTP.
+  // This is what makes the system self-healing — the server re-authenticates
+  // exactly like a human would, but generates its own 2FA codes.
+  const fresh = await performFreshLogin();
+  cachedToken = fresh;
+  await saveTokenToMongo(fresh);
+  return cachedToken;
 }
 
 function nowSec() { return Math.floor(Date.now() / 1000); }
+
+// ---------------------------------------------------------------------------
+// TOTP generator (RFC 6238). Produces the same 6-digit code Google
+// Authenticator does, given the shared secret (base32). We use this so our
+// server can generate 2FA codes on demand without a human with a phone.
+// ---------------------------------------------------------------------------
+function base32Decode(str) {
+  // RFC 4648 base32 (A-Z2-7). Accepts uppercase, ignores padding.
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const clean = str.replace(/=+$/g, '').toUpperCase();
+  let bits = '';
+  for (const ch of clean) {
+    const v = alphabet.indexOf(ch);
+    if (v < 0) throw new Error('Invalid base32 char: ' + ch);
+    bits += v.toString(2).padStart(5, '0');
+  }
+  const out = Buffer.alloc(Math.floor(bits.length / 8));
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+  }
+  return out;
+}
+
+function generateTotp(secretB32, stepSec = 30, digits = 6, offsetSteps = 0) {
+  if (!secretB32) throw new Error('AGENT_TOTP_SECRET is not set');
+  const key = base32Decode(secretB32);
+  const counter = Math.floor(nowSec() / stepSec) + offsetSteps;
+  // Counter -> 8-byte big-endian
+  const buf = Buffer.alloc(8);
+  buf.writeBigUInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const binCode =
+    ((hmac[offset]     & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) <<  8) |
+    ( hmac[offset + 3] & 0xff);
+  return (binCode % Math.pow(10, digits)).toString().padStart(digits, '0');
+}
+
+// ---------------------------------------------------------------------------
+// Fresh login: authenticateCustomer → OTPLoginWithCode → real JWT
+// This is what makes the whole system self-healing. When any part of the
+// cache/refresh chain breaks, we come back here and mint a new chain.
+// ---------------------------------------------------------------------------
+async function performFreshLogin() {
+  const user   = process.env.AGENT_USERNAME;
+  const pass   = process.env.AGENT_PASSWORD;
+  const secret = process.env.AGENT_TOTP_SECRET;
+
+  if (!user || !pass || !secret) {
+    throw new AgentAuthError(
+      'Fresh login requires AGENT_USERNAME, AGENT_PASSWORD, and AGENT_TOTP_SECRET env vars.'
+    );
+  }
+
+  console.log('[agent] performing fresh login for', user, '...');
+
+  // Step 1 — authenticateCustomer. The portal uppercases the password before
+  // submitting; we mirror that exactly to match the captured browser flow.
+  const step1Body = new URLSearchParams({
+    customerID:    user,
+    state:         'true',
+    password:      pass.toUpperCase(),
+    multiaccount:  '0',
+    response_type: 'code',
+    client_id:     user,
+    domain:        'wager.bitcoinbay.com',
+    redirect_uri:  'wager.bitcoinbay.com',
+    token:         '',
+    operation:     'authenticateCustomer',
+    RRO:           '1'
+  });
+
+  const r1 = await fetch(AUTH_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type':     'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Authorization':    'Bearer'   // browser sends an empty Bearer here
+    },
+    body: step1Body.toString()
+  });
+
+  if (!r1.ok) {
+    const text = await r1.text().catch(() => '');
+    throw new AgentAuthError(`authenticateCustomer HTTP ${r1.status}: ${text.slice(0, 300)}`);
+  }
+  const d1 = await r1.json().catch(() => null);
+  const tempJwt = d1 && (d1.tokentemp || d1.code);
+  if (!tempJwt) {
+    throw new AgentAuthError('authenticateCustomer response missing tokentemp/code: ' + JSON.stringify(d1).slice(0, 300));
+  }
+
+  // Step 2 — OTPLoginWithCode with the current TOTP. If we just missed the
+  // 30-second window, try the previous and next codes too (± 1 step skew).
+  const codes = [
+    generateTotp(secret, 30, 6, 0),
+    generateTotp(secret, 30, 6, -1),
+    generateTotp(secret, 30, 6, 1)
+  ];
+
+  for (const code of codes) {
+    const step2Body = new URLSearchParams({ operation: 'OTPLoginWithCode', code });
+    const r2 = await fetch(OTP_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization':    `Bearer ${tempJwt}`,
+        'Content-Type':     'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: step2Body.toString()
+    });
+
+    if (!r2.ok) {
+      const text = await r2.text().catch(() => '');
+      // 401/403 = code rejected — try next offset
+      if (r2.status === 401 || r2.status === 403) continue;
+      throw new AgentAuthError(`OTPLoginWithCode HTTP ${r2.status}: ${text.slice(0, 300)}`);
+    }
+    const d2 = await r2.json().catch(() => null);
+    const realJwt = d2 && d2.code;
+    if (!realJwt) {
+      throw new AgentAuthError('OTPLoginWithCode response missing code: ' + JSON.stringify(d2).slice(0, 300));
+    }
+
+    const exp = decodeJwtExp(realJwt) || (nowSec() + 20 * 60);
+    console.log('[agent] fresh login succeeded, token exp in', Math.round((exp - nowSec()) / 60), 'min');
+    return { code: realJwt, exp };
+  }
+
+  throw new AgentAuthError('All TOTP codes rejected. Check AGENT_TOTP_SECRET matches the account.');
+}
 
 async function refreshToken(currentJwt) {
   const body = new URLSearchParams({
@@ -191,9 +333,18 @@ async function getValidToken() {
     console.log('[agent] token refreshed, new exp in', Math.round((fresh.exp - nowSec()) / 60), 'min');
     return fresh.code;
   } catch (err) {
+    // If the refresh chain died (wager enforces ~9h max lifetime even with
+    // perfect refresh), fall through to a fresh login instead of failing.
+    if (err instanceof AgentAuthError) {
+      console.log('[agent] refresh rejected (chain expired) — performing fresh login');
+      const relogin = await performFreshLogin();
+      cachedToken = relogin;
+      await saveTokenToMongo(relogin);
+      return relogin.code;
+    }
     if (secondsLeft > 0) {
-      // Refresh failed but current token still has life — use it and surface
-      // the refresh failure in logs. Next call will try to refresh again.
+      // Transient error (network, etc.) — use current token while it's still
+      // valid. Next call will try refresh again.
       console.error('[agent] refresh failed but current token still valid:', err.message);
       return current.code;
     }
@@ -325,6 +476,8 @@ module.exports = {
   getValidToken,
   updatePlayerPassword,
   getPlayerInfo,
+  performFreshLogin,
+  generateTotp,
   startBackgroundRefresh,
   stopBackgroundRefresh,
   AgentAuthError,
