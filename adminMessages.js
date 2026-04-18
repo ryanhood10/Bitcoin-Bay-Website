@@ -337,7 +337,7 @@ header button:hover{border-color:var(--gold);color:var(--gold)}
       <span>Conversations</span>
       <span class="count" id="thread-count">0</span>
       <span class="spacer"></span>
-      <button type="button" class="icon-btn toggle" id="toggle-resolved" title="Toggle resolved threads">Hide done</button>
+      <button type="button" class="icon-btn toggle" id="toggle-resolved" title="Toggle resolved threads">Hide Completed</button>
       <button type="button" class="icon-btn" id="refresh-btn" title="Pull latest from wager">↻</button>
     </div>
     <div id="thread-list"><div class="empty">Loading…</div></div>
@@ -447,7 +447,7 @@ function renderThreads(hiddenCount) {
   const list = document.getElementById('thread-list');
   if (!threads.length) {
     const hint = hiddenCount > 0
-      ? '<div class="small">' + hiddenCount + ' resolved thread' + (hiddenCount === 1 ? '' : 's') + ' hidden — click "Hide done" to show.</div>'
+      ? '<div class="small">' + hiddenCount + ' completed thread' + (hiddenCount === 1 ? '' : 's') + ' hidden — click "Hide Completed" to show.</div>'
       : '<div class="small">New player messages will appear here automatically.</div>';
     list.innerHTML = '<div class="empty">No active conversations.' + hint + '</div>';
     return;
@@ -666,7 +666,7 @@ document.getElementById('refresh-btn').addEventListener('click', async (e) => {
 
 document.getElementById('toggle-resolved').addEventListener('click', (e) => {
   showResolved = !showResolved;
-  e.currentTarget.textContent = showResolved ? 'Hide done' : 'Show all';
+  e.currentTarget.textContent = showResolved ? 'Hide Completed' : 'Show All';
   e.currentTarget.classList.toggle('active', showResolved);
   loadThreads();
 });
