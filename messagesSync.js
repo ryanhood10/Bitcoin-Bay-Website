@@ -112,8 +112,25 @@ async function syncOnce() {
     await coll.insertMany(docs);
 
     let alerted = 0;
+    const reopenedPlayers = new Set();
     for (const doc of docs) {
       if (!doc.is_player_message) continue;
+
+      // If this player's thread was previously marked Done, auto-reopen it
+      // so the fresh message lands in the operator's active queue.
+      if (doc.from_login && !reopenedPlayers.has(doc.from_login)) {
+        try {
+          const stateColl = client.db(MONGO_DB).collection('bcb_thread_state');
+          await stateColl.updateOne(
+            { _id: doc.from_login.toUpperCase(), resolved_at: { $ne: null } },
+            { $set: { resolved_at: null, reopened_at: new Date(), reopened_by: 'sync_auto' } }
+          );
+          reopenedPlayers.add(doc.from_login);
+        } catch (err) {
+          console.error(`[sync] auto-reopen failed for ${doc.from_login}:`, err.message);
+        }
+      }
+
       try {
         await notifyNewMessage(doc);
         await coll.updateOne({ wager_id: doc.wager_id }, { $set: { alerted_at: new Date() } });
