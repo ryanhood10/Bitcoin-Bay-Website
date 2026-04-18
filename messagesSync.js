@@ -60,8 +60,15 @@ function shapeMessage(m, direction) {
 }
 
 // ---------------------------------------------------------------------------
-// Twilio SMS helpers
+// Alert transports. Pushover is preferred for operator alerts (no 10DLC /
+// A2P compliance — it's push notifications, not SMS). Twilio stays as a
+// fallback and for other SMS uses (password resets, 2FA, client outreach
+// once 10DLC registration is approved).
 // ---------------------------------------------------------------------------
+function isPushoverConfigured() {
+  return !!(process.env.PUSHOVER_USER_KEY && process.env.PUSHOVER_APP_TOKEN);
+}
+
 function isTwilioConfigured() {
   return !!(
     process.env.TWILIO_ACCOUNT_SID &&
@@ -70,6 +77,30 @@ function isTwilioConfigured() {
     process.env.TWILIO_FROM_NUMBER &&
     process.env.OPERATOR_PHONE_NUMBER
   );
+}
+
+// Send via Pushover — a single HTTPS POST, no SDK required. Returns on
+// success, throws on non-2xx or Pushover-reported error.
+async function sendPushover({ title, message, url }) {
+  const body = new URLSearchParams({
+    token:   process.env.PUSHOVER_APP_TOKEN,
+    user:    process.env.PUSHOVER_USER_KEY,
+    title:   title || 'Bitcoin Bay',
+    message: message || '',
+  });
+  if (url) body.set('url', url);
+
+  const r = await fetch('https://api.pushover.net/1/messages.json', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString(),
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok || !data || data.status !== 1) {
+    const err = data && Array.isArray(data.errors) ? data.errors.join('; ') : `HTTP ${r.status}`;
+    throw new Error('Pushover rejected: ' + err);
+  }
+  return { ok: true, id: data.request };
 }
 
 let _twilioClient = null;
@@ -82,6 +113,30 @@ function getTwilioClient() {
     { accountSid: process.env.TWILIO_ACCOUNT_SID }
   );
   return _twilioClient;
+}
+
+async function sendTwilioSms({ body }) {
+  const tw = getTwilioClient();
+  await tw.messages.create({
+    from: process.env.TWILIO_FROM_NUMBER,
+    to:   process.env.OPERATOR_PHONE_NUMBER,
+    body,
+  });
+  return { ok: true };
+}
+
+// Unified alert send. Picks Pushover if configured, else Twilio. Throws if
+// neither is configured (caller treats as skip).
+async function sendOperatorAlert({ title, body, url }) {
+  if (isPushoverConfigured()) {
+    return await sendPushover({ title, message: body, url });
+  }
+  if (isTwilioConfigured()) {
+    // SMS has no title field — prepend it to the body.
+    const smsBody = title ? `${title}\n${body}` : body;
+    return await sendTwilioSms({ body: smsBody });
+  }
+  throw new Error('no_alert_transport_configured');
 }
 
 // SMS_QUIET_HOURS=22-8 means alerts pause from 10pm to 8am in SMS_TIMEZONE.
@@ -108,8 +163,8 @@ function cleanText(s, max) {
 // as alerted on success. Failed sends leave alerted_at: null so the next
 // sync retries them automatically.
 async function processAlertQueue(client, coll) {
-  if (!isTwilioConfigured()) {
-    return { groups_sent: 0, messages_alerted: 0, skipped: 'twilio_not_configured' };
+  if (!isPushoverConfigured() && !isTwilioConfigured()) {
+    return { groups_sent: 0, messages_alerted: 0, skipped: 'no_transport_configured' };
   }
   if (isInQuietHours()) {
     return { groups_sent: 0, messages_alerted: 0, skipped: 'quiet_hours' };
@@ -148,7 +203,7 @@ async function processAlertQueue(client, coll) {
     if (name) names.set(p._id, name);
   }
 
-  const tw = getTwilioClient();
+  const transport = isPushoverConfigured() ? 'pushover' : 'twilio';
   let groupsSent = 0;
   let totalAlerted = 0;
 
@@ -157,16 +212,19 @@ async function processAlertQueue(client, coll) {
     const name = names.get(playerId);
     const sender = name ? `${name} (${playerId})` : playerId;
     const latest = msgs[msgs.length - 1].body || '';
+
+    // Pushover has a `title` field (bold heading on the notification) so we
+    // split title from body. SMS has no title — sendOperatorAlert folds the
+    // title into the body automatically when Pushover isn't available.
+    const title = msgs.length === 1
+      ? `New message from ${sender}`
+      : `${msgs.length} new messages from ${sender}`;
     const body = msgs.length === 1
-      ? `BCB: ${sender}\n"${cleanText(latest, 110)}"\nReply: ${DASHBOARD_URL}`
-      : `BCB: ${msgs.length} new from ${sender}\nLatest: "${cleanText(latest, 80)}"\nReply: ${DASHBOARD_URL}`;
+      ? `"${cleanText(latest, 600)}"\n\nReply: ${DASHBOARD_URL}`
+      : `Latest: "${cleanText(latest, 400)}"\n\nReply: ${DASHBOARD_URL}`;
 
     try {
-      await tw.messages.create({
-        from: process.env.TWILIO_FROM_NUMBER,
-        to:   process.env.OPERATOR_PHONE_NUMBER,
-        body,
-      });
+      await sendOperatorAlert({ title, body, url: 'https://www.' + DASHBOARD_URL });
       const wagerIds = msgs.map(m => m.wager_id);
       await coll.updateMany(
         { wager_id: { $in: wagerIds } },
@@ -174,14 +232,14 @@ async function processAlertQueue(client, coll) {
       );
       groupsSent++;
       totalAlerted += msgs.length;
-      console.log(`[sync] SMS alert sent: ${msgs.length} msg(s) from ${playerId}`);
+      console.log(`[sync] ${transport} alert sent: ${msgs.length} msg(s) from ${playerId}`);
     } catch (err) {
-      console.error(`[sync] Twilio send failed for ${playerId}:`, err.message);
+      console.error(`[sync] ${transport} send failed for ${playerId}:`, err.message);
       // Don't mark alerted — next sync will retry.
     }
   }
 
-  return { groups_sent: groupsSent, messages_alerted: totalAlerted };
+  return { groups_sent: groupsSent, messages_alerted: totalAlerted, transport };
 }
 
 // Back-compat shim. The integrated alert path uses processAlertQueue;
