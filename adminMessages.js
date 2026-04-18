@@ -535,7 +535,7 @@ function escapeRegex(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'
 // ---------------------------------------------------------------------------
 // POST /api/admin/reply — send message to player via wager API + record locally
 // ---------------------------------------------------------------------------
-router.post('/api/admin/reply', requireAdmin, express.json(), async (req, res) => {
+router.post('/api/admin/reply', requireAdmin, async (req, res) => {
   const remoteIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   const playerId = (req.body.playerId || '').toString().trim().toUpperCase();
   const body     = (req.body.body     || '').toString();
