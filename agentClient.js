@@ -204,25 +204,29 @@ let _lastAlertAt = 0;
 const ALERT_FAILURE_THRESHOLD = 3;
 const ALERT_COOLDOWN_MS = 60 * 60 * 1000;  // one alert per hour max
 
+// Shared module-level cooldown state: one alert per hour max across ALL
+// callers (fresh-login failures, sync failures, future callers). Prevents
+// cascading failures from flooding the ops inbox.
 async function sendOpsAlert(subject, message) {
-  const to = process.env.EMAIL;        // info@bitcoinbay.com equivalent
-  const pass = process.env.EMAIL_PASSWORD;
-  if (!to || !pass) return;            // no transport configured
+  const fromAddr = process.env.EMAIL;                // sender mailbox (must match EMAIL_PASSWORD)
+  const toAddr   = process.env.OPS_ALERT_EMAIL || process.env.EMAIL;  // where alerts land
+  const pass     = process.env.EMAIL_PASSWORD;
+  if (!fromAddr || !pass) return;
   const now = Date.now();
-  if (now - _lastAlertAt < ALERT_COOLDOWN_MS) return;  // cooldown
+  if (now - _lastAlertAt < ALERT_COOLDOWN_MS) return;
   _lastAlertAt = now;
   try {
     const t = nodemailer.createTransport({
       host: 'mail.gandi.net', port: 465, secure: true,
-      auth: { user: to, pass }
+      auth: { user: fromAddr, pass }
     });
     await t.sendMail({
-      from: `"Bitcoin Bay Ops" <${to}>`,
-      to,
+      from: `"Bitcoin Bay Ops" <${fromAddr}>`,
+      to:   toAddr,
       subject: `[BCB OPS] ${subject}`,
       text: `${message}\n\nTime: ${new Date().toISOString()}\nHeroku app: bitcoin-bay\n`
     });
-    console.log('[agent] ops alert sent:', subject);
+    console.log('[agent] ops alert sent to', toAddr, ':', subject);
   } catch (err) {
     console.error('[agent] ops alert send failed:', err.message);
   }
@@ -653,6 +657,7 @@ module.exports = {
   generateTotp,
   startBackgroundRefresh,
   stopBackgroundRefresh,
+  sendOpsAlert,
   AgentAuthError,
   AgentApiError
 };

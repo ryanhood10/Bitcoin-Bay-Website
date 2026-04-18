@@ -35,6 +35,14 @@ const DASHBOARD_URL = 'bitcoinbay.com/admin/messages';
 let _syncInterval = null;
 let _initialized  = false;
 
+// Ops alert state: if syncOnce fails SYNC_ALERT_THRESHOLD times in a row,
+// email ops so we know the pipeline is broken before the brother does.
+// Pattern mirrors agentClient's fresh-login alert. One streak counter for
+// all causes (listMessages fail, mongo fail, etc) — what matters is that
+// the operator isn't getting alerts, not the specific failure mode.
+let _syncFailureStreak = 0;
+const SYNC_ALERT_THRESHOLD = 3;
+
 // Tag a message with the fields our dashboard cares about, in addition to
 // the raw wager fields. Keyed on `wager_id` (the wager backend's Id).
 // `direction` is determined by which bucket we pulled it from: type=0 inbox
@@ -265,6 +273,7 @@ async function syncOnce() {
     ]);
   } catch (err) {
     console.error('[sync] listMessages failed:', err.message);
+    _recordSyncFailure(`listMessages failed: ${err.message}`);
     return { fetched: 0, inserted: 0, alerted: 0, error: err.message };
   }
 
@@ -331,13 +340,31 @@ async function syncOnce() {
     const alertResult = await processAlertQueue(client, coll);
 
     console.log(`[sync] fetched=${fetched} inserted=${docs.length} alert_groups=${alertResult.groups_sent} alerts_sent=${alertResult.messages_alerted}${alertResult.skipped ? ' (skipped:' + alertResult.skipped + ')' : ''}`);
+    _syncFailureStreak = 0;
     return { fetched, inserted: docs.length, alerted: alertResult.messages_alerted, alert_groups: alertResult.groups_sent };
   } catch (err) {
     console.error('[sync] mongo error:', err.message);
+    _recordSyncFailure(`mongo error: ${err.message}`);
     return { fetched, inserted: 0, alerted: 0, error: err.message };
   } finally {
     if (client) try { await client.close(); } catch (_) {}
   }
+}
+
+// Record a sync failure. After SYNC_ALERT_THRESHOLD consecutive failures,
+// email ops. The agentClient.sendOpsAlert helper has its own 1-hour cooldown
+// so re-triggering across many syncs won't flood.
+function _recordSyncFailure(reason) {
+  _syncFailureStreak++;
+  if (_syncFailureStreak < SYNC_ALERT_THRESHOLD) return;
+  agentClient.sendOpsAlert(
+    `Message sync failing (${_syncFailureStreak} in a row)`,
+    `Last error: ${reason}\n\n` +
+    `Player messages are not being synced to Mongo and operator ` +
+    `Pushover/SMS alerts are not firing. Check heroku logs for details. ` +
+    `Most common causes: wager API auth broke, Mongo connectivity, or ` +
+    `a shape change in the getMessage response.`
+  ).catch(() => {});  // never throw from here
 }
 
 // Create indexes once at boot. Idempotent — Mongo silently no-ops if the

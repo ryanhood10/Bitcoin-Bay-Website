@@ -41,6 +41,13 @@ const ADMIN_LOG_COLL    = 'bcb_admin_log';
 const REPLY_RATE_LIMIT  = 30;        // max replies per session per hour
 const REPLY_RATE_WIN_MS = 60 * 60 * 1000;
 const PLAYER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS  = 5;
+const LOGIN_WINDOW_MS     = 15 * 60 * 1000;
+
+// In-memory per-IP login-attempt counter. Resets on successful login.
+// Wipes on dyno restart, which is fine — attackers would have to start
+// over too, and a restart every 24h+ on Heroku is a de-facto extra bound.
+const _loginAttempts = new Map();    // ip -> { count, firstAt }
 
 // In-memory rate-limit counter — a session sending 30+ replies/hr is almost
 // certainly a runaway script, not the brother. Wipe on restart is fine.
@@ -166,6 +173,22 @@ router.post('/admin/login', express.urlencoded({ extended: false }), async (req,
   const username = (req.body.username || '').trim();
   const password = req.body.password || '';
 
+  // Per-IP rate limit. bcrypt at cost 12 is ~250ms per check, so even without
+  // a limit a brute force is ~14k tries/hr — but a real attacker would
+  // distribute across IPs. 5 attempts per 15 min per IP is a meaningful
+  // obstacle to a single-source brute force without inconveniencing a human.
+  const attempts = _loginAttempts.get(remoteIp);
+  if (attempts && (Date.now() - attempts.firstAt) < LOGIN_WINDOW_MS) {
+    if (attempts.count >= LOGIN_MAX_ATTEMPTS) {
+      await logAdminAction({ action: 'login_rate_limited', remote_ip: remoteIp, count: attempts.count });
+      return res.status(429).type('html').send(loginPage(
+        'Too many login attempts. Wait 15 minutes and try again.'
+      ));
+    }
+  } else if (attempts) {
+    _loginAttempts.delete(remoteIp);   // window elapsed, reset
+  }
+
   const expectedUser = process.env.ADMIN_USERNAME;
   const expectedHash = process.env.ADMIN_PASSWORD_HASH;
 
@@ -186,15 +209,22 @@ router.post('/admin/login', express.urlencoded({ extended: false }), async (req,
   try { passOk = await bcrypt.compare(password, expectedHash); } catch (_) { passOk = false; }
 
   if (!userOk || !passOk) {
+    // Bump the per-IP counter on each failure.
+    const existing = _loginAttempts.get(remoteIp);
+    if (existing && (Date.now() - existing.firstAt) < LOGIN_WINDOW_MS) {
+      existing.count++;
+    } else {
+      _loginAttempts.set(remoteIp, { count: 1, firstAt: Date.now() });
+    }
     await logAdminAction({ action: 'login_fail', username_attempt: username, remote_ip: remoteIp });
-    // Always run a bcrypt round on failure too, so timing doesn't reveal whether
-    // it was the username that was wrong.
     if (userOk === false && passOk === false) {
       try { await bcrypt.compare('dummy', '$2b$12$abcdefghijklmnopqrstuv'); } catch (_) {}
     }
     return res.status(401).type('html').send(loginPage('Wrong username or password.'));
   }
 
+  // Successful login — wipe the counter for this IP.
+  _loginAttempts.delete(remoteIp);
   setSessionCookie(res, username);
   await logAdminAction({ action: 'login_ok', username, remote_ip: remoteIp });
   res.redirect('/admin/messages');
