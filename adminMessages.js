@@ -586,7 +586,6 @@ async function openThread(playerId) {
         const digits = btn.dataset.digits;
         const display = btn.dataset.display;
         showActionMenu(btn, [
-          { label: '📞 Call ' + display,  href: 'tel:' + digits  },
           { label: '💬 Text ' + display,  href: 'sms:' + digits  },
           { sep: true },
           { label: 'Cancel', cancel: true }
