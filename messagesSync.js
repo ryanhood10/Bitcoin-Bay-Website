@@ -1,18 +1,25 @@
 // ---------------------------------------------------------------------------
-// messagesSync.js — periodic poll of the wager inbox into our own Mongo.
+// messagesSync.js — periodic poll of the wager inbox into our own Mongo +
+// SMS alerts to the operator when player messages arrive.
 //
 // The wager backend has no webhook for new messages, so we poll. Every
-// SYNC_INTERVAL_MS we call agentClient.listInboxMessages(), diff against
-// what we've already stored, insert the new ones, and fire notifyNewMessage()
-// for anything that looks like a real player message (FromType === 'C').
+// SYNC_INTERVAL_MS we fetch both buckets (inbox + sent), diff against what
+// we've already stored, insert the new ones, and fire SMS alerts for any
+// inbound player message (FromType === 'C').
 //
 // First-run behavior: on a brand-new database, we treat every existing
-// message as "already seen" so we don't blast SMS notifications for an
-// inbox-full of historical bonus announcements. Only NEW messages arriving
-// after sync starts will trigger alerts.
+// message as "already seen" so we don't blast SMS for an inbox-full of
+// historical bonus announcements. Only NEW messages arriving after sync
+// starts will trigger alerts.
 //
-// Notification is a pluggable hook. notifyNewMessage() is currently a stub
-// that just logs — Phase 2 fills it in with Twilio SMS.
+// Alert behavior:
+//   - Aggregated per-sender: 5 messages from one player in a single sync
+//     window collapse into ONE SMS ("3 new from Ryan Hood").
+//   - Self-retry on Twilio failure: messages with alerted_at: null from
+//     the last 24h are reprocessed every sync cycle, so a Twilio outage
+//     doesn't lose alerts — they fire when service recovers.
+//   - Optional quiet hours via SMS_QUIET_HOURS env var ("22-8" = 10pm-8am
+//     in SMS_TIMEZONE, default America/Chicago).
 // ---------------------------------------------------------------------------
 
 const { MongoClient } = require('mongodb');
@@ -20,7 +27,10 @@ const agentClient = require('./agentClient');
 
 const MONGO_DB        = 'bcbay_automation';
 const MESSAGES_COLL   = 'bcb_messages';
+const PLAYERS_COLL    = 'bcb_player_info';
 const SYNC_INTERVAL_MS = 3 * 60 * 1000;   // 3 min
+const ALERT_RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DASHBOARD_URL = 'bitcoinbay.com/admin/messages';
 
 let _syncInterval = null;
 let _initialized  = false;
@@ -49,10 +59,135 @@ function shapeMessage(m, direction) {
   };
 }
 
-// Stub for Phase 2 (Twilio). Called once per new player message.
+// ---------------------------------------------------------------------------
+// Twilio SMS helpers
+// ---------------------------------------------------------------------------
+function isTwilioConfigured() {
+  return !!(
+    process.env.TWILIO_ACCOUNT_SID &&
+    process.env.TWILIO_API_KEY_SID &&
+    process.env.TWILIO_API_KEY_SECRET &&
+    process.env.TWILIO_FROM_NUMBER &&
+    process.env.OPERATOR_PHONE_NUMBER
+  );
+}
+
+let _twilioClient = null;
+function getTwilioClient() {
+  if (_twilioClient) return _twilioClient;
+  const twilio = require('twilio');
+  _twilioClient = twilio(
+    process.env.TWILIO_API_KEY_SID,
+    process.env.TWILIO_API_KEY_SECRET,
+    { accountSid: process.env.TWILIO_ACCOUNT_SID }
+  );
+  return _twilioClient;
+}
+
+// SMS_QUIET_HOURS=22-8 means alerts pause from 10pm to 8am in SMS_TIMEZONE.
+// Pending alerts wait in alerted_at: null state and fire when quiet ends.
+function isInQuietHours() {
+  const range = process.env.SMS_QUIET_HOURS;
+  if (!range) return false;
+  const [start, end] = range.split('-').map(s => parseInt(s, 10));
+  if (Number.isNaN(start) || Number.isNaN(end)) return false;
+  const tz = process.env.SMS_TIMEZONE || 'America/Chicago';
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false });
+  const hour = parseInt(fmt.format(new Date()), 10);
+  if (start > end) return hour >= start || hour < end;   // wraps midnight
+  return hour >= start && hour < end;
+}
+
+function cleanText(s, max) {
+  s = String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+}
+
+// Process the alert queue: find any unalerted inbound player messages from
+// the last 24h, group by sender, send one SMS per sender, mark the messages
+// as alerted on success. Failed sends leave alerted_at: null so the next
+// sync retries them automatically.
+async function processAlertQueue(client, coll) {
+  if (!isTwilioConfigured()) {
+    return { groups_sent: 0, messages_alerted: 0, skipped: 'twilio_not_configured' };
+  }
+  if (isInQuietHours()) {
+    return { groups_sent: 0, messages_alerted: 0, skipped: 'quiet_hours' };
+  }
+
+  const cutoff = new Date(Date.now() - ALERT_RETRY_WINDOW_MS);
+  const queue = await coll.find({
+    is_player_message: true,
+    direction:         'inbound',
+    alerted_at:        null,
+    is_backfill:       { $ne: true },
+    date_mail:         { $gte: cutoff },
+  }).toArray();
+
+  if (!queue.length) return { groups_sent: 0, messages_alerted: 0 };
+
+  // Group by sender (player ID).
+  const byPlayer = new Map();
+  for (const m of queue) {
+    const key = (m.from_login || '').toUpperCase().trim();
+    if (!key || key === 'MY AGENT') continue;
+    if (!byPlayer.has(key)) byPlayer.set(key, []);
+    byPlayer.get(key).push(m);
+  }
+  if (!byPlayer.size) return { groups_sent: 0, messages_alerted: 0 };
+
+  // Look up display names from cache (populated lazily by dashboard clicks).
+  // No cache miss → just use the player ID — never blocks an alert.
+  const ids = Array.from(byPlayer.keys());
+  const playerDocs = await client.db(MONGO_DB).collection(PLAYERS_COLL)
+    .find({ _id: { $in: ids } }, { projection: { name_first: 1, name_last: 1 } })
+    .toArray();
+  const names = new Map();
+  for (const p of playerDocs) {
+    const name = [p.name_first, p.name_last].filter(Boolean).join(' ').trim();
+    if (name) names.set(p._id, name);
+  }
+
+  const tw = getTwilioClient();
+  let groupsSent = 0;
+  let totalAlerted = 0;
+
+  for (const [playerId, msgs] of byPlayer) {
+    msgs.sort((a, b) => (new Date(a.date_mail || 0)) - (new Date(b.date_mail || 0)));
+    const name = names.get(playerId);
+    const sender = name ? `${name} (${playerId})` : playerId;
+    const latest = msgs[msgs.length - 1].body || '';
+    const body = msgs.length === 1
+      ? `BCB: ${sender}\n"${cleanText(latest, 110)}"\nReply: ${DASHBOARD_URL}`
+      : `BCB: ${msgs.length} new from ${sender}\nLatest: "${cleanText(latest, 80)}"\nReply: ${DASHBOARD_URL}`;
+
+    try {
+      await tw.messages.create({
+        from: process.env.TWILIO_FROM_NUMBER,
+        to:   process.env.OPERATOR_PHONE_NUMBER,
+        body,
+      });
+      const wagerIds = msgs.map(m => m.wager_id);
+      await coll.updateMany(
+        { wager_id: { $in: wagerIds } },
+        { $set: { alerted_at: new Date() } }
+      );
+      groupsSent++;
+      totalAlerted += msgs.length;
+      console.log(`[sync] SMS alert sent: ${msgs.length} msg(s) from ${playerId}`);
+    } catch (err) {
+      console.error(`[sync] Twilio send failed for ${playerId}:`, err.message);
+      // Don't mark alerted — next sync will retry.
+    }
+  }
+
+  return { groups_sent: groupsSent, messages_alerted: totalAlerted };
+}
+
+// Back-compat shim. The integrated alert path uses processAlertQueue;
+// notifyNewMessage stays exported in case anything calls it directly.
 async function notifyNewMessage(msg) {
-  console.log(`[sync] NEW PLAYER MESSAGE from ${msg.from_login}: ${(msg.body || '').slice(0, 80)}`);
-  // Phase 2 will wire this to twilio.messages.create({...}).
+  console.log(`[sync] notify (legacy single-msg path): ${msg.from_login}`);
 }
 
 async function syncOnce() {
@@ -104,44 +239,41 @@ async function syncOnce() {
     const seenIds = new Set(existing.map(e => e.wager_id));
     const fresh = tagged.filter(t => !seenIds.has(t.msg.Id));
 
+    // Even when nothing new arrived from wager, still run processAlertQueue
+    // so any unalerted messages from previous failures get retried.
     if (fresh.length === 0) {
-      return { fetched, inserted: 0, alerted: 0 };
+      const retryResult = await processAlertQueue(client, coll);
+      return { fetched, inserted: 0, alerted: retryResult.messages_alerted, alert_groups: retryResult.groups_sent };
     }
 
     const docs = fresh.map(t => ({ ...shapeMessage(t.msg, t.direction), alerted_at: null }));
     await coll.insertMany(docs);
 
-    let alerted = 0;
+    // Auto-reopen any resolved threads where a fresh inbound player message
+    // just landed — done so the brother's "active" list always reflects new
+    // activity even on threads he marked completed earlier.
     const reopenedPlayers = new Set();
     for (const doc of docs) {
-      if (!doc.is_player_message) continue;
-
-      // If this player's thread was previously marked Done, auto-reopen it
-      // so the fresh message lands in the operator's active queue.
-      if (doc.from_login && !reopenedPlayers.has(doc.from_login)) {
-        try {
-          const stateColl = client.db(MONGO_DB).collection('bcb_thread_state');
-          await stateColl.updateOne(
-            { _id: doc.from_login.toUpperCase(), resolved_at: { $ne: null } },
-            { $set: { resolved_at: null, reopened_at: new Date(), reopened_by: 'sync_auto' } }
-          );
-          reopenedPlayers.add(doc.from_login);
-        } catch (err) {
-          console.error(`[sync] auto-reopen failed for ${doc.from_login}:`, err.message);
-        }
-      }
-
+      if (!doc.is_player_message || !doc.from_login) continue;
+      if (reopenedPlayers.has(doc.from_login)) continue;
       try {
-        await notifyNewMessage(doc);
-        await coll.updateOne({ wager_id: doc.wager_id }, { $set: { alerted_at: new Date() } });
-        alerted++;
+        await client.db(MONGO_DB).collection('bcb_thread_state').updateOne(
+          { _id: doc.from_login.toUpperCase(), resolved_at: { $ne: null } },
+          { $set: { resolved_at: null, reopened_at: new Date(), reopened_by: 'sync_auto' } }
+        );
+        reopenedPlayers.add(doc.from_login);
       } catch (err) {
-        console.error(`[sync] notify failed for wager_id=${doc.wager_id}:`, err.message);
+        console.error(`[sync] auto-reopen failed for ${doc.from_login}:`, err.message);
       }
     }
 
-    console.log(`[sync] fetched=${fetched} inserted=${docs.length} alerted=${alerted}`);
-    return { fetched, inserted: docs.length, alerted };
+    // Process the alert queue. This handles both the messages we just
+    // inserted AND any from the last 24h that previously failed to send
+    // (auto-retry for transient Twilio outages).
+    const alertResult = await processAlertQueue(client, coll);
+
+    console.log(`[sync] fetched=${fetched} inserted=${docs.length} alert_groups=${alertResult.groups_sent} alerts_sent=${alertResult.messages_alerted}${alertResult.skipped ? ' (skipped:' + alertResult.skipped + ')' : ''}`);
+    return { fetched, inserted: docs.length, alerted: alertResult.messages_alerted, alert_groups: alertResult.groups_sent };
   } catch (err) {
     console.error('[sync] mongo error:', err.message);
     return { fetched, inserted: 0, alerted: 0, error: err.message };
