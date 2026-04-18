@@ -275,6 +275,17 @@ header button:hover{border-color:var(--gold);color:var(--gold)}
 .convo-header .contact{font-size:12px;color:var(--text-3);margin-top:2px;display:flex;gap:14px;flex-wrap:wrap}
 .convo-header .contact a{color:var(--text-3);text-decoration:none}
 .convo-header .contact a:hover{color:var(--gold)}
+.contact-action{background:transparent;border:none;color:var(--text-3);font-size:12px;padding:0;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+.contact-action:hover{color:var(--gold)}
+
+/* Action-menu popover */
+.action-menu{position:absolute;z-index:1000;background:var(--panel);border:1px solid var(--border-strong);border-radius:10px;padding:6px;box-shadow:0 12px 36px rgba(0,0,0,0.55);min-width:200px;display:flex;flex-direction:column;gap:1px;animation:menuIn 0.12s ease-out}
+@keyframes menuIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.action-menu button{background:transparent;border:none;color:var(--text);font-size:13px;padding:10px 12px;text-align:left;border-radius:6px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:10px;line-height:1.3}
+.action-menu button:hover{background:var(--panel-2);color:var(--gold)}
+.action-menu .sep{height:1px;background:var(--border);margin:4px 0}
+.action-menu .cancel{color:var(--text-3)}
+.action-menu .cancel:hover{color:var(--red);background:rgba(239,68,68,0.08)}
 .convo-header .actions{margin-left:auto;display:flex;gap:8px;flex-shrink:0}
 .convo-header .actions button{background:transparent;border:1px solid var(--border-strong);color:var(--text-2);font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .convo-header .actions button.primary{border-color:rgba(34,197,94,0.4);color:var(--green)}
@@ -432,6 +443,58 @@ function stripHtml(s) {
   return String(s||'').replace(/<[^>]+>/g, ' ').replace(/\\s+/g, ' ').trim();
 }
 
+// ---------- Action menu (popover for phone/email confirms) ----------
+let _activeMenu = null;
+function closeActionMenu() {
+  if (_activeMenu) { _activeMenu.remove(); _activeMenu = null; }
+}
+document.addEventListener('click', (e) => {
+  if (_activeMenu && !_activeMenu.contains(e.target)) closeActionMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeActionMenu();
+});
+window.addEventListener('resize', closeActionMenu);
+window.addEventListener('scroll', closeActionMenu, true);
+
+function showActionMenu(anchorEl, actions) {
+  closeActionMenu();
+  const menu = document.createElement('div');
+  menu.className = 'action-menu';
+  actions.forEach(a => {
+    if (a.sep) {
+      const s = document.createElement('div');
+      s.className = 'sep';
+      menu.appendChild(s);
+      return;
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = a.label;
+    if (a.cancel) btn.className = 'cancel';
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      closeActionMenu();
+      if (a.href)    window.location.href = a.href;
+      if (a.onClick) a.onClick();
+    });
+    menu.appendChild(btn);
+  });
+  document.body.appendChild(menu);
+  // Position below the anchor, clamped to viewport.
+  const rect = anchorEl.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 6) + 'px';
+  menu.style.left = rect.left + 'px';
+  const mr = menu.getBoundingClientRect();
+  if (mr.right > window.innerWidth - 12) {
+    menu.style.left = Math.max(8, window.innerWidth - mr.width - 12) + 'px';
+  }
+  if (mr.bottom > window.innerHeight - 12) {
+    menu.style.top = Math.max(8, rect.top - mr.height - 6) + 'px';
+  }
+  _activeMenu = menu;
+}
+
 // ---------- Thread list ----------
 async function loadThreads() {
   const url = '/api/admin/threads' + (showResolved ? '?include_resolved=1' : '');
@@ -507,10 +570,37 @@ async function openThread(playerId) {
   }
   const contactEl = document.getElementById('convo-contact');
   const parts = [];
-  if (p && p.phone) parts.push('<a href="tel:' + escapeHtml(p.phone.replace(/[^0-9+]/g,'')) + '">📞 ' + escapeHtml(p.phone) + '</a>');
-  if (p && p.email) parts.push('<a href="mailto:' + escapeHtml(p.email) + '">✉ ' + escapeHtml(p.email) + '</a>');
+  if (p && p.phone) {
+    const digits = p.phone.replace(/[^0-9+]/g, '');
+    parts.push('<button type="button" class="contact-action" data-action="phone" data-digits="' + escapeHtml(digits) + '" data-display="' + escapeHtml(p.phone) + '">📞 ' + escapeHtml(p.phone) + '</button>');
+  }
+  if (p && p.email) {
+    parts.push('<button type="button" class="contact-action" data-action="email" data-email="' + escapeHtml(p.email) + '">✉ ' + escapeHtml(p.email) + '</button>');
+  }
   parts.push('<span>' + (data.messages || []).length + ' messages</span>');
   contactEl.innerHTML = parts.join('');
+  contactEl.querySelectorAll('.contact-action').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (btn.dataset.action === 'phone') {
+        const digits = btn.dataset.digits;
+        const display = btn.dataset.display;
+        showActionMenu(btn, [
+          { label: '📞 Call ' + display,  href: 'tel:' + digits  },
+          { label: '💬 Text ' + display,  href: 'sms:' + digits  },
+          { sep: true },
+          { label: 'Cancel', cancel: true }
+        ]);
+      } else if (btn.dataset.action === 'email') {
+        const email = btn.dataset.email;
+        showActionMenu(btn, [
+          { label: '✉ Open in Mail', href: 'mailto:' + email, sub: email },
+          { sep: true },
+          { label: 'Cancel', cancel: true }
+        ]);
+      }
+    });
+  });
 
   // Resolve button state
   updateResolveButton(data.resolved);
