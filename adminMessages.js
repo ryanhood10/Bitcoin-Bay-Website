@@ -248,6 +248,15 @@ header button:hover{border-color:var(--gold);color:var(--gold)}
 .threads-header .icon-btn{background:transparent;border:1px solid var(--border);color:var(--text-3);font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:4px}
 .threads-header .icon-btn:hover{color:var(--gold);border-color:var(--gold)}
 .threads-header .icon-btn.toggle.active{color:var(--gold);border-color:var(--gold);background:rgba(247,148,29,0.05)}
+
+.threads-stats{position:sticky;top:43px;z-index:4;display:flex;gap:14px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--panel-2);font-size:11px;color:var(--text-3)}
+.threads-stats span strong{color:var(--text-2);font-weight:700;font-variant-numeric:tabular-nums}
+.threads-stats .dot{color:var(--text-4)}
+
+.threads-search{position:sticky;top:80px;z-index:4;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--panel-2)}
+.threads-search input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px 8px 32px;color:var(--text);font-size:13px;font-family:inherit;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B8DB5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:11px center;background-size:14px}
+.threads-search input::placeholder{color:var(--text-4)}
+.threads-search input:focus{border-color:var(--gold)}
 .thread{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;position:relative}
 .thread:hover{background:rgba(86,204,242,0.04)}
 .thread:hover .thread-actions{opacity:1}
@@ -351,6 +360,16 @@ header button:hover{border-color:var(--gold);color:var(--gold)}
       <button type="button" class="icon-btn toggle" id="toggle-resolved" title="Toggle resolved threads">Hide Completed</button>
       <button type="button" class="icon-btn" id="refresh-btn" title="Pull latest from wager">↻</button>
     </div>
+    <div class="threads-stats" id="threads-stats">
+      <span><strong id="stat-active">0</strong> active</span>
+      <span class="dot">·</span>
+      <span><strong id="stat-completed">0</strong> completed</span>
+      <span class="dot">·</span>
+      <span><strong id="stat-lifetime">0</strong> lifetime</span>
+    </div>
+    <div class="threads-search">
+      <input type="search" id="thread-search" placeholder="Search by ID or name…" autocomplete="off">
+    </div>
     <div id="thread-list"><div class="empty">Loading…</div></div>
   </aside>
   <main class="convo">
@@ -389,6 +408,7 @@ let activePlayer = null;
 let threads = [];
 let currentThread = null;
 let showResolved = false;
+let searchQuery = '';
 
 // ---------- Time formatting (local TZ) ----------
 const dayMs = 86400000;
@@ -502,20 +522,38 @@ async function loadThreads() {
   if (!r.ok) { document.getElementById('thread-list').innerHTML = '<div class="empty">Failed to load.</div>'; return; }
   const data = await r.json();
   threads = data.threads || [];
+  if (data.stats) {
+    document.getElementById('stat-active').textContent    = data.stats.active;
+    document.getElementById('stat-completed').textContent = data.stats.completed;
+    document.getElementById('stat-lifetime').textContent  = data.stats.lifetime;
+  }
   renderThreads(data.resolved_hidden || 0);
 }
 
+function applySearch(list) {
+  if (!searchQuery) return list;
+  const q = searchQuery.toLowerCase();
+  return list.filter(t =>
+    t.player_id.toLowerCase().includes(q) ||
+    (t.display_name || '').toLowerCase().includes(q)
+  );
+}
+
 function renderThreads(hiddenCount) {
-  document.getElementById('thread-count').textContent = threads.length;
+  const filtered = applySearch(threads);
+  document.getElementById('thread-count').textContent = filtered.length;
   const list = document.getElementById('thread-list');
-  if (!threads.length) {
-    const hint = hiddenCount > 0
-      ? '<div class="small">' + hiddenCount + ' completed thread' + (hiddenCount === 1 ? '' : 's') + ' hidden — click "Hide Completed" to show.</div>'
-      : '<div class="small">New player messages will appear here automatically.</div>';
-    list.innerHTML = '<div class="empty">No active conversations.' + hint + '</div>';
+  if (!filtered.length) {
+    const hint = searchQuery
+      ? '<div class="small">No matches for "' + escapeHtml(searchQuery) + '". Try a different search.</div>'
+      : (hiddenCount > 0
+          ? '<div class="small">' + hiddenCount + ' completed thread' + (hiddenCount === 1 ? '' : 's') + ' hidden — click "Hide Completed" to show.</div>'
+          : '<div class="small">New player messages will appear here automatically.</div>');
+    const heading = searchQuery ? 'No matches.' : 'No active conversations.';
+    list.innerHTML = '<div class="empty">' + heading + hint + '</div>';
     return;
   }
-  list.innerHTML = threads.map(t => {
+  list.innerHTML = filtered.map(t => {
     const isActive = activePlayer === t.player_id;
     const unreadBadge = t.unread_player ? '<span class="badge">' + t.unread_player + '</span>' : '';
     const resolvedBadge = t.resolved ? '<span class="resolved-tag">Done</span>' : '';
@@ -760,6 +798,12 @@ document.getElementById('toggle-resolved').addEventListener('click', (e) => {
   loadThreads();
 });
 
+// Search input — pure client-side filter on already-loaded threads.
+document.getElementById('thread-search').addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
+  renderThreads(0);
+});
+
 // CSS keyframe for refresh spin
 const styleEl = document.createElement('style');
 styleEl.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
@@ -850,7 +894,27 @@ router.get('/api/admin/threads', requireAdmin, async (req, res) => {
       (b.last_at ? new Date(b.last_at).getTime() : 0) - (a.last_at ? new Date(a.last_at).getTime() : 0)
     );
 
-    res.json({ threads, resolved_hidden: includeResolved ? 0 : resolvedCount });
+    // Lifetime stats: distinct counterparts ever messaged + resolved count.
+    // Cheap at small scale; revisit if bcb_messages crosses ~50k docs.
+    const [outboundCounterparts, inboundCounterparts, completedCount] = await Promise.all([
+      coll.distinct('to_login',   { direction: 'outbound' }),
+      coll.distinct('from_login', { direction: 'inbound'  }),
+      client.db(MONGO_DB).collection(THREAD_STATE_COLL)
+        .countDocuments({ resolved_at: { $ne: null } }),
+    ]);
+    const allCounterparts = new Set(
+      [...outboundCounterparts, ...inboundCounterparts]
+        .map(s => (s || '').toUpperCase().trim())
+        .filter(s => s && s !== 'MY AGENT' && s !== agent)
+    );
+    const lifetimeCount = allCounterparts.size;
+    const activeCount   = Math.max(0, lifetimeCount - completedCount);
+
+    res.json({
+      threads,
+      resolved_hidden: includeResolved ? 0 : resolvedCount,
+      stats: { active: activeCount, completed: completedCount, lifetime: lifetimeCount },
+    });
   } catch (err) {
     console.error('[admin] /api/admin/threads error:', err.message);
     res.status(500).json({ error: 'Failed to load threads' });

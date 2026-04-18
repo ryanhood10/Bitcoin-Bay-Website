@@ -1207,7 +1207,9 @@ app.listen(PORT, () => {
   }
   // Poll the wager inbox for new player messages and store them locally so the
   // admin dashboard can render them and (Phase 2) so SMS alerts can fire.
-  try { messagesSync.startSyncLoop(); } catch (err) {
-    console.error('[startup] message sync init failed:', err.message);
-  }
+  // Make sure Mongo indexes exist before the first sync writes a row.
+  // Idempotent — Mongo no-ops if the index already exists.
+  messagesSync.ensureIndexes()
+    .then(() => messagesSync.startSyncLoop())
+    .catch(err => console.error('[startup] message sync init failed:', err.message));
 });

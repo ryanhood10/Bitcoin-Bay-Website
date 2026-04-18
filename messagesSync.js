@@ -150,6 +150,43 @@ async function syncOnce() {
   }
 }
 
+// Create indexes once at boot. Idempotent — Mongo silently no-ops if the
+// index already exists with the same keys/options. Without these the
+// queries are fine at small scale (~thousands of docs) but degrade as the
+// collection grows. Cheap insurance.
+async function ensureIndexes() {
+  if (!process.env.MONGO_URI) return;
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db(MONGO_DB);
+
+    // Messages: wager_id is the natural primary key — unique prevents any
+    // future dup-insert race. Other indexes are for the threads/thread/sync
+    // queries that use them.
+    await db.collection(MESSAGES_COLL).createIndex({ wager_id: 1 }, { unique: true });
+    await db.collection(MESSAGES_COLL).createIndex({ date_mail: -1 });
+    await db.collection(MESSAGES_COLL).createIndex({ from_login: 1 });
+    await db.collection(MESSAGES_COLL).createIndex({ to_login: 1 });
+    await db.collection(MESSAGES_COLL).createIndex({ direction: 1 });
+    await db.collection(MESSAGES_COLL).createIndex({ is_player_message: 1, alerted_at: 1 });
+
+    // Thread state: looked up by counterpart ID (resolve/unresolve, sync
+    // auto-reopen). _id is already the player ID; no extra index needed.
+
+    // Player info cache: TTL on expires_at would auto-evict, but we treat
+    // expired docs as cache-miss + refresh in-line, so a TTL would race.
+    // _id is already the player ID; no extra index needed.
+
+    console.log('[sync] mongo indexes ensured');
+  } catch (err) {
+    console.error('[sync] ensureIndexes failed:', err.message);
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
+}
+
 function startSyncLoop() {
   if (_syncInterval) return;
   // Fire one immediate sync on boot, then on interval.
@@ -169,5 +206,6 @@ module.exports = {
   syncOnce,
   startSyncLoop,
   stopSyncLoop,
+  ensureIndexes,
   notifyNewMessage,    // exported so Phase 2 can monkey-patch / test it
 };
