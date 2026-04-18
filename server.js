@@ -8,7 +8,10 @@ const app = express();
 const dotenv = require('dotenv');
 const { parse } = require('csv-parse/sync');
 const { MongoClient } = require('mongodb');
+const cookieParser = require('cookie-parser');
 const agentClient = require('./agentClient');
+const messagesSync = require('./messagesSync');
+const adminMessagesRouter = require('./adminMessages');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -22,6 +25,12 @@ app.use(express.static(path.join(__dirname), { index: false }));
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
+
+// Cookie parser — required by adminMessages router for signed session cookie.
+app.use(cookieParser());
+
+// Admin messaging dashboard (login + private inbox + reply UI).
+app.use(adminMessagesRouter);
 
 // Favicon fallback — browsers request /favicon.ico by default
 app.get('/favicon.ico', (req, res) => {
@@ -1195,5 +1204,10 @@ app.listen(PORT, () => {
   // fail cold. The background loop refreshes every 14 min.
   try { agentClient.startBackgroundRefresh(); } catch (err) {
     console.error('[startup] background refresh init failed:', err.message);
+  }
+  // Poll the wager inbox for new player messages and store them locally so the
+  // admin dashboard can render them and (Phase 2) so SMS alerts can fire.
+  try { messagesSync.startSyncLoop(); } catch (err) {
+    console.error('[startup] message sync init failed:', err.message);
   }
 });

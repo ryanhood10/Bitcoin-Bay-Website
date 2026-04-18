@@ -42,6 +42,8 @@ const AUTH_URL       = `${WAGER_BASE}/cloud/api/System/authenticateCustomer`;
 const OTP_URL        = `${WAGER_BASE}/cloud/api/System/OTPLoginWithCode`;
 const UPDATE_URL     = `${WAGER_BASE}/cloud/api/Manager/updateByColumn`;
 const GET_INFO_URL   = `${WAGER_BASE}/cloud/api/Manager/getInfoPlayer`;
+const MSG_LIST_URL   = `${WAGER_BASE}/cloud/api/Manager/getMessage`;
+const MSG_SEND_URL   = `${WAGER_BASE}/cloud/api/Manager/mailAgentNew`;
 
 // Refresh the JWT when it has this much time or less remaining. 21-min tokens
 // + 5-min skew = we refresh every ~16 minutes of activity. Plenty of buffer.
@@ -495,6 +497,114 @@ async function getPlayerInfo(customerId) {
   return data && data.INFO && data.INFO.data ? data.INFO.data : null;
 }
 
+// ---------------------------------------------------------------------------
+// Messaging API — list inbox + send-to-customer.
+//
+// Note: messaging endpoints want agentID = the actual logged-in account
+// (AGENT_USERNAME, e.g. BTCBMA), NOT the hardcoded AGENT_ID='BITCOINBAY' the
+// password endpoints use. The wager backend is lenient on agentID for some
+// calls and strict on others — captures show BTCBMA is required here.
+// ---------------------------------------------------------------------------
+
+function getMessagingAgentId() {
+  const u = process.env.AGENT_USERNAME;
+  if (!u) throw new Error('AGENT_USERNAME env var not configured');
+  return u;
+}
+
+// Public: fetch the agent's inbox. Returns the LIST array directly (each item
+// has Id, FromE/ToE, FromELogin/ToELogin, FromType/ToType, Subject, Message,
+// DateMail, MessageType, PadreID, etc). Caller filters/sorts as needed.
+async function listInboxMessages() {
+  const token = await getValidToken();
+  const agent = getMessagingAgentId();
+
+  const body = new URLSearchParams({
+    acc:        agent,
+    operation:  'getMessage',
+    type:       '0',
+    RRO:        '1',
+    agentID:    agent,
+    agentOwner: agent,
+    agentSite:  AGENT_SITE
+  });
+
+  const r = await fetch(MSG_LIST_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization':    `Bearer ${token}`,
+      'Content-Type':     'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: body.toString()
+  });
+
+  if (r.status === 401 || r.status === 403) {
+    throw new AgentAuthError(`getMessage auth rejected (HTTP ${r.status})`);
+  }
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new AgentApiError(`getMessage HTTP ${r.status}`, r.status, text.slice(0, 500));
+  }
+
+  const data = await r.json().catch(() => null);
+  return (data && Array.isArray(data.LIST)) ? data.LIST : [];
+}
+
+// Public: send a message FROM the agent TO a customer (player).
+// Mirrors the portal payload exactly. `subject` defaults to the customer ID
+// because that's the convention the portal uses for direct replies.
+// Throws on any non-OK response. Returns { ok: true } on success.
+async function sendMessageToCustomer({ customerId, body: messageBody, subject }) {
+  if (!customerId || !messageBody) {
+    throw new Error('sendMessageToCustomer requires customerId and body');
+  }
+
+  const token = await getValidToken();
+  const agent = getMessagingAgentId();
+
+  const params = new URLSearchParams({
+    msgID:        '0',
+    from:         agent,
+    message:      messageBody,
+    subject:      subject || customerId,
+    messageType:  'm',
+    CFWebsite:    '1',
+    Applyto:      '0',
+    CustomerList: JSON.stringify([customerId]),
+    asCs:         'false',
+    operation:    'mailAgentNew',
+    agentID:      agent,
+    agentOwner:   agent,
+    agentSite:    AGENT_SITE
+  });
+
+  const r = await fetch(MSG_SEND_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization':    `Bearer ${token}`,
+      'Content-Type':     'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: params.toString()
+  });
+
+  if (r.status === 401 || r.status === 403) {
+    throw new AgentAuthError(`mailAgentNew auth rejected (HTTP ${r.status})`);
+  }
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new AgentApiError(`mailAgentNew HTTP ${r.status}`, r.status, text.slice(0, 500));
+  }
+
+  const data = await r.json().catch(() => null);
+  if (!data || data.INFO !== 'OK') {
+    throw new AgentApiError('mailAgentNew returned non-OK', r.status, JSON.stringify(data).slice(0, 500));
+  }
+
+  return { ok: true };
+}
+
 // Background refresh loop. Without this, on a low-traffic site the token
 // simply expires between user visits — because the passive refresh in
 // getValidToken only fires on incoming requests. The background loop keeps
@@ -531,6 +641,8 @@ module.exports = {
   getValidToken,
   updatePlayerPassword,
   getPlayerInfo,
+  listInboxMessages,
+  sendMessageToCustomer,
   performFreshLogin,
   generateTotp,
   startBackgroundRefresh,
