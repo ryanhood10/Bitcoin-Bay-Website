@@ -574,31 +574,26 @@ router.post('/api/admin/reply', requireAdmin, express.json(), async (req, res) =
     return res.status(502).json({ success: false, error: 'Failed to send: ' + err.message });
   }
 
-  // Record the outbound reply locally so it shows up in the thread immediately,
-  // before the next sync poll would pick it up. We use a synthetic wager_id
-  // (negative timestamp) so it can't collide with real wager IDs.
+  // Trigger an immediate sync so the just-sent message (which now lives in
+  // the wager backend's type=1 sent bucket) lands in Mongo with its real
+  // wager_id before the dashboard refreshes the thread view. Avoids the
+  // synthetic-id-then-dupe problem that any local-insert approach has.
+  try { await messagesSync.syncOnce(); }
+  catch (err) { console.error('[admin] post-reply sync failed:', err.message); }
+
+  // Tag the just-sent message with who clicked Send.
   if (process.env.MONGO_URI) {
     let client;
     try {
       client = new MongoClient(process.env.MONGO_URI);
       await client.connect();
-      await client.db(MONGO_DB).collection(MESSAGES_COLL).insertOne({
-        wager_id:    -Date.now(),       // synthetic — negative so it can't collide
-        from_login:  process.env.AGENT_USERNAME,
-        to_login:    playerId,
-        from_type:   'A',
-        to_type:     'C',
-        subject:     playerId,
-        body,
-        message_type: 'm',
-        date_mail:   new Date(),
-        is_player_message: false,
-        direction:   'outbound',
-        sent_by:     req.admin.user,
-        seen_at:     new Date(),
-      });
+      await client.db(MONGO_DB).collection(MESSAGES_COLL).updateOne(
+        { direction: 'outbound', to_login: { $regex: `^${escapeRegex(playerId)}\\s*$`, $options: 'i' }, body, sent_by: { $exists: false } },
+        { $set: { sent_by: req.admin.user } },
+        { sort: { date_mail: -1 } }
+      );
     } catch (err) {
-      console.error('[admin] failed to record outbound reply:', err.message);
+      console.error('[admin] failed to tag sent_by:', err.message);
     } finally {
       if (client) try { await client.close(); } catch (_) {}
     }

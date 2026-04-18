@@ -512,17 +512,19 @@ function getMessagingAgentId() {
   return u;
 }
 
-// Public: fetch the agent's inbox. Returns the LIST array directly (each item
-// has Id, FromE/ToE, FromELogin/ToELogin, FromType/ToType, Subject, Message,
-// DateMail, MessageType, PadreID, etc). Caller filters/sorts as needed.
-async function listInboxMessages() {
+// Public: fetch a message bucket from the agent portal.
+//   type=0 → inbox (received)        type=1 → sent (outbound)
+//   type=2 → other (mostly empty)    type=3 → empty
+// Returns the LIST array directly (Id, FromE/ToE, FromELogin/ToELogin,
+// FromType/ToType, Subject, Message, DateMail, MessageType, PadreID, ...).
+async function listMessages(type = '0') {
   const token = await getValidToken();
   const agent = getMessagingAgentId();
 
   const body = new URLSearchParams({
     acc:        agent,
     operation:  'getMessage',
-    type:       '0',
+    type:       String(type),
     RRO:        '1',
     agentID:    agent,
     agentOwner: agent,
@@ -550,6 +552,9 @@ async function listInboxMessages() {
   const data = await r.json().catch(() => null);
   return (data && Array.isArray(data.LIST)) ? data.LIST : [];
 }
+
+// Backwards-compat alias — listInboxMessages() === listMessages('0').
+async function listInboxMessages() { return listMessages('0'); }
 
 // Public: send a message FROM the agent TO a customer (player).
 // Mirrors the portal payload exactly. `subject` defaults to the customer ID
@@ -641,6 +646,7 @@ module.exports = {
   getValidToken,
   updatePlayerPassword,
   getPlayerInfo,
+  listMessages,
   listInboxMessages,
   sendMessageToCustomer,
   performFreshLogin,

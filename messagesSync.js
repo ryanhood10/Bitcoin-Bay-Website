@@ -27,7 +27,9 @@ let _initialized  = false;
 
 // Tag a message with the fields our dashboard cares about, in addition to
 // the raw wager fields. Keyed on `wager_id` (the wager backend's Id).
-function shapeMessage(m) {
+// `direction` is determined by which bucket we pulled it from: type=0 inbox
+// is inbound, type=1 sent is outbound.
+function shapeMessage(m, direction) {
   return {
     wager_id:    m.Id,
     from_login:  (m.FromELogin || m.FromE || '').trim(),
@@ -40,9 +42,9 @@ function shapeMessage(m) {
     parent_id:   m.PadreID,
     correlation_id: m.CorrelationID,
     date_mail:   m.DateMail ? new Date(m.DateMail.replace(' ', 'T') + 'Z') : null,
-    raw:         m,            // keep the full payload for forward-compat
-    is_player_message: m.FromType === 'C',
-    direction:   'inbound',    // we only sync inbox here; replies are stored by the reply endpoint
+    raw:         m,
+    is_player_message: direction === 'inbound' && m.FromType === 'C',
+    direction,
     seen_at:     new Date(),
   };
 }
@@ -59,13 +61,25 @@ async function syncOnce() {
     return { fetched: 0, inserted: 0, alerted: 0 };
   }
 
-  let messages;
+  // Pull both buckets in parallel: inbox (type=0) and sent (type=1).
+  // Tag each with direction so the dashboard renders sender vs recipient
+  // bubbles correctly and threads include our own outbound messages.
+  let inbox, sent;
   try {
-    messages = await agentClient.listInboxMessages();
+    [inbox, sent] = await Promise.all([
+      agentClient.listMessages('0'),
+      agentClient.listMessages('1'),
+    ]);
   } catch (err) {
-    console.error('[sync] listInboxMessages failed:', err.message);
+    console.error('[sync] listMessages failed:', err.message);
     return { fetched: 0, inserted: 0, alerted: 0, error: err.message };
   }
+
+  const tagged = [
+    ...inbox.map(m => ({ msg: m, direction: 'inbound'  })),
+    ...sent.map(m  => ({ msg: m, direction: 'outbound' })),
+  ];
+  const fetched = tagged.length;
 
   let client;
   try {
@@ -73,31 +87,28 @@ async function syncOnce() {
     await client.connect();
     const coll = client.db(MONGO_DB).collection(MESSAGES_COLL);
 
-    // First-run guard: if the collection is empty, mark everything currently
-    // in the inbox as already-seen with `is_backfill: true`. No alerts fire.
     if (!_initialized) {
       const existingCount = await coll.estimatedDocumentCount();
-      if (existingCount === 0 && messages.length > 0) {
-        const backfilled = messages.map(m => ({ ...shapeMessage(m), is_backfill: true, alerted_at: null }));
+      if (existingCount === 0 && fetched > 0) {
+        const backfilled = tagged.map(t => ({ ...shapeMessage(t.msg, t.direction), is_backfill: true, alerted_at: null }));
         await coll.insertMany(backfilled);
         _initialized = true;
         console.log(`[sync] first-run backfill: stored ${backfilled.length} existing messages, no alerts`);
-        return { fetched: messages.length, inserted: backfilled.length, alerted: 0, backfill: true };
+        return { fetched, inserted: backfilled.length, alerted: 0, backfill: true };
       }
       _initialized = true;
     }
 
-    // Find which ones are new.
-    const ids = messages.map(m => m.Id).filter(Boolean);
+    const ids = tagged.map(t => t.msg.Id).filter(Boolean);
     const existing = await coll.find({ wager_id: { $in: ids } }, { projection: { wager_id: 1 } }).toArray();
     const seenIds = new Set(existing.map(e => e.wager_id));
-    const fresh = messages.filter(m => !seenIds.has(m.Id));
+    const fresh = tagged.filter(t => !seenIds.has(t.msg.Id));
 
     if (fresh.length === 0) {
-      return { fetched: messages.length, inserted: 0, alerted: 0 };
+      return { fetched, inserted: 0, alerted: 0 };
     }
 
-    const docs = fresh.map(m => ({ ...shapeMessage(m), alerted_at: null }));
+    const docs = fresh.map(t => ({ ...shapeMessage(t.msg, t.direction), alerted_at: null }));
     await coll.insertMany(docs);
 
     let alerted = 0;
@@ -112,11 +123,11 @@ async function syncOnce() {
       }
     }
 
-    console.log(`[sync] fetched=${messages.length} inserted=${docs.length} alerted=${alerted}`);
-    return { fetched: messages.length, inserted: docs.length, alerted };
+    console.log(`[sync] fetched=${fetched} inserted=${docs.length} alerted=${alerted}`);
+    return { fetched, inserted: docs.length, alerted };
   } catch (err) {
     console.error('[sync] mongo error:', err.message);
-    return { fetched: messages.length, inserted: 0, alerted: 0, error: err.message };
+    return { fetched, inserted: 0, alerted: 0, error: err.message };
   } finally {
     if (client) try { await client.close(); } catch (_) {}
   }
