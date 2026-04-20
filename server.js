@@ -1037,26 +1037,59 @@ app.post('/api/reset-password', async (req, res) => {
 });
 
 
-// Leaderboard API — hardcoded for week of Apr 7–13, 2026
-// TODO: Replace with MongoDB lookup once the collection is wired up
-app.get('/api/leaderboard', (req, res) => {
-  res.json({
-    leaderboard: [
-      'BTCB2577',
-      'GD0288',
-      'BTCB3084',
-      'BTCB1931',
-      'BTCB2554',
-      'BCB1807',
-      'BCB312',
-      'BCB889',
-      'SAMP153',
-      'BTCB7573'
-    ],
-    volumeNeeded: '1,961',
-    subheading: '4/7 – 4/14',
-    userDate: '4-13'
-  });
+// Leaderboard API — pulls the most recent weekly entry from Mongo
+// (collection `weekly_leaderboard`). The upstream job writes one doc per
+// week with { week_start, week_end, volume_threshold, bonuses: [{rank,account},...] }.
+// We shape it into the exact response the existing leaderboard.html expects.
+app.get('/api/leaderboard', async (req, res) => {
+  if (!process.env.MONGO_URI) {
+    return res.status(503).json({ error: 'Leaderboard service unavailable' });
+  }
+  let client;
+  try {
+    client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const doc = await client.db('bcbay_automation').collection('weekly_leaderboard')
+      .find({})
+      .sort({ updated_at: -1, generated_at: -1 })
+      .limit(1)
+      .next();
+    if (!doc) return res.status(404).json({ error: 'No leaderboard data yet' });
+
+    // Sort bonuses by rank ASC, emit just the account strings.
+    const leaderboard = (doc.bonuses || [])
+      .slice()
+      .sort((a, b) => (a.rank || 0) - (b.rank || 0))
+      .map(b => b.account);
+
+    // "04-14-2026" → "4/14"
+    const fmtShort = s => {
+      if (!s) return '';
+      const [mm, dd] = s.split('-');
+      return `${parseInt(mm, 10)}/${parseInt(dd, 10)}`;
+    };
+    const subheading = doc.week_start && doc.week_end
+      ? `${fmtShort(doc.week_start)} – ${fmtShort(doc.week_end)}`
+      : '';
+
+    // "Updated 4-20" — use updated_at in ET so it matches the operator's
+    // perception of "when was this posted" regardless of server clock.
+    const updatedSrc = doc.updated_at || doc.generated_at;
+    const userDate = updatedSrc
+      ? new Date(updatedSrc).toLocaleDateString('en-US', {
+          timeZone: 'America/New_York', month: 'numeric', day: 'numeric'
+        }).replace('/', '-')
+      : '';
+
+    const volumeNeeded = (doc.volume_threshold || 0).toLocaleString('en-US');
+
+    res.json({ leaderboard, volumeNeeded, subheading, userDate });
+  } catch (err) {
+    console.error('[leaderboard] mongo error:', err.message);
+    res.status(500).json({ error: 'Error loading leaderboard' });
+  } finally {
+    if (client) try { await client.close(); } catch (_) {}
+  }
 });
 
 
