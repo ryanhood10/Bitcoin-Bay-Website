@@ -147,19 +147,28 @@ async function touchLastLogin(username) {
 //   requireAdmin()        — any authenticated admin (full OR dashboard)
 //   requireAdmin('full')  — must be role=full
 // ---------------------------------------------------------------------------
+// Client wants JSON if the path is under /api/ OR the Accept header says so.
+// Lets us reuse requireAdmin on non-/api paths like /auth/instagram/status
+// that are still called via fetch() and expect JSON back.
+function wantsJson(req) {
+  if (req.path.startsWith('/api/')) return true;
+  const accept = (req.get && req.get('Accept')) || req.headers?.accept || '';
+  return accept.includes('application/json');
+}
+
 function requireAdmin(requiredRole) {
   return function (req, res, next) {
     const raw = req.cookies && req.cookies[COOKIE_NAME];
     const session = verifyCookie(raw);
     if (!session) {
-      if (req.path.startsWith('/api/')) {
+      if (wantsJson(req)) {
         return res.status(401).json({ success: false, error: 'Not signed in' });
       }
       return res.redirect('/admin/login');
     }
     const userRole = session.role || ROLE_FULL;  // back-compat: older cookies had no role
     if (requiredRole === ROLE_FULL && userRole !== ROLE_FULL) {
-      if (req.path.startsWith('/api/')) {
+      if (wantsJson(req)) {
         return res.status(403).json({ success: false, error: 'Insufficient role' });
       }
       return res.status(403).type('html').send(

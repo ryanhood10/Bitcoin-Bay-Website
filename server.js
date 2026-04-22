@@ -13,6 +13,7 @@ const agentClient = require('./agentClient');
 const messagesSync = require('./messagesSync');
 const adminMessagesRouter = require('./adminMessages');
 const adminDashboardRouter = require('./adminDashboard');
+const authInstagramRouter  = require('./authInstagram');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -37,6 +38,10 @@ app.use(adminMessagesRouter);
 // Internal analytics dashboard (/admin/dashboard + /api/admin/dashboard/*).
 // Accessible by any admin role (full or dashboard).
 app.use(adminDashboardRouter);
+
+// Instagram auth flows (OAuth connect/callback + scrape-session form).
+// Full-role only for anything that mints/updates credentials.
+app.use(authInstagramRouter);
 
 // Favicon fallback — browsers request /favicon.ico by default
 app.get('/favicon.ico', (req, res) => {
