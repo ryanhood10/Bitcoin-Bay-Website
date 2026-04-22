@@ -101,6 +101,12 @@ router.get('/admin/dashboard', adminAuth.requireAdmin(), (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'admin-dashboard.html'));
 });
 
+// Current admin identity — used by the dashboard JS to conditionally show
+// role-specific UI (e.g., "Back to messages" button only for full admins).
+router.get('/api/admin/dashboard/me', adminAuth.requireAdmin(), (req, res) => {
+  res.json({ user: req.admin.user, role: req.admin.role });
+});
+
 // ===========================================================================
 // ANALYTICS — reports collection
 // ===========================================================================

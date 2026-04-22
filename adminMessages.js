@@ -249,6 +249,8 @@ button{font-family:inherit}
 
 header{height:52px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--border);background:var(--panel-2);gap:14px}
 header .brand{font-weight:800;font-size:13px;background:linear-gradient(135deg,var(--gold),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:0.02em}
+header .nav-link{font-size:12px;font-weight:600;color:var(--text-2);text-decoration:none;padding:6px 12px;border:1px solid var(--border);border-radius:6px;transition:all 0.12s ease}
+header .nav-link:hover{color:var(--orange);border-color:var(--orange)}
 header .who{margin-left:auto;color:var(--text-3);font-size:12px}
 header .who strong{color:var(--text-2);font-weight:600}
 header form{display:inline}
@@ -365,6 +367,7 @@ header button:hover{border-color:var(--gold);color:var(--gold)}
 </style></head><body>
 <header>
   <span class="brand">BITCOIN BAY · ADMIN</span>
+  <a class="nav-link" href="/admin/dashboard" title="Internal analytics dashboard">Dashboard →</a>
   <span class="who">Signed in as <strong>${user}</strong></span>
   <form method="POST" action="/admin/logout"><button>Sign out</button></form>
 </header>

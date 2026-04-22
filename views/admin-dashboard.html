@@ -645,6 +645,16 @@ body {
 <script>
 let MODE='day', OFFSET=0, REPORT=null, ALL_DATES=[];
 let ENGAGEMENT_STATS = { twitter: null, instagram: null };
+// CURRENT_ADMIN populated at load time. Used to conditionally show UI that
+// links into /admin/messages — only role=full admins can access that page.
+let CURRENT_ADMIN = { user: null, role: null };
+async function fetchCurrentAdmin(){
+  try {
+    const res = await fetch('/api/admin/dashboard/me', { headers: { Accept: 'application/json' }});
+    if (res.ok) CURRENT_ADMIN = await res.json();
+  } catch(_) { /* stay null — UI treats as no messages access */ }
+}
+function canAccessMessages(){ return CURRENT_ADMIN && CURRENT_ADMIN.role === 'full'; }
 
 async function fetchEngagementStats(){
   try {
@@ -1016,7 +1026,7 @@ async function load(){
   el('main-page').innerHTML=`<div class="loading-page"><div class="spinner"></div><span style="font-size:12px;color:var(--dim);">Loading...</span></div>`;
   el('status-pills').innerHTML='';
   el('period-label').textContent=getPeriodLabel();
-  try{ REPORT=await fetchReport(); await fetchEngagementStats(); renderAll(); }
+  try{ REPORT=await fetchReport(); await Promise.all([fetchCurrentAdmin(), fetchEngagementStats()]); renderAll(); }
   catch(e){ el('main-page').innerHTML=`<div class="loading-page"><span style="font-size:13px;color:var(--red);">${e.message}</span></div>`; }
 }
 
@@ -1619,7 +1629,7 @@ async function renderTicketsTab(){
     <div class="chart-wrap" style="padding:0;">
       <div class="chart-head" style="padding:14px 16px 0;">
         <div class="chart-title">Currently open threads</div>
-        <a class="draft-btn primary" id="open-admin" href="https://bitcoinbay.com/admin/messages" target="_blank" rel="noopener" style="text-decoration:none;">Open admin →</a>
+        ${canAccessMessages() ? `<a class="draft-btn primary" id="open-admin" href="/admin/messages" rel="noopener" style="text-decoration:none;">Open admin →</a>` : ''}
       </div>
       <div id="tickets-list" style="padding:10px 16px 16px;">
         <div class="empty" style="padding:20px 0;">Loading threads…</div>
@@ -1660,7 +1670,7 @@ async function renderTicketsTab(){
         <div>${waiting}</div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
           ${unread}
-          <a class="draft-btn" href="${t.admin_url}" target="_blank" rel="noopener" style="font-size:10px;padding:4px 8px;">Reply ↗</a>
+          ${canAccessMessages() ? `<a class="draft-btn" href="${t.admin_url}" rel="noopener" style="font-size:10px;padding:4px 8px;">Reply ↗</a>` : ''}
         </div>
       </div>`;
     }).join('')}</div>`;
