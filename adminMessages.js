@@ -28,6 +28,7 @@ const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
 const agentClient = require('./agentClient');
 const messagesSync = require('./messagesSync');
+const adminAuth = require('./adminAuth');
 
 const router = express.Router();
 
@@ -98,17 +99,10 @@ function setSessionCookie(res, user) {
   });
 }
 
-function requireAdmin(req, res, next) {
-  const session = verifyCookie(req.cookies && req.cookies[COOKIE_NAME]);
-  if (!session) {
-    if (req.path.startsWith('/api/')) {
-      return res.status(401).json({ success: false, error: 'Not signed in' });
-    }
-    return res.redirect('/admin/login');
-  }
-  req.admin = session;
-  next();
-}
+// Messaging dashboard requires role=full — dashboard-only admins can't see
+// or reply to player tickets. Defers to the shared adminAuth module so a
+// single sign-in cookie works across /admin/messages AND /admin/dashboard.
+const requireAdmin = adminAuth.requireAdmin('full');
 
 // ---------------------------------------------------------------------------
 // Audit logging for sensitive admin actions.
@@ -189,27 +183,21 @@ router.post('/admin/login', express.urlencoded({ extended: false }), async (req,
     _loginAttempts.delete(remoteIp);   // window elapsed, reset
   }
 
-  const expectedUser = process.env.ADMIN_USERNAME;
-  const expectedHash = process.env.ADMIN_PASSWORD_HASH;
-
-  if (!expectedUser || !expectedHash) {
-    console.error('[admin] ADMIN_USERNAME or ADMIN_PASSWORD_HASH not configured');
-    return res.status(500).type('html').send(loginPage('Admin login is not configured. Contact the site owner.'));
-  }
-
   if (!username || !password) {
     return res.status(400).type('html').send(loginPage('Username and password required.'));
   }
 
-  // Constant-time username compare to limit username enumeration.
-  const userOk = username.length === expectedUser.length &&
-                 crypto.timingSafeEqual(Buffer.from(username), Buffer.from(expectedUser));
-
+  // Look up admin — env-var admin (role=full) first, then Mongo bcb_admin_users.
+  const admin = await adminAuth.findAdmin(username);
   let passOk = false;
-  try { passOk = await bcrypt.compare(password, expectedHash); } catch (_) { passOk = false; }
+  if (admin) {
+    passOk = await adminAuth.verifyPassword(password, admin.passwordHash);
+  } else {
+    // Run a dummy bcrypt to keep timing similar whether user exists or not.
+    try { await bcrypt.compare(password, '$2b$12$abcdefghijklmnopqrstuvwxyz012345678901234567890123'); } catch (_) {}
+  }
 
-  if (!userOk || !passOk) {
-    // Bump the per-IP counter on each failure.
+  if (!admin || !passOk) {
     const existing = _loginAttempts.get(remoteIp);
     if (existing && (Date.now() - existing.firstAt) < LOGIN_WINDOW_MS) {
       existing.count++;
@@ -217,17 +205,16 @@ router.post('/admin/login', express.urlencoded({ extended: false }), async (req,
       _loginAttempts.set(remoteIp, { count: 1, firstAt: Date.now() });
     }
     await logAdminAction({ action: 'login_fail', username_attempt: username, remote_ip: remoteIp });
-    if (userOk === false && passOk === false) {
-      try { await bcrypt.compare('dummy', '$2b$12$abcdefghijklmnopqrstuv'); } catch (_) {}
-    }
     return res.status(401).type('html').send(loginPage('Wrong username or password.'));
   }
 
-  // Successful login — wipe the counter for this IP.
+  // Successful login — wipe the counter for this IP, set session with role.
   _loginAttempts.delete(remoteIp);
-  setSessionCookie(res, username);
-  await logAdminAction({ action: 'login_ok', username, remote_ip: remoteIp });
-  res.redirect('/admin/messages');
+  adminAuth.setSessionCookie(res, admin.username, admin.role);
+  await adminAuth.touchLastLogin(admin.username);
+  await logAdminAction({ action: 'login_ok', username: admin.username, role: admin.role, remote_ip: remoteIp });
+  // Dashboard-only admins land on the analytics page; full admins land on messages.
+  res.redirect(admin.role === adminAuth.ROLE_FULL ? '/admin/messages' : '/admin/dashboard');
 });
 
 router.post('/admin/logout', (req, res) => {

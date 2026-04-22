@@ -12,6 +12,7 @@ const cookieParser = require('cookie-parser');
 const agentClient = require('./agentClient');
 const messagesSync = require('./messagesSync');
 const adminMessagesRouter = require('./adminMessages');
+const adminDashboardRouter = require('./adminDashboard');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -30,7 +31,12 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 // Admin messaging dashboard (login + private inbox + reply UI).
+// Full-role only — shared login with the analytics dashboard below.
 app.use(adminMessagesRouter);
+
+// Internal analytics dashboard (/admin/dashboard + /api/admin/dashboard/*).
+// Accessible by any admin role (full or dashboard).
+app.use(adminDashboardRouter);
 
 // Favicon fallback — browsers request /favicon.ico by default
 app.get('/favicon.ico', (req, res) => {

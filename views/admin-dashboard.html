@@ -1,0 +1,2278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BC Bay — Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0c0c10;
+  --surface:  #131318;
+  --surface2: #1a1a22;
+  --surface3: #21212c;
+  --border:   #2a2a38;
+  --border2:  #353548;
+  --text:     #e8e6f0;
+  --sub:      #9895aa;
+  --dim:      #5a5870;
+  --blurple:  #EE8034;
+  --blurple2: #9d6ef5;
+  --mint:     #34d399;
+  --red:      #f87171;
+  --amber:    #f59e0b;
+  --blue:     #F8932F;
+  --r:        10px;
+  --r-sm:     7px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; height: 54px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar-left  { display: flex; align-items: center; gap: 20px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.brand { display: flex; align-items: center; gap: 9px; }
+.brand-name { font-family: 'Inter Tight', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+
+/* separator */
+.sep { width: 1px; height: 22px; background: var(--border2); }
+
+/* ── VIEW TOGGLE (Day / Week / Month — segmented control) ── */
+.view-toggle {
+  display: inline-flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 1px;
+}
+.vt-btn {
+  background: transparent; border: none; color: var(--sub);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  padding: 6px 16px; border-radius: 6px;
+  cursor: pointer; transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  line-height: 1.3;
+}
+.vt-btn:hover { color: var(--text); background: var(--surface3); }
+.vt-btn.active {
+  background: linear-gradient(180deg, #EE8034 0%, #d4691c 100%);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(238,128,52,0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* ── PERIOD NAV ── */
+.period-nav { display: flex; align-items: center; gap: 6px; }
+.pnav-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--sub); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.pnav-btn:hover { background: var(--surface2); color: var(--text); }
+.period-text { font-size: 13px; font-weight: 500; color: var(--text); min-width: 200px; text-align: center; }
+
+/* status pills */
+.pill { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; border: 1px solid; }
+.pill.ok   { color: var(--mint);  border-color: rgba(52,211,153,0.3);  background: rgba(52,211,153,0.07); }
+.pill.warn { color: var(--amber); border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.07); }
+.pill.err  { color: var(--red);   border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.07); }
+
+/* ── PAGE LAYOUT ── */
+.page { max-width: 1360px; margin: 0 auto; padding: 28px 32px 80px; }
+
+/* ── SECTION BLOCK ── */
+.section-block { margin-bottom: 36px; }
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.section-title-row { display: flex; align-items: center; gap: 8px; }
+.section-title {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.02em;
+}
+.section-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--surface2); color: var(--dim);
+  border: 1px solid var(--border); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.section-badge.period { background: rgba(124,58,237,0.12); color: var(--blurple2); border-color: rgba(124,58,237,0.2); }
+.section-badge.snap   { background: rgba(52,211,153,0.08); color: var(--mint);     border-color: rgba(52,211,153,0.18); }
+.section-note { font-size: 11px; color: var(--dim); }
+
+/* ── HERO STRIP ── */
+.hero-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--r); overflow: hidden;
+  margin-bottom: 20px;
+}
+.hero-card { background: var(--surface); padding: 18px 20px; }
+.hero-card-label { font-size: 11px; font-weight: 500; color: var(--sub); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.hero-card-value { font-family: 'Inter Tight', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--text); margin-bottom: 4px; }
+.hero-card-sub   { font-size: 11px; color: var(--dim); }
+
+/* ── CARD GRID ── */
+.card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.card-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.card-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.card-grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px 20px;
+}
+.panel-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.panel-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ── STAT TILE ── */
+.stat-tile {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 12px 14px;
+}
+.stat-label { font-size: 10px; font-weight: 500; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; line-height: 1.3; }
+.stat-value { font-family: 'Inter Tight', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: var(--text); }
+.stat-value.pos { color: var(--mint); }
+.stat-value.neg { color: var(--red); }
+.stat-value.hi  { color: var(--blurple2); }
+
+/* ── CONVERSION BAR ── */
+.conv-bar-wrap { margin-bottom: 14px; }
+.conv-bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-bottom: 5px; }
+.conv-bar-track { height: 5px; border-radius: 3px; background: var(--surface3); overflow: hidden; }
+.conv-bar-fill  { height: 100%; border-radius: 3px; background: var(--blurple); }
+
+/* ── BAR LIST ── */
+.bar-list-item { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.bli-label { font-size: 11px; color: var(--sub); width: 110px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bli-track { flex: 1; height: 3px; background: var(--surface3); border-radius: 2px; }
+.bli-fill  { height: 100%; border-radius: 2px; }
+.bli-val   { width: 40px; text-align: right; font-size: 11px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+
+/* ── SOCIAL GROUP LABEL ── */
+.social-group-label {
+  font-size: 10px; font-weight: 600; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin: 16px 0 8px; display: flex; align-items: center; gap: 8px;
+}
+.social-group-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.social-group-label:first-child { margin-top: 0; }
+
+
+/* ── SOCIAL GRID 2-COL ── */
+.social-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── SOCIAL GRID MINOR (smaller cards) ── */
+.social-grid-minor { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.social-card.minor { opacity: 0.6; }
+.social-card.minor .social-followers { font-size: 18px; }
+
+
+.social-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px;
+}
+.social-card.skipped { opacity: 0.3; pointer-events: none; }
+.social-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.social-platform { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--text); }
+.social-followers { font-family: 'Inter Tight', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin-bottom: 2px; }
+.social-fol-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+.social-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.ss { background: var(--surface2); border-radius: 6px; padding: 7px 9px; }
+.ss-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.ss-value { font-family: 'Inter Tight', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
+
+/* ── SCOPE TAGS ── */
+.stag {
+  display: inline-block; font-size: 9px; font-weight: 600;
+  padding: 1px 5px; border-radius: 3px; vertical-align: middle;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.stag.p { background: rgba(124,58,237,0.12); color: var(--blurple2); }
+.stag.s { background: rgba(52,211,153,0.08); color: var(--mint); }
+
+/* ── COMING SOON PANEL ── */
+.coming-soon {
+  background: var(--surface); border: 1px dashed var(--border2);
+  border-radius: var(--r); padding: 28px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: var(--dim); font-size: 13px;
+}
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+/* ── EMPTY / LOADING ── */
+.empty { padding: 24px 0; color: var(--dim); font-size: 12px; text-align: center; }
+.loading-page { display: flex; align-items: center; justify-content: center; min-height: 60vh; flex-direction: column; gap: 12px; }
+.spinner { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border2); border-top-color: var(--blurple); animation: spin 0.75s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── AGG NOTE ── */
+.agg-note {
+  font-size: 11px; color: var(--dim);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 8px 14px;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .social-grid { grid-template-columns: repeat(3, 1fr); }
+  .hero-strip  { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 740px) {
+  .card-grid-2 { grid-template-columns: 1fr; }
+  .card-grid-3 { grid-template-columns: 1fr 1fr; }
+  .social-grid { grid-template-columns: repeat(2, 1fr); }
+  .topbar { padding: 0 16px; }
+  .page { padding: 20px 16px 60px; }
+}
+
+/* ── MOBILE POLISH (≤ 600px) ── */
+@media (max-width: 600px) {
+  /* Topbar: allow wrap so nothing gets squeezed */
+  .topbar {
+    height: auto; min-height: 54px;
+    padding: 10px 14px;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .topbar-left { flex-wrap: wrap; gap: 10px; row-gap: 8px; }
+  .topbar-right { width: 100%; justify-content: flex-end; }
+  .brand-name { font-size: 14px; }
+  .sep { display: none; }
+  .view-toggle { padding: 2px; }
+  .vt-btn { padding: 5px 10px; font-size: 11px; }
+  .period-nav { gap: 4px; }
+  .period-text { font-size: 11px; }
+  .pnav-btn { width: 26px; height: 26px; }
+
+  /* Page gets a tiny bit more breathing room */
+  .page { padding: 16px 12px 48px; }
+
+  /* Hero cards stack to one column */
+  .hero-strip { grid-template-columns: 1fr !important; }
+  .hero-card-value { font-size: 26px; }
+
+  /* Section headers wrap */
+  .section-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .section-note { font-size: 10px; }
+
+  /* GA4 stat tiles + signup columns stack */
+  .card-grid-3 { grid-template-columns: 1fr; }
+  .card-grid-auto { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+
+  /* Modal: shrink padding so content breathes on tiny viewports */
+  .modal-overlay { padding: 8px; }
+  .modal-head { padding: 12px 16px; }
+  .modal-title { font-size: 14px; gap: 8px; flex-wrap: wrap; }
+  .modal-title .handle { font-size: 11px; }
+  .modal-body { padding: 14px 14px; }
+  .modal-tabs { padding: 0 14px; overflow-x: auto; white-space: nowrap; }
+  .modal-tab { padding: 10px 12px; font-size: 11px; }
+
+  /* Kmetric row on mobile: smaller min-width so 2 fit per row */
+  .kmetric-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; }
+  .kmetric { padding: 10px 12px; }
+  .kmetric-value { font-size: 18px; }
+  .kmetric-label { font-size: 9px; }
+
+  /* Chart container on mobile */
+  .chart-wrap { padding: 12px; }
+  .chart-head { flex-wrap: wrap; gap: 8px; }
+  .scale-picker { padding: 2px; }
+  .scale-btn { padding: 4px 8px; font-size: 9px; }
+
+  /* Draft cards: actions row wraps below the handle */
+  .draft-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .draft-actions { width: 100%; justify-content: flex-start; }
+  .draft-btn { font-size: 10px; padding: 5px 8px; }
+  .draft-target-tweet { margin-left: 8px; }
+
+  /* Stats bar on mobile — pills wrap cleanly */
+  .stats-bar { flex-wrap: wrap; gap: 6px; }
+  .stat-pill { min-width: 72px; padding: 5px 10px; }
+  .sp-value { font-size: 12px; }
+
+  /* Top tweets list — stack stats under text rather than alongside */
+  .tweet-row { grid-template-columns: 1fr; gap: 8px; }
+  .tweet-stats { flex-wrap: wrap; }
+
+  /* Hour-bars stay readable */
+  .hour-bars { height: 60px; }
+
+  /* Footer stacks to two lines */
+  .dash-footer { padding: 14px 16px; font-size: 10px; flex-direction: column; align-items: flex-start; }
+  .dash-footer .footer-right { flex-wrap: wrap; }
+}
+
+/* ── DETAIL MODAL ── */
+.clickable { cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+
+/* Section-level clickable (header shows "details →" pill, cursor changes over title row only) */
+.section-clickable .section-title-row { cursor: pointer; }
+.section-clickable .section-details-pill {
+  font-size: 9px; padding: 2px 7px;
+  background: rgba(238,128,52,0.10); color: var(--blurple);
+  border: 1px solid rgba(238,128,52,0.2);
+  opacity: 0.7; transition: opacity 0.12s ease;
+}
+.section-clickable:hover .section-details-pill { opacity: 1; }
+
+/* ── FOOTER ── */
+.dash-footer {
+  margin-top: 24px; padding: 18px 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 10px;
+  font-size: 11px; color: var(--dim);
+}
+.dash-footer .footer-brand { font-weight: 700; color: var(--sub); letter-spacing: 0.02em; }
+.dash-footer .footer-left, .dash-footer .footer-right {
+  display: flex; align-items: center; gap: 8px;
+}
+.dash-footer b { color: var(--text); font-weight: 600; }
+.dash-footer .footer-sep { color: var(--border2); }
+.dash-footer a { color: var(--sub); text-decoration: none; transition: color 0.12s; }
+.dash-footer a:hover { color: var(--blurple); }
+
+/* ── SOCIAL LAYOUT ── */
+.social-row {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.social-row.communities { grid-template-columns: 2fr 1fr; }    /* Twitter wider, Instagram narrower */
+.social-row.video       { grid-template-columns: 1fr 1fr; }    /* YT + TT equal small */
+
+@media (max-width: 900px) {
+  .social-row.communities, .social-row.video { grid-template-columns: 1fr; }
+}
+
+/* Compact social cards (YT/TT placeholders) */
+.social-card.compact { padding: 10px 14px; opacity: 0.75; }
+.social-card.compact .social-followers { font-size: 18px; margin-top: 2px; }
+.social-card.compact .social-fol-label { margin-bottom: 8px; }
+.social-card.compact .social-stats { gap: 6px; }
+.social-card.compact .ss-label { font-size: 8px; }
+.social-card.compact .ss-value { font-size: 11px; }
+
+/* ── ENGAGED-TODAY BADGE ── */
+.engaged-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700;
+  padding: 3px 9px; border-radius: 6px;
+  background: rgba(52,211,153,0.14);
+  color: var(--mint);
+  border: 1px solid rgba(52,211,153,0.3);
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+/* ── SIGNUPS TABLE (Users modal) ── */
+.signup-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.signup-row {
+  display: grid; grid-template-columns: 100px 1fr 110px 80px;
+  gap: 12px; align-items: center;
+  padding: 8px 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+}
+.signup-row.failed { background: rgba(248,113,113,0.04); border-color: rgba(248,113,113,0.2); }
+.signup-row.success { background: rgba(52,211,153,0.04); border-color: rgba(52,211,153,0.2); }
+.signup-row .su-date { color: var(--dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.signup-row .su-name { color: var(--text); font-weight: 500; }
+.signup-row .su-email { color: var(--sub); font-size: 11px; }
+.signup-row .su-login { color: var(--mint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 600; }
+.signup-row .su-login.failed { color: var(--red); font-weight: 500; }
+.signup-row .su-status { display: inline-flex; align-items: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 4px; }
+.signup-row .su-status.ok   { background: rgba(52,211,153,0.14); color: var(--mint); }
+.signup-row .su-status.fail { background: rgba(248,113,113,0.14); color: var(--red); }
+@media (max-width: 680px) {
+  .signup-row { grid-template-columns: 1fr; gap: 4px; }
+}
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(4,4,8,0.85); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; width: min(1100px, 100%);
+  max-height: calc(100vh - 48px); display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; border-bottom: 1px solid var(--border);
+}
+.modal-title { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 700; }
+.modal-title .handle { color: var(--sub); font-weight: 500; font-size: 13px; }
+.modal-close {
+  background: transparent; border: 1px solid var(--border2); color: var(--sub);
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { color: var(--text); border-color: var(--sub); }
+.modal-tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--border); }
+.modal-tab {
+  padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--sub);
+  background: transparent; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent; letter-spacing: 0.04em;
+}
+.modal-tab.active { color: var(--text); border-bottom-color: var(--blurple); }
+.modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.modal-panel { display: none; }
+.modal-panel.active { display: block; }
+.kmetric-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.kmetric {
+  padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.kmetric-clickable { cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease; }
+.kmetric-clickable:hover { border-color: var(--border2); background: var(--surface3); }
+.kmetric-clickable.active { border-color: var(--blurple); background: rgba(238,128,52,0.06); }
+.kmetric-clickable.active .kmetric-value { color: var(--blurple); }
+.kmetric-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+.kmetric-value { font-size: 22px; font-weight: 700; color: var(--text); }
+.kmetric-sub { font-size: 11px; margin-top: 3px; color: var(--sub); }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.chart-head .chart-title { margin: 0; }
+.scale-picker { display: flex; gap: 2px; background: var(--surface3); padding: 2px; border-radius: 7px; }
+.scale-btn {
+  background: transparent; border: none; color: var(--sub);
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 5px 10px; border-radius: 5px; cursor: pointer;
+}
+.scale-btn:hover { color: var(--text); }
+.scale-btn.active { background: var(--blurple); color: #fff; }
+.kind-pill {
+  display: inline-block; font-size: 9px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; padding: 1px 6px; border-radius: 4px;
+  margin-right: 6px; vertical-align: middle;
+}
+.kind-pill.quote { background: rgba(157,110,245,0.14); color: var(--blurple2); }
+.kind-pill.reply { background: rgba(52,211,153,0.12); color: var(--mint); }
+
+/* ── ENGAGEMENT DRAFT CARDS ── */
+.draft-header-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.draft-list { display: flex; flex-direction: column; gap: 14px; }
+.draft-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 14px 16px;
+}
+.draft-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.draft-target { display: flex; flex-direction: column; gap: 2px; }
+.draft-handle { font-weight: 700; color: var(--text); font-size: 14px; }
+.draft-meta { font-size: 11px; color: var(--dim); }
+.draft-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.draft-btn {
+  background: transparent; border: 1px solid var(--border2); color: var(--sub);
+  font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 6px;
+  cursor: pointer; text-decoration: none; line-height: 1.4;
+  transition: all 0.1s ease;
+}
+.draft-btn:hover { color: var(--text); border-color: var(--sub); }
+.draft-btn.copy { background: var(--blurple); color: #fff; border-color: var(--blurple); }
+.draft-btn.copy:hover { background: #d4691c; border-color: #d4691c; color: #fff; }
+.draft-btn.copy.copied { background: var(--mint); border-color: var(--mint); }
+.draft-btn.open:hover { color: var(--blurple); border-color: var(--blurple); }
+.draft-btn.dismiss:hover { color: var(--red); border-color: var(--red); }
+
+.draft-thread { display: flex; flex-direction: column; gap: 8px; }
+.draft-context, .draft-target-tweet {
+  background: var(--surface3); border-radius: 6px;
+  padding: 8px 10px; font-size: 12px;
+}
+.draft-context-label {
+  font-size: 10px; color: var(--dim); text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 3px; font-weight: 600;
+}
+.draft-context-text, .draft-target-text { color: var(--sub); line-height: 1.45; }
+.draft-target-tweet { margin-left: 14px; border-left: 2px solid var(--border2); }
+
+.draft-reply {
+  background: rgba(238,128,52,0.06); border: 1px solid rgba(238,128,52,0.25);
+  border-radius: 6px; padding: 10px 12px; margin-top: 4px;
+}
+.draft-reply-label {
+  font-size: 10px; color: var(--blurple); text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 4px; font-weight: 700;
+}
+.draft-reply-text { color: var(--text); font-size: 14px; line-height: 1.5; }
+.draft-why {
+  font-size: 11px; color: var(--dim); margin-top: 8px;
+  padding-top: 8px; border-top: 1px dashed var(--border);
+}
+.draft-why span { color: var(--sub); font-weight: 600; }
+
+.stats-bar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.stat-pill {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 12px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  min-width: 80px;
+}
+.sp-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.sp-value { font-size: 14px; font-weight: 700; color: var(--text); }
+.draft-btn.primary { background: var(--blurple); color: #fff; border-color: var(--blurple); }
+.draft-btn.primary:hover { background: #d4691c; border-color: #d4691c; color: #fff; }
+.draft-btn.primary:disabled { opacity: 0.6; cursor: wait; }
+.draft-btn.icon-only {
+  width: 32px; height: 28px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1;
+}
+.draft-btn.icon-only:hover { transform: rotate(90deg); transition: transform 0.3s ease; }
+.draft-btn.posted:hover { color: var(--mint); border-color: var(--mint); }
+
+.quality-badge {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 7px; border-radius: 4px; line-height: 1.4;
+}
+.quality-badge.q-high { background: rgba(52,211,153,0.14); color: var(--mint); }
+.quality-badge.q-med  { background: rgba(245,158,11,0.14); color: var(--amber); }
+.quality-badge.q-low  { background: var(--surface3); color: var(--dim); }
+.verified-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--blurple); color: #fff;
+  font-size: 9px; font-weight: 700;
+}
+.kmetric-sub.pos { color: var(--mint); }
+.kmetric-sub.neg { color: var(--red); }
+.chart-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 14px 16px; margin-bottom: 16px; }
+.chart-title { font-size: 11px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.tweet-list { display: flex; flex-direction: column; gap: 10px; }
+.tweet-row {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 12px;
+  text-decoration: none; color: inherit; transition: border-color 0.1s ease;
+}
+.tweet-row:hover { border-color: var(--blurple); }
+.tweet-text { font-size: 13px; color: var(--text); line-height: 1.45; }
+.tweet-meta { font-size: 10px; color: var(--dim); margin-top: 6px; }
+.tweet-stats { display: flex; gap: 14px; align-items: flex-start; font-size: 11px; color: var(--sub); white-space: nowrap; }
+.tweet-stat-val { color: var(--text); font-weight: 600; }
+.hour-bars { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; align-items: end; height: 80px; }
+.hour-bar { background: var(--blurple); border-radius: 2px 2px 0 0; min-height: 2px; position: relative; }
+.hour-bar.zero { background: var(--surface3); }
+.hour-axis { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; font-size: 8px; color: var(--dim); margin-top: 4px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="brand">
+      <!-- Wizard hat -->
+      <svg width="30" height="30" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 18c-2 8-3 16-4 28h8c-1-12-2-20-4-28z" fill="#8B6914"/>
+        <path d="M32 8c-4 2-10 6-16 4 4 4 10 6 15 8-6-1-14 0-18 4 6 0 14-1 19-2-4 2-10 8-12 14 4-4 10-10 14-14 4 4 10 10 14 14-2-6-8-12-12-14 5 1 13 2 19 2-4-4-12-5-18-4 5-2 11-4 15-8-6 2-12-2-16-4z" fill="#EE8034"/>
+      </svg>
+      <span class="brand-name">BC Bay</span>
+    </div>
+
+    <div class="view-toggle">
+      <button class="vt-btn active" data-view="day">Day</button>
+      <button class="vt-btn" data-view="week">Week</button>
+      <button class="vt-btn" data-view="month">Month</button>
+    </div>
+
+    <div class="sep"></div>
+
+    <div class="period-nav">
+      <button class="pnav-btn" id="nav-prev">&#8592;</button>
+      <span class="period-text" id="period-label">—</span>
+      <button class="pnav-btn" id="nav-next">&#8594;</button>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <div id="status-pills" style="display:flex;gap:6px;"></div>
+  </div>
+</div>
+
+<!-- PAGE -->
+<div class="page" id="main-page">
+  <div class="loading-page">
+    <div class="spinner"></div>
+    <span style="font-size:12px;color:var(--dim);">Loading report...</span>
+  </div>
+</div>
+
+<script>
+let MODE='day', OFFSET=0, REPORT=null, ALL_DATES=[];
+let ENGAGEMENT_STATS = { twitter: null, instagram: null };
+
+async function fetchEngagementStats(){
+  try {
+    const [tw, ig] = await Promise.all([
+      fetch('/api/admin/dashboard/engagement-drafts/stats').then(r => r.json()).catch(() => null),
+      fetch('/api/admin/dashboard/instagram-drafts/stats').then(r => r.json()).catch(() => null),
+    ]);
+    ENGAGEMENT_STATS.twitter = tw;
+    ENGAGEMENT_STATS.instagram = ig;
+  } catch(_) { /* ignore — badges will just hide */ }
+}
+const el=id=>document.getElementById(id);
+
+function fmt(n,pre='',suf='',dec=0){
+  if(n==null)return '—';
+  const v=parseFloat(n); if(isNaN(v))return '—';
+  return pre+v.toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec})+suf;
+}
+function fmtK(n){
+  if(n==null)return '—';
+  if(n>=1e6)return (n/1e6).toFixed(1)+'M';
+  if(n>=1000)return (n/1000).toFixed(1)+'K';
+  return Number(n).toLocaleString();
+}
+function stag(label,snap=false){
+  return `<span class="stag ${snap?'s':'p'}">${label}</span>`;
+}
+
+// ── DATE UTILS ──
+function getTargetDates(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  if(MODE==='day'){
+    const d=new Date(today); d.setDate(d.getDate()+OFFSET);
+    return [d.toISOString().slice(0,10)];
+  }
+  if(MODE==='week'){
+    const d=new Date(today);
+    const dow=d.getDay()||7; d.setDate(d.getDate()-dow+1+OFFSET*7);
+    return Array.from({length:7},(_,i)=>{ const dd=new Date(d); dd.setDate(dd.getDate()+i); return dd.toISOString().slice(0,10); });
+  }
+  const d=new Date(today.getFullYear(),today.getMonth()+OFFSET,1);
+  const yr=d.getFullYear(),mo=d.getMonth();
+  const days=new Date(yr,mo+1,0).getDate();
+  return Array.from({length:days},(_,i)=>`${yr}-${String(mo+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`);
+}
+
+function getPeriodLabel(){
+  const dates=getTargetDates();
+  if(MODE==='day'){
+    const d=new Date(dates[0]+'T12:00:00');
+    const isToday=dates[0]===new Date().toISOString().slice(0,10);
+    return isToday?`Today, ${d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}`:d.toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'});
+  }
+  if(MODE==='week'){
+    const s=new Date(dates[0]+'T12:00:00'),e=new Date(dates[6]+'T12:00:00');
+    return `${s.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${e.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+  }
+  return new Date(dates[0]+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'});
+}
+
+function pw(){ return MODE==='day'?'today':MODE==='week'?'this week':'this month'; }
+
+// ── FETCH ──
+async function fetchDates(){
+  try{ const r=await fetch('/api/admin/dashboard/dates'); ALL_DATES=await r.json(); }catch{ ALL_DATES=[]; }
+}
+
+async function fetchReport(){
+  const dates=getTargetDates();
+  if(MODE==='day'){
+    const r=await fetch(`/api/admin/dashboard/report?date=${dates[0]}`);
+    if(!r.ok)throw new Error(`Server returned ${r.status}`);
+    return await r.json();
+  }
+  const avail=dates.filter(d=>ALL_DATES.includes(d));
+  if(!avail.length)return null;
+  const docs=(await Promise.all(avail.map(async d=>{
+    try{ const r=await fetch(`/api/admin/dashboard/report?date=${d}`); return r.ok?await r.json():null; }catch{return null;}
+  }))).filter(Boolean);
+  return aggDocs(docs);
+}
+
+// ── AGGREGATION ──
+function sumF(docs,path){ const p=path.split('.'); return docs.reduce((a,d)=>{ let v=d; p.forEach(k=>v=v?.[k]); return a+(parseFloat(v)||0); },0); }
+function lastF(docs,path){ const p=path.split('.'); for(let i=docs.length-1;i>=0;i--){ let v=docs[i]; p.forEach(k=>v=v?.[k]); if(v!=null)return v; } return null; }
+function avgF(docs,path){ const vals=docs.map(d=>{ let v=d; path.split('.').forEach(k=>v=v?.[k]); return parseFloat(v)||0; }).filter(x=>x>0); return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0; }
+
+function aggDocs(docs){
+  if(!docs.length)return null;
+  const has=key=>docs.some(d=>d[key]!=null);
+  return {
+    _agg:true, _days:docs.length, date:docs[docs.length-1]?.date,
+    meta:{ success:[...new Set(docs.flatMap(d=>d.meta?.success||[]))], skipped:[...new Set(docs.flatMap(d=>d.meta?.skipped||[]))].filter(s=>![...new Set(docs.flatMap(d=>d.meta?.success||[]))].includes(s)), failed:[] },
+    mongodb_users:has('mongodb_users')?{successful_signups_today:sumF(docs,'mongodb_users.successful_signups_today'),successful_signups_total:lastF(docs,'mongodb_users.successful_signups_total'),attempts_today:sumF(docs,'mongodb_users.attempts_today'),failed_attempts_today:sumF(docs,'mongodb_users.failed_attempts_today'),signup_success_rate:avgF(docs,'mongodb_users.signup_success_rate')}:null,
+    ga4:has('ga4')?{sessions:sumF(docs,'ga4.sessions'),page_views:sumF(docs,'ga4.page_views'),new_users:sumF(docs,'ga4.new_users'),total_users:lastF(docs,'ga4.total_users'),bounce_rate:avgF(docs,'ga4.bounce_rate'),avg_session_duration_seconds:avgF(docs,'ga4.avg_session_duration_seconds'),engagement_rate:avgF(docs,'ga4.engagement_rate'),top_traffic_sources:lastF(docs,'ga4.top_traffic_sources')||[],top_pages:lastF(docs,'ga4.top_pages')||[],top_countries:lastF(docs,'ga4.top_countries')||[]}:null,
+    twitter:has('twitter')?{followers_count:lastF(docs,'twitter.followers_count'),tweets_today:sumF(docs,'twitter.tweets_today'),impressions_today:sumF(docs,'twitter.impressions_today'),likes_today:sumF(docs,'twitter.likes_today'),retweets_today:sumF(docs,'twitter.retweets_today'),replies_today:sumF(docs,'twitter.replies_today')}:null,
+    instagram:has('instagram')?{followers_count:lastF(docs,'instagram.followers_count'),impressions_today:sumF(docs,'instagram.impressions_today'),reach_today:sumF(docs,'instagram.reach_today'),profile_views_today:sumF(docs,'instagram.profile_views_today'),media_count:lastF(docs,'instagram.media_count')}:null,
+    facebook:has('facebook')?{followers_count:lastF(docs,'facebook.followers_count'),impressions_today:sumF(docs,'facebook.impressions_today'),reach_today:sumF(docs,'facebook.reach_today'),engaged_users_today:sumF(docs,'facebook.engaged_users_today'),page_likes:lastF(docs,'facebook.page_likes')}:null,
+    tiktok:has('tiktok')?{followers_count:lastF(docs,'tiktok.followers_count'),total_likes:lastF(docs,'tiktok.total_likes'),video_count:lastF(docs,'tiktok.video_count'),following_count:lastF(docs,'tiktok.following_count')}:null,
+    youtube:has('youtube')?{subscribers_count:lastF(docs,'youtube.subscribers_count'),total_views:lastF(docs,'youtube.total_views'),total_videos:lastF(docs,'youtube.total_videos'),views_today:sumF(docs,'youtube.views_today'),watch_minutes_today:sumF(docs,'youtube.watch_minutes_today'),subscribers_gained_today:sumF(docs,'youtube.subscribers_gained_today'),subscribers_lost_today:sumF(docs,'youtube.subscribers_lost_today')}:null,
+  };
+}
+
+// ── RENDER ──
+function renderAll(){
+  el('period-label').textContent=getPeriodLabel();
+
+  if(!REPORT){
+    el('main-page').innerHTML=`<div class="loading-page"><span style="font-size:13px;color:var(--dim);">No data available for this period.</span></div>`;
+    return;
+  }
+
+  const pills=el('status-pills'); pills.innerHTML='';
+  const {success,skipped,failed}=REPORT.meta;
+  if(success.length) pills.innerHTML+=`<span class="pill ok">${success.length} sources ok</span>`;
+  if(skipped.length) pills.innerHTML+=`<span class="pill warn">${skipped.length} skipped</span>`;
+  if(failed.length)  pills.innerHTML+=`<span class="pill err">${failed.length} failed</span>`;
+
+  const agg=REPORT._agg;
+  const p=pw();
+  const u=REPORT.mongodb_users, g=REPORT.ga4, yt=REPORT.youtube;
+
+  let html='';
+
+  // ── AGG NOTE ──
+  if(agg) html+=`<div class="agg-note">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Aggregated from ${REPORT._days} daily report${REPORT._days>1?'s':''}. Activity metrics show period totals; follower and subscriber counts reflect the most recent snapshot.
+  </div>`;
+
+  // ── USERS ──
+  html+=`<div class="section-block section-clickable" data-modal="users">
+    <div class="section-header">
+      <div class="section-title-row">
+        <span class="section-title">Users</span>
+        <span class="pill section-details-pill">details →</span>
+      </div>
+      <span class="section-note">${stag('snapshot','true')}</span>
+    </div>
+
+    <div class="hero-strip" style="grid-template-columns:1fr 1fr;">
+      <div class="hero-card">
+        <div class="hero-card-label">Total Signups ${stag('snapshot',true)}</div>
+        <div class="hero-card-value">${u?fmtK(u.successful_signups_total):'—'}</div>
+        <div class="hero-card-sub">+${u?u.successful_signups_today:0} new ${p}</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-label">Signup Success Rate ${p}</div>
+        <div class="hero-card-value">${u?fmt(u.signup_success_rate,'','%',1):'—'}</div>
+        <div class="hero-card-sub">${u?fmtK(u.successful_signups_today)+' ok / '+fmtK(u.failed_attempts_today)+' failed':'—'}</div>
+      </div>
+    </div>
+
+    <div style="max-width:100%;">
+      <div class="panel">
+        <div class="panel-title">
+          <div class="panel-icon" style="background:rgba(124,58,237,0.1);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F8932F" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          Signup Attempts
+        </div>
+        ${u?`<div class="conv-bar-wrap">
+          <div class="conv-bar-labels">
+            <span>Failed — ${fmtK(u.failed_attempts_today)}</span>
+            <span style="color:var(--blurple2);">Successful — ${fmtK(u.successful_signups_today)}</span>
+          </div>
+          <div class="conv-bar-track"><div class="conv-bar-fill" style="width:${Math.min(u.signup_success_rate,100).toFixed(1)}%;"></div></div>
+        </div>
+        <div class="card-grid-auto">
+          <div class="stat-tile"><div class="stat-label">Successful ${stag(p)}</div><div class="stat-value pos">+${u.successful_signups_today}</div></div>
+          <div class="stat-tile"><div class="stat-label">Attempts ${stag(p)}</div><div class="stat-value">${fmtK(u.attempts_today)}</div></div>
+          <div class="stat-tile"><div class="stat-label">Failed ${stag(p)}</div><div class="stat-value">${fmtK(u.failed_attempts_today)}</div></div>
+          <div class="stat-tile"><div class="stat-label">Total All-Time ${stag('snapshot',true)}</div><div class="stat-value">${fmtK(u.successful_signups_total)}</div></div>
+        </div>`:`<div class="empty">No data collected</div>`}
+      </div>
+    </div>
+  </div>`;
+
+  // ── SOCIAL MEDIA ──
+  const CLICKABLE_PLATFORMS = new Set(['twitter', 'instagram']);
+  // ENGAGEMENT_STATS is populated by load() before renderAll() runs
+  const engagedToday = key => {
+    if (key === 'twitter')   return (ENGAGEMENT_STATS?.twitter?.posted_today   ?? 0) > 0;
+    if (key === 'instagram') return (ENGAGEMENT_STATS?.instagram?.posted_today ?? 0) > 0;
+    return false;
+  };
+
+  function socialCard(key, name, color, icon, statsArr, minor=false, compact=false) {
+    const d = REPORT[key], sk = !d;
+    const clickable = d && CLICKABLE_PLATFORMS.has(key);
+    const engaged = engagedToday(key);
+    const headerRight = sk
+      ? `<span class="pill warn" style="font-size:9px;padding:2px 7px;">skipped</span>`
+      : engaged
+        ? `<span class="engaged-badge" title="You've marked at least one draft posted today">✓ Engaged today</span>`
+        : clickable
+          ? `<span class="pill" style="font-size:9px;padding:2px 7px;background:rgba(238,128,52,0.12);color:var(--blurple);border-color:rgba(238,128,52,0.2);">details →</span>`
+          : '';
+    return `<div class="social-card${sk?' skipped':''}${minor?' minor':''}${compact?' compact':''}${clickable?' clickable':''}" ${clickable?`data-platform="${key}"`:''}>
+      <div class="social-card-header">
+        <div class="social-platform">${icon} ${name}</div>
+        ${headerRight}
+      </div>
+      <div class="social-followers" style="color:${color};">${d?fmtK(d.followers_count):'—'}</div>
+      <div class="social-fol-label">followers</div>
+      <div class="social-stats">
+        ${(d?statsArr(d):[{l:'—',v:'—'},{l:'—',v:'—'},{l:'—',v:'—'},{l:'—',v:'—'}]).map(st=>`
+          <div class="ss"><div class="ss-label">${st.l}</div><div class="ss-value">${st.v}</div></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── SUPPORT TICKETS ──
+  const tk = REPORT.tickets;
+  html+=`<div class="section-block section-clickable" data-modal="tickets">
+    <div class="section-header">
+      <div class="section-title-row">
+        <span class="section-title">Support Tickets</span>
+        <span class="pill section-details-pill">details →</span>
+        ${tk && (tk.open_tickets||0) > 0 ? `<span class="pill" style="font-size:9px;padding:2px 7px;background:rgba(248,113,113,0.12);color:var(--red);border-color:rgba(248,113,113,0.3);">${tk.open_tickets} open</span>` : ''}
+        ${tk && (tk.unread_from_player||0) > 0 ? `<span class="pill" style="font-size:9px;padding:2px 7px;background:rgba(245,158,11,0.12);color:var(--amber);border-color:rgba(245,158,11,0.3);">${tk.unread_from_player} unread</span>` : ''}
+      </div>
+      <span class="section-note">Player messages · reply via bitcoinbay.com/admin/messages</span>
+    </div>
+
+    ${tk ? `<div class="hero-strip" style="grid-template-columns:repeat(4, 1fr);">
+      <div class="hero-card">
+        <div class="hero-card-label">Open Tickets ${stag('snapshot',true)}</div>
+        <div class="hero-card-value" style="color:${(tk.open_tickets||0)>0?'var(--red)':'var(--text)'};">${fmtK(tk.open_tickets||0)}</div>
+        <div class="hero-card-sub">${tk.unanswered_threads||0} waiting on us</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-label">Unread Player Msgs ${stag('snapshot',true)}</div>
+        <div class="hero-card-value" style="color:${(tk.unread_from_player||0)>0?'var(--amber)':'var(--text)'};">${fmtK(tk.unread_from_player||0)}</div>
+        <div class="hero-card-sub">—</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-label">Oldest Waiting</div>
+        <div class="hero-card-value">${(function(){
+          const m = tk.oldest_unanswered_minutes || 0;
+          if (m < 60)   return Math.round(m) + 'm';
+          if (m < 1440) return (m/60).toFixed(1) + 'h';
+          return (m/1440).toFixed(1) + 'd';
+        })()}</div>
+        <div class="hero-card-sub">since last inbound</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-label">Avg Response ${p}</div>
+        <div class="hero-card-value">${(function(){
+          const m = tk.avg_response_minutes_7d || 0;
+          if (m < 60)   return Math.round(m) + 'm';
+          if (m < 1440) return (m/60).toFixed(1) + 'h';
+          return (m/1440).toFixed(1) + 'd';
+        })()}</div>
+        <div class="hero-card-sub">median ${(function(){
+          const m = tk.median_response_minutes_7d || 0;
+          if (m < 60)   return Math.round(m) + 'm';
+          if (m < 1440) return (m/60).toFixed(1) + 'h';
+          return (m/1440).toFixed(1) + 'd';
+        })()} · ${tk.responses_tracked_7d||0} tracked</div>
+      </div>
+    </div>` : '<div class="panel"><div class="empty">Ticket data not yet collected — run the daily report.</div></div>'}
+  </div>`;
+
+  html+=`<div class="section-block section-clickable" data-modal="website">
+    <div class="section-header">
+      <div class="section-title-row">
+        <span class="section-title">Website Analytics</span>
+        <span class="pill section-details-pill">details →</span>
+      </div>
+      <span class="section-note">Google Analytics + Search Console · ${p}</span>
+    </div>`;
+
+  if(!g){
+    html+=`<div class="panel"><div class="empty">${REPORT.meta.failed?.includes('ga4')?'Collection failed':'No credentials configured or no activity this period'}</div></div>`;
+  } else {
+    const dur=Math.round(g.avg_session_duration_seconds||0);
+    html+=`<div class="card-grid-auto" style="margin-bottom:12px;">
+      <div class="stat-tile"><div class="stat-label">Sessions</div><div class="stat-value">${fmtK(g.sessions)}</div></div>
+      <div class="stat-tile"><div class="stat-label">Page Views</div><div class="stat-value">${fmtK(g.page_views)}</div></div>
+      <div class="stat-tile"><div class="stat-label">New Users</div><div class="stat-value">${fmtK(g.new_users)}</div></div>
+      <div class="stat-tile"><div class="stat-label">Total Users ${stag('snapshot',true)}</div><div class="stat-value">${fmtK(g.total_users)}</div></div>
+      <div class="stat-tile"><div class="stat-label">Bounce Rate</div><div class="stat-value">${fmt(g.bounce_rate*100,'','%',1)}</div></div>
+      <div class="stat-tile"><div class="stat-label">Engagement</div><div class="stat-value">${fmt(g.engagement_rate*100,'','%',1)}</div></div>
+      <div class="stat-tile"><div class="stat-label">Avg Session</div><div class="stat-value">${Math.floor(dur/60)}m ${dur%60}s</div></div>
+    </div>`;
+
+    const mkBars=(title,items,kFn,vFn,color)=>{
+      if(!items?.length) return '';
+      const mx=Math.max(...items.map(vFn),1);
+      return `<div class="panel" style="padding:14px 16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">${title}</div>
+        ${items.map(it=>`<div class="bar-list-item">
+          <div class="bli-label">${kFn(it)}</div>
+          <div class="bli-track"><div class="bli-fill" style="width:${(vFn(it)/mx*100).toFixed(0)}%;background:${color};"></div></div>
+          <div class="bli-val">${fmtK(vFn(it))}</div>
+        </div>`).join('')}
+      </div>`;
+    };
+
+    if(g.top_traffic_sources?.length||g.top_pages?.length||g.top_countries?.length){
+      html+=`<div class="card-grid-3">
+        ${mkBars('Top Sources',g.top_traffic_sources,r=>r.source,r=>r.sessions,'#EE8034')}
+        ${mkBars('Top Pages',g.top_pages,r=>r.page,r=>r.views,'#34d399')}
+        ${mkBars('Top Countries',g.top_countries,r=>r.country,r=>r.users,'#F8932F')}
+      </div>`;
+    }
+  }
+  html+=`</div>`;
+
+  html+=`<div class="section-block">
+    <div class="section-header">
+      <div class="section-title-row"><span class="section-title">Social Media</span></div>
+      <span class="section-note">Followers are snapshots · activity stats reflect ${p}</span>
+    </div>
+
+    <!-- Communities: Twitter + Instagram (the two active engagement platforms) -->
+    <div class="social-group-label">Communities</div>
+    <div class="social-row communities">
+      ${socialCard('twitter','Twitter / X','#1d9bf0',
+        `<svg width="13" height="13" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+        d=>[{l:'Followers',v:fmtK(d.followers_count)},{l:'Tweets',v:d.tweets_today},{l:'Impressions',v:fmtK(d.impressions_today)},{l:'Likes',v:fmtK(d.likes_today)},{l:'Retweets',v:fmtK(d.retweets_today)},{l:'Comments Made',v:d.comments_made_today ?? 0}])}
+      ${socialCard('instagram','Instagram','#e1306c',
+        `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#e1306c" stroke="none"/></svg>`,
+        d=>[{l:'Reach',v:fmtK(d.reach_today)},{l:'Profile Views',v:fmtK(d.profile_views_today)},{l:'Site Clicks',v:fmtK(d.website_clicks_today)},{l:'Posts',v:fmtK(d.media_count)}])}
+    </div>
+
+    <!-- Video & Images: YouTube + TikTok (not yet active — compact placeholders) -->
+    <div class="social-group-label">Video &amp; Images <span style="color:var(--dim);font-weight:500;text-transform:none;letter-spacing:0;">· coming soon</span></div>
+    <div class="social-row video">
+      ${socialCard('youtube','YouTube','#f87171',
+        `<svg width="13" height="13" viewBox="0 0 24 24" fill="#f87171"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#131318"/></svg>`,
+        d=>[{l:'Subscribers',v:fmtK(d.subscribers_count)},{l:'Views',v:fmtK(d.views_today)},{l:'Watch Mins',v:fmtK(d.watch_minutes_today)}], false, true)}
+      ${socialCard('tiktok','TikTok','#ff0050',
+        `<svg width="13" height="13" viewBox="0 0 24 24" fill="#ff0050"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.77 0 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-6.34 6.28 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.53V6.78a4.85 4.85 0 0 1-1.01-.09z"/></svg>`,
+        d=>[{l:'Total Likes',v:fmtK(d.total_likes)},{l:'Videos',v:d.video_count},{l:'Following',v:fmtK(d.following_count)}], false, true)}
+    </div>
+
+  </div>`;
+
+
+
+  // ── FOOTER ──
+  const okCount  = (REPORT.meta?.success?.length  || 0);
+  const skipCount = (REPORT.meta?.skipped?.length || 0);
+  const failCount = (REPORT.meta?.failed?.length  || 0);
+  html+=`<div class="dash-footer">
+    <div class="footer-left">
+      <span class="footer-brand">BC Bay dashboard</span>
+      <span class="footer-sep">·</span>
+      <span>Report for <b>${REPORT.date || '—'}</b></span>
+      <span class="footer-sep">·</span>
+      <span>${okCount} sources ok${skipCount ? ' · ' + skipCount + ' skipped' : ''}${failCount ? ' · ' + failCount + ' failed' : ''}</span>
+    </div>
+    <div class="footer-right">
+      <a href="/auth/instagram/scrape-session" target="_blank" rel="noopener">IG session</a>
+      <span class="footer-sep">·</span>
+      <a href="/health" target="_blank" rel="noopener">health</a>
+      <span class="footer-sep">·</span>
+      <a href="https://github.com/ryanhood10/bcbay-dashboard" target="_blank" rel="noopener">repo ↗</a>
+    </div>
+  </div>`;
+
+  el('main-page').innerHTML=html;
+}
+
+// ── LOAD ──
+async function load(){
+  el('main-page').innerHTML=`<div class="loading-page"><div class="spinner"></div><span style="font-size:12px;color:var(--dim);">Loading...</span></div>`;
+  el('status-pills').innerHTML='';
+  el('period-label').textContent=getPeriodLabel();
+  try{ REPORT=await fetchReport(); await fetchEngagementStats(); renderAll(); }
+  catch(e){ el('main-page').innerHTML=`<div class="loading-page"><span style="font-size:13px;color:var(--red);">${e.message}</span></div>`; }
+}
+
+// ── CONTROLS ──
+document.querySelectorAll('.vt-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.vt-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    MODE=btn.dataset.view; OFFSET=0; load();
+  });
+});
+el('nav-prev').addEventListener('click',()=>{ OFFSET--; load(); });
+el('nav-next').addEventListener('click',()=>{ if(OFFSET<0){OFFSET++;load();} });
+
+// ── DETAIL MODAL ──
+function openModal(){ document.getElementById('detail-modal').classList.add('open'); }
+function closeModal(){ document.getElementById('detail-modal').classList.remove('open'); }
+
+function wireModal(){
+  const closeBtn = document.getElementById('modal-close');
+  const overlay  = document.getElementById('detail-modal');
+  if (!closeBtn || !overlay) return;
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', e=>{
+    if (e.target.id === 'detail-modal') closeModal();
+  });
+  document.addEventListener('keydown', e=>{ if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('click', e=>{
+    // Twitter (platform) card click
+    const platCard = e.target.closest('[data-platform]');
+    if (platCard) {
+      const p = platCard.dataset.platform;
+      if (p === 'twitter')   { openTwitterModal(); return; }
+      if (p === 'instagram') { openInstagramModal(); return; }
+    }
+    // Section-level click (Users, Website Analytics) — only fire if the click target
+    // isn't an interactive element inside the section (links, buttons, etc.)
+    const sec = e.target.closest('[data-modal]');
+    if (sec) {
+      if (e.target.closest('a, button, [role="button"], input, textarea, select')) return;
+      const m = sec.dataset.modal;
+      if (m === 'users')   { openUsersModal();   return; }
+      if (m === 'website') { openWebsiteModal(); return; }
+      if (m === 'tickets') { openTicketsModal(); return; }
+    }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wireModal);
+} else {
+  wireModal();
+}
+
+// ── Generic modal system ──
+// Opens the shared modal with a configurable title + tabs. Each tab has an id,
+// a label, and a render function. First tab auto-renders; others render on click.
+function configureModal({ title, handle, tabs }) {
+  document.getElementById('modal-title-main').textContent = title;
+  document.getElementById('modal-handle').textContent = handle || '';
+  const tabsEl = document.querySelector('.modal-tabs');
+  const bodyEl = document.querySelector('.modal-body');
+  if (tabs.length <= 1) {
+    tabsEl.innerHTML = '';
+    tabsEl.style.display = 'none';
+  } else {
+    tabsEl.style.display = '';
+    tabsEl.innerHTML = tabs.map((t,i) =>
+      `<button class="modal-tab ${i===0?'active':''}" data-tab="${t.id}">${t.label}</button>`
+    ).join('');
+  }
+  bodyEl.innerHTML = tabs.map((t,i) =>
+    `<div class="modal-panel ${i===0?'active':''}" data-panel="${t.id}"></div>`
+  ).join('');
+
+  const rendered = new Set();
+  const renderTab = (idx) => {
+    if (rendered.has(idx)) return;
+    rendered.add(idx);
+    try { tabs[idx].render(); } catch(e){ console.error('render error', e); }
+  };
+
+  tabsEl.querySelectorAll('.modal-tab').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      tabsEl.querySelectorAll('.modal-tab').forEach(b => b.classList.toggle('active', b===btn));
+      bodyEl.querySelectorAll('.modal-panel').forEach(p => p.classList.toggle('active', p.dataset.panel===btn.dataset.tab));
+      renderTab(i);
+    });
+  });
+
+  openModal();
+  renderTab(0);
+}
+
+async function openTwitterModal(){
+  const tw = REPORT?.twitter;
+  configureModal({
+    title: 'Twitter / X',
+    handle: tw?.username ? '@'+tw.username : '',
+    tabs: [
+      { id: 'analytics',  label: 'Analytics',  render: renderTwitterAnalytics },
+      { id: 'engagement', label: 'Engagement', render: renderTwitterEngagement },
+    ],
+  });
+}
+
+async function openUsersModal(){
+  configureModal({
+    title: 'User Signups',
+    handle: 'bitcoinbay.com',
+    tabs: [{ id: 'signups', label: 'Overview', render: renderSignupsTab }],
+  });
+}
+
+async function openInstagramModal(){
+  const ig = REPORT?.instagram;
+  configureModal({
+    title: 'Instagram',
+    handle: ig?.username ? '@'+ig.username : '@bitcoin_bay',
+    tabs: [
+      { id: 'analytics',  label: 'Analytics',  render: renderInstagramAnalytics },
+      { id: 'engagement', label: 'Engagement', render: renderInstagramEngagement },
+    ],
+  });
+}
+
+async function openTicketsModal(){
+  configureModal({
+    title: 'Support Tickets',
+    handle: 'bitcoinbay.com · player messages',
+    tabs: [{ id: 'tickets', label: 'Overview', render: renderTicketsTab }],
+  });
+}
+
+async function openWebsiteModal(){
+  configureModal({
+    title: 'Website Analytics',
+    handle: 'bitcoinbay.com',
+    tabs: [
+      { id: 'ga4', label: 'Google Analytics', render: renderGA4Tab },
+      { id: 'gsc', label: 'Search Console',   render: renderGSCTab },
+    ],
+  });
+}
+
+// ── Shared history fetch ──
+// One call returns all fields every modal needs. Cached for the session.
+let HISTORY_CACHE = null;
+const HISTORY_FIELDS = [
+  'twitter.followers_count','twitter.tweets_today','twitter.impressions_today',
+  'twitter.likes_today','twitter.retweets_today','twitter.replies_today','twitter.quotes_today',
+  'twitter.comments_made_today','twitter.quotes_made_today','twitter.originals_made_today',
+  'ga4.sessions','ga4.page_views','ga4.new_users','ga4.total_users',
+  'ga4.bounce_rate','ga4.engagement_rate','ga4.avg_session_duration_seconds',
+  'gsc.clicks','gsc.impressions','gsc.ctr','gsc.average_position',
+  'mongodb_users.successful_signups_today','mongodb_users.attempts_today',
+  'mongodb_users.failed_attempts_today','mongodb_users.successful_signups_total',
+  'mongodb_users.signup_success_rate',
+  'instagram.followers_count','instagram.media_count','instagram.posts_today',
+  'instagram.likes_today','instagram.comments_received_today','instagram.posts_7d_count',
+  'instagram.reach_today','instagram.views_today','instagram.profile_views_today',
+  'instagram.website_clicks_today','instagram.accounts_engaged_today','instagram.total_interactions_today',
+  'tickets.open_tickets','tickets.unread_from_player','tickets.inbound_today','tickets.outbound_today',
+  'tickets.resolved_today','tickets.oldest_unanswered_minutes','tickets.avg_response_minutes_7d',
+  'tickets.unanswered_threads',
+].join(',');
+
+async function fetchHistory(days=30){
+  if (HISTORY_CACHE && HISTORY_CACHE.days >= days) return HISTORY_CACHE.data;
+  try {
+    const res = await fetch(`/api/admin/dashboard/reports?days=${days}&fields=${HISTORY_FIELDS}`);
+    const data = await res.json();
+    HISTORY_CACHE = { days, data };
+    return data;
+  } catch(e){ return []; }
+}
+
+function niceChart(series, opts={}){
+  // series: [{ date: 'YYYY-MM-DD', value: number }, ...] sorted oldest->newest
+  const width = 720, height = 220;
+  const color = opts.color || '#EE8034';
+  const label = opts.label || '';
+  const fmtV  = opts.fmt || (v => v);
+  const pad = { t: 16, r: 16, b: 28, l: 48 };
+
+  if (!series.length) {
+    return `<div class="empty" style="padding:30px 0;">No data for this range.</div>`;
+  }
+  if (series.length === 1) {
+    return `<div style="padding:18px 12px;text-align:center;">
+      <div style="font-size:12px;color:var(--sub);margin-bottom:6px;">Single snapshot — ${series[0].date}</div>
+      <div style="font-size:32px;font-weight:700;color:${color};">${fmtV(series[0].value)}</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px;">Chart will populate as more daily reports accumulate.</div>
+    </div>`;
+  }
+
+  const vals = series.map(s => s.value);
+  const max = Math.max(...vals);
+  const min = Math.min(...vals);
+  const range = (max - min) || Math.max(max, 1);
+  const yMin = Math.max(0, min - range * 0.1);
+  const yMax = max + range * 0.1;
+  const yRange = yMax - yMin || 1;
+
+  const innerW = width  - pad.l - pad.r;
+  const innerH = height - pad.t - pad.b;
+  const dx = innerW / Math.max(series.length - 1, 1);
+  const pts = series.map((s, i) => [
+    pad.l + i * dx,
+    pad.t + innerH * (1 - (s.value - yMin) / yRange)
+  ]);
+
+  const path = pts.map((p, i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = path + ` L${pts[pts.length-1][0].toFixed(1)},${pad.t+innerH} L${pts[0][0].toFixed(1)},${pad.t+innerH} Z`;
+
+  const yTicks = 4;
+  const yLines = Array.from({length: yTicks+1}, (_, i) => {
+    const v = yMin + (yRange * i / yTicks);
+    const y = pad.t + innerH * (1 - i / yTicks);
+    return { v, y };
+  });
+
+  const nXLabels = Math.min(series.length, 6);
+  const xLabelIdx = Array.from({length: nXLabels}, (_, i) =>
+    Math.round(i * (series.length - 1) / Math.max(nXLabels - 1, 1))
+  );
+  const xLabels = xLabelIdx.map(i => ({ x: pts[i][0], date: series[i].date }));
+  const gradId = 'ncg_' + Math.random().toString(36).slice(2,8);
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" style="display:block;">
+    <defs><linearGradient id="${gradId}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${yLines.map(l => `<line x1="${pad.l}" x2="${width-pad.r}" y1="${l.y.toFixed(1)}" y2="${l.y.toFixed(1)}" stroke="#2a2a38" stroke-width="1"/>`).join('')}
+    ${yLines.map(l => `<text x="${pad.l - 8}" y="${(l.y + 3).toFixed(1)}" fill="#5a5870" font-size="10" text-anchor="end" font-family="Inter,sans-serif">${fmtV(l.v)}</text>`).join('')}
+    <path d="${area}" fill="url(#${gradId})"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pts.map((p,i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="${color}" stroke="${opts.bgForDot||'#131318'}" stroke-width="1.5"><title>${series[i].date}: ${fmtV(series[i].value)}</title></circle>`).join('')}
+    ${xLabels.map(x => `<text x="${x.x.toFixed(1)}" y="${height - 8}" fill="#5a5870" font-size="10" text-anchor="middle" font-family="Inter,sans-serif">${x.date.slice(5)}</text>`).join('')}
+    <text x="${pad.l}" y="${pad.t - 4}" fill="#9895aa" font-size="10" font-weight="600" font-family="Inter,sans-serif">${label}</text>
+  </svg>`;
+}
+
+// Cap a date-sorted history list to the last N days, or all
+function filterByScale(history, scale){
+  if (scale === 'all') return history;
+  const n = { '7d': 7, '30d': 30, '90d': 90 }[scale] || 30;
+  return history.slice(-n);
+}
+
+const METRIC_DEFS = {
+  followers: {
+    label: 'Followers',
+    pick: h => h?.twitter?.followers_count,
+    color: '#EE8034',
+    fmt: v => (v >= 1000 ? (v/1000).toFixed(1) + 'K' : Math.round(v).toString()),
+  },
+  tweets: {
+    label: 'Tweets per day',
+    pick: h => h?.twitter?.tweets_today,
+    color: '#9d6ef5',
+    fmt: v => Math.round(v).toString(),
+  },
+  impressions: {
+    label: 'Daily Impressions',
+    pick: h => h?.twitter?.impressions_today,
+    color: '#34d399',
+    fmt: v => (v >= 1000 ? (v/1000).toFixed(1) + 'K' : Math.round(v).toString()),
+  },
+  engagement: {
+    label: 'Engagement per day',
+    pick: h => {
+      const t = h?.twitter;
+      if (!t) return null;
+      const eng = (t.likes_today||0) + (t.retweets_today||0) + (t.replies_today||0) + (t.quotes_today||0);
+      const imp = t.impressions_today || 0;
+      return imp ? +(eng / imp * 100).toFixed(2) : 0;
+    },
+    color: '#f59e0b',
+    fmt: v => v.toFixed(2) + '%',
+  },
+  comments: {
+    label: 'Comments made per day',
+    pick: h => h?.twitter?.comments_made_today,
+    color: '#60a5fa',
+    fmt: v => Math.round(v).toString(),
+  },
+};
+
+let TWITTER_STATE = { metric: 'followers', scale: '30d' };
+
+// ── Reusable metric/chart renderer ──
+// Drops a clickable-metric-boxes row + scale picker + chart into `panel`.
+// state: { metric, scale } — mutated in place so the user's selection sticks.
+// metricDefs: { key: { label, pick(h), color, fmt(v) } }
+// boxes: [{ key, label, value, sub }] — display config per box
+async function renderMetricPanel({
+  panel, state, metricDefs, boxes, history,
+  scales = ['7d','30d','90d','all'],
+}) {
+  const kBox = (key, label, value, sub, isActive) => `
+    <div class="kmetric kmetric-clickable ${isActive?'active':''}" data-metric="${key}">
+      <div class="kmetric-label">${label}</div>
+      <div class="kmetric-value">${value}</div>
+      <div class="kmetric-sub">${sub}</div>
+    </div>`;
+
+  const controlsHtml = `
+    <div class="kmetric-row">${boxes.map(b => kBox(b.key, b.label, b.value, b.sub, state.metric===b.key)).join('')}</div>
+    <div class="chart-wrap">
+      <div class="chart-head">
+        <div class="chart-title" id="chart-title-${panel.dataset.panel}"></div>
+        <div class="scale-picker">
+          ${scales.map(s => `<button class="scale-btn ${s===state.scale?'active':''}" data-scale="${s}">${s.toUpperCase()}</button>`).join('')}
+        </div>
+      </div>
+      <div id="chart-body-${panel.dataset.panel}"></div>
+    </div>
+  `;
+
+  // Insert controls at top; caller appends supplementary panels after
+  panel.insertAdjacentHTML('afterbegin', controlsHtml);
+
+  const pick = (metricKey) =>
+    history.map(h => ({ date: h.date, value: metricDefs[metricKey].pick(h) }))
+           .filter(p => p.value != null && !Number.isNaN(p.value));
+
+  function drawChart(){
+    const def = metricDefs[state.metric];
+    const all = pick(state.metric);
+    const series = filterByScale(all, state.scale);
+    const title = document.getElementById('chart-title-' + panel.dataset.panel);
+    const body  = document.getElementById('chart-body-'  + panel.dataset.panel);
+    if (!title || !body) return;
+    const rangeLabel = state.scale.toUpperCase();
+    const firstDate = series[0]?.date || '—';
+    const lastDate  = series[series.length-1]?.date || '—';
+    const deltaText = (series.length >= 2) ? (series[series.length-1].value - series[0].value) : null;
+    const deltaStr = (deltaText == null) ? ''
+      : ` · ${deltaText >= 0 ? '+' : ''}${def.fmt(deltaText)} since ${firstDate}`;
+    title.textContent = `${def.label} · ${rangeLabel} (${firstDate} → ${lastDate}${deltaStr})`;
+    body.innerHTML = niceChart(series, { label: def.label, color: def.color, fmt: def.fmt });
+  }
+  drawChart();
+
+  panel.querySelectorAll('.kmetric-clickable').forEach(box => {
+    box.addEventListener('click', () => {
+      state.metric = box.dataset.metric;
+      panel.querySelectorAll('.kmetric-clickable').forEach(b => b.classList.toggle('active', b === box));
+      drawChart();
+    });
+  });
+  panel.querySelectorAll('.scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.scale = btn.dataset.scale;
+      panel.querySelectorAll('.scale-btn').forEach(b => b.classList.toggle('active', b === btn));
+      drawChart();
+    });
+  });
+}
+
+// ── State + metric defs for each new modal ──
+let USERS_STATE     = { metric: 'successful_today', scale: '30d' };
+let TICKETS_STATE   = { metric: 'open_tickets',     scale: '30d' };
+
+const TICKETS_METRICS = {
+  open_tickets:             { label: 'Open tickets (snapshot)',   pick: h => h?.tickets?.open_tickets,             color: '#f87171', fmt: v => Math.round(v).toString() },
+  unread_from_player:       { label: 'Unread player messages',    pick: h => h?.tickets?.unread_from_player,       color: '#f59e0b', fmt: v => Math.round(v).toString() },
+  unanswered_threads:       { label: 'Threads waiting on us',     pick: h => h?.tickets?.unanswered_threads,       color: '#EE8034', fmt: v => Math.round(v).toString() },
+  inbound_today:            { label: 'Inbound messages per day',  pick: h => h?.tickets?.inbound_today,            color: '#60a5fa', fmt: v => Math.round(v).toString() },
+  outbound_today:           { label: 'Outbound replies per day',  pick: h => h?.tickets?.outbound_today,           color: '#34d399', fmt: v => Math.round(v).toString() },
+  resolved_today:           { label: 'Resolved per day',          pick: h => h?.tickets?.resolved_today,           color: '#9d6ef5', fmt: v => Math.round(v).toString() },
+  avg_response_minutes_7d:  { label: 'Avg response time (min)',   pick: h => h?.tickets?.avg_response_minutes_7d,  color: '#f59e0b', fmt: v => (v < 60 ? Math.round(v)+'m' : (v/60).toFixed(1)+'h') },
+  oldest_unanswered_minutes:{ label: 'Oldest unanswered (min)',   pick: h => h?.tickets?.oldest_unanswered_minutes, color: '#f87171', fmt: v => (v < 60 ? Math.round(v)+'m' : (v/60).toFixed(1)+'h') },
+};
+let INSTAGRAM_STATE = { metric: 'followers',         scale: '30d' };
+
+const INSTAGRAM_METRICS = {
+  followers:              { label: 'Followers',                 pick: h => h?.instagram?.followers_count,          color: '#e1306c', fmt: v => fmtK(Math.round(v)) },
+  reach_today:            { label: 'Reach per day',             pick: h => h?.instagram?.reach_today,              color: '#EE8034', fmt: v => fmtK(Math.round(v)) },
+  profile_views_today:    { label: 'Profile views per day',     pick: h => h?.instagram?.profile_views_today,      color: '#9d6ef5', fmt: v => fmtK(Math.round(v)) },
+  website_clicks_today:   { label: 'Website clicks per day',    pick: h => h?.instagram?.website_clicks_today,     color: '#34d399', fmt: v => Math.round(v).toString() },
+  accounts_engaged_today: { label: 'Accounts engaged per day',  pick: h => h?.instagram?.accounts_engaged_today,   color: '#60a5fa', fmt: v => fmtK(Math.round(v)) },
+  posts_today:            { label: 'Posts per day',             pick: h => h?.instagram?.posts_today,              color: '#f59e0b', fmt: v => Math.round(v).toString() },
+};
+let GA4_STATE     = { metric: 'sessions',         scale: '30d' };
+let GSC_STATE     = { metric: 'clicks',           scale: '30d' };
+
+const USERS_METRICS = {
+  successful_today:  { label: 'Successful signups per day', pick: h => h?.mongodb_users?.successful_signups_today, color: '#34d399', fmt: v => Math.round(v).toString() },
+  attempts_today:    { label: 'Signup attempts per day',    pick: h => h?.mongodb_users?.attempts_today,             color: '#60a5fa', fmt: v => Math.round(v).toString() },
+  failed_today:      { label: 'Failed attempts per day',    pick: h => h?.mongodb_users?.failed_attempts_today,      color: '#f87171', fmt: v => Math.round(v).toString() },
+  success_rate:      { label: 'Signup success rate',        pick: h => h?.mongodb_users?.signup_success_rate,        color: '#EE8034', fmt: v => v.toFixed(1)+'%' },
+  total_signups:     { label: 'Total signups all-time',     pick: h => h?.mongodb_users?.successful_signups_total,   color: '#9d6ef5', fmt: v => Math.round(v).toString() },
+};
+
+const GA4_METRICS = {
+  sessions:          { label: 'Sessions',            pick: h => h?.ga4?.sessions,                     color: '#EE8034', fmt: v => fmtK(Math.round(v)) },
+  page_views:        { label: 'Page views',          pick: h => h?.ga4?.page_views,                   color: '#9d6ef5', fmt: v => fmtK(Math.round(v)) },
+  new_users:         { label: 'New users',           pick: h => h?.ga4?.new_users,                    color: '#34d399', fmt: v => fmtK(Math.round(v)) },
+  total_users:       { label: 'Total users',         pick: h => h?.ga4?.total_users,                  color: '#60a5fa', fmt: v => fmtK(Math.round(v)) },
+  bounce_rate:       { label: 'Bounce rate',         pick: h => (h?.ga4?.bounce_rate ?? 0) * 100,     color: '#f87171', fmt: v => v.toFixed(1)+'%' },
+  engagement_rate:   { label: 'Engagement rate',     pick: h => (h?.ga4?.engagement_rate ?? 0) * 100, color: '#f59e0b', fmt: v => v.toFixed(1)+'%' },
+  avg_session:       { label: 'Avg session (sec)',   pick: h => h?.ga4?.avg_session_duration_seconds, color: '#9d6ef5', fmt: v => Math.round(v) + 's' },
+};
+
+const GSC_METRICS = {
+  clicks:            { label: 'Search clicks',        pick: h => h?.gsc?.clicks,             color: '#EE8034', fmt: v => fmtK(Math.round(v)) },
+  impressions:       { label: 'Search impressions',   pick: h => h?.gsc?.impressions,        color: '#60a5fa', fmt: v => fmtK(Math.round(v)) },
+  ctr:               { label: 'CTR',                  pick: h => (h?.gsc?.ctr ?? 0) * 100,   color: '#34d399', fmt: v => v.toFixed(2)+'%' },
+  average_position:  { label: 'Avg position',         pick: h => h?.gsc?.average_position,   color: '#f59e0b', fmt: v => v ? v.toFixed(1) : '—' },
+};
+
+async function renderTwitterAnalytics(){
+  const panel = document.querySelector('.modal-panel[data-panel="analytics"]');
+  const tw = REPORT?.twitter;
+  if (!tw){ panel.innerHTML = '<div class="empty">No Twitter data for this period.</div>'; return; }
+
+  panel.innerHTML = '<div class="empty">Loading history…</div>';
+  const history = await fetchHistory(365);
+  panel.innerHTML = '';
+
+  const topTweets = (tw.top_tweets_7d || []).filter(t => t.kind !== 'retweet');
+  const hours = tw.posting_hours_7d || [];
+  const hourMax = Math.max(1, ...hours.map(h=>h.engagement));
+
+  const tweets7d  = tw.tweets_7d_count || 0;
+  const todayImp  = tw.impressions_today || 0;
+  const avgEngRate = (function(){
+    const rates = (tw.tweets_today_detail || []).map(t => t.engagement_rate).filter(r => r > 0);
+    return rates.length ? (rates.reduce((a,b)=>a+b,0)/rates.length).toFixed(2) + '%' : '0.00%';
+  })();
+
+  await renderMetricPanel({
+    panel, state: TWITTER_STATE, metricDefs: METRIC_DEFS, history,
+    boxes: [
+      { key: 'followers',   label: 'Followers',        value: fmtK(tw.followers_count), sub: 'click to chart' },
+      { key: 'tweets',      label: 'Tweets per day',   value: tweets7d + ' in 7d',      sub: tw.tweets_today + ' today' },
+      { key: 'impressions', label: 'Daily Impressions', value: fmtK(todayImp),          sub: 'today' },
+      { key: 'engagement',  label: 'Engagement Rate',  value: avgEngRate,               sub: 'today avg' },
+    ],
+  });
+
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="chart-wrap">
+      <div class="chart-title">Posting activity by hour · last 7 days</div>
+      <div class="hour-bars">
+        ${hours.map(h=>`<div class="hour-bar${h.engagement===0?' zero':''}" style="height:${h.engagement===0?2:Math.max(4, (h.engagement/hourMax)*80)}px;" title="${h.hour}:00 — ${h.tweets} tweets, ${h.engagement} engagement"></div>`).join('')}
+      </div>
+      <div class="hour-axis">${[0,3,6,9,12,15,18,21].map(h=>`<div style="grid-column: ${h+1} / span 3;">${h}:00</div>`).join('')}</div>
+    </div>
+
+    <div class="chart-wrap" style="padding:0;">
+      <div class="chart-title" style="padding:14px 16px 0;">Top tweets · last 7 days (originals + quotes, retweets excluded)</div>
+      <div class="tweet-list" style="padding:10px 16px 16px;">
+        ${topTweets.length === 0 ? '<div class="empty" style="padding:12px 0;">No original or quote tweets in the last 7 days yet.</div>' :
+          topTweets.map(t=>`
+            <a href="${t.url}" target="_blank" rel="noopener" class="tweet-row">
+              <div>
+                <div class="tweet-text">${t.kind==='quote'?'<span class="kind-pill quote">quote</span> ':t.kind==='reply'?'<span class="kind-pill reply">reply</span> ':''}${escapeHtml(t.text)}</div>
+                <div class="tweet-meta">${t.created_at ? new Date(t.created_at).toLocaleString() : '—'} · ${t.engagement_rate}% engagement</div>
+              </div>
+              <div class="tweet-stats">
+                <div><span class="tweet-stat-val">${fmtK(t.impressions)}</span> imp</div>
+                <div><span class="tweet-stat-val">${fmtK(t.likes)}</span> ♥</div>
+                <div><span class="tweet-stat-val">${fmtK(t.retweets)}</span> rt</div>
+                <div><span class="tweet-stat-val">${fmtK(t.replies)}</span> rep</div>
+              </div>
+            </a>`).join('')}
+      </div>
+    </div>
+  `);
+}
+
+// ── Users / signups tab ──
+async function renderSignupsTab(){
+  const panel = document.querySelector('.modal-panel[data-panel="signups"]');
+  const u = REPORT?.mongodb_users;
+  if (!u){ panel.innerHTML = '<div class="empty">No signup data.</div>'; return; }
+
+  panel.innerHTML = '<div class="empty">Loading history…</div>';
+  const history = await fetchHistory(365);
+  panel.innerHTML = '';
+
+  await renderMetricPanel({
+    panel, state: USERS_STATE, metricDefs: USERS_METRICS, history,
+    boxes: [
+      { key: 'total_signups',    label: 'Total Signups',     value: u.successful_signups_total ?? 0, sub: 'all-time' },
+      { key: 'successful_today', label: 'Successful Today',  value: u.successful_signups_today ?? 0, sub: 'click to chart' },
+      { key: 'attempts_today',   label: 'Attempts Today',    value: u.attempts_today ?? 0,           sub: 'signup form hits' },
+      { key: 'failed_today',     label: 'Failed Today',      value: u.failed_attempts_today ?? 0,    sub: 'attempt errors' },
+      { key: 'success_rate',     label: 'Success Rate Today', value: (u.signup_success_rate ?? 0).toFixed(1)+'%', sub: 'ok / attempts' },
+    ],
+  });
+
+  // Weekly / monthly rollups
+  const sum = (arr, k) => arr.reduce((a,h) => a + (h?.mongodb_users?.[k] || 0), 0);
+  const last7  = history.slice(-7);
+  const last30 = history.slice(-30);
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="kmetric-row" style="margin-top:6px;">
+      <div class="kmetric"><div class="kmetric-label">Signups · 7 days</div><div class="kmetric-value">${sum(last7,'successful_signups_today')}</div><div class="kmetric-sub">${sum(last7,'attempts_today')} attempts</div></div>
+      <div class="kmetric"><div class="kmetric-label">Signups · 30 days</div><div class="kmetric-value">${sum(last30,'successful_signups_today')}</div><div class="kmetric-sub">${sum(last30,'attempts_today')} attempts</div></div>
+      <div class="kmetric"><div class="kmetric-label">Daily avg · last 7d</div><div class="kmetric-value">${last7.length ? (sum(last7,'successful_signups_today')/last7.length).toFixed(1) : '0'}</div><div class="kmetric-sub">successful/day</div></div>
+      <div class="kmetric"><div class="kmetric-label">Rolling success rate · 7d</div><div class="kmetric-value">${(function(){ const s=sum(last7,'successful_signups_today'), a=sum(last7,'attempts_today'); return a ? (s/a*100).toFixed(1)+'%' : '—'; })()}</div><div class="kmetric-sub">s/a</div></div>
+    </div>
+  `);
+
+  // Signups list (from bcb_signups collection, password fields stripped server-side)
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="chart-wrap" style="padding:0;">
+      <div class="chart-head" style="padding:14px 16px 0;">
+        <div class="chart-title">Recent signup attempts</div>
+        <div class="scale-picker" id="signup-filter">
+          <button class="scale-btn active" data-su-filter="all">All</button>
+          <button class="scale-btn" data-su-filter="success">Success</button>
+          <button class="scale-btn" data-su-filter="failed">Failed</button>
+        </div>
+      </div>
+      <div id="signup-list-body" style="padding:10px 16px 16px;">
+        <div class="empty" style="padding:20px 0;">Loading…</div>
+      </div>
+    </div>
+  `);
+
+  async function loadSignups(filter){
+    const body = document.getElementById('signup-list-body');
+    if (!body) return;
+    body.innerHTML = '<div class="empty" style="padding:20px 0;">Loading…</div>';
+    try {
+      const res = await fetch('/api/admin/dashboard/signups?status=' + filter + '&limit=50');
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0){
+        body.innerHTML = '<div class="empty" style="padding:20px 0;">No signup records for this filter.</div>';
+        return;
+      }
+      body.innerHTML = `<div class="signup-list">
+        ${rows.map(r => {
+          const when = r.created_at ? new Date(r.created_at) : null;
+          const dateLabel = when ? when.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + when.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}) : '—';
+          const name = escapeHtml(((r.firstname || '') + ' ' + (r.lastname || '')).trim() || '(no name)');
+          const email = escapeHtml(r.email || '—');
+          const loginId = r.login_id ? `<span class="su-login">${escapeHtml(r.login_id)}</span>` : `<span class="su-login failed">${escapeHtml(r.error || 'failed')}</span>`;
+          const status = r.success ? '<span class="su-status ok">OK</span>' : '<span class="su-status fail">✗</span>';
+          return `<div class="signup-row ${r.success ? 'success' : 'failed'}">
+            <div class="su-date">${dateLabel}</div>
+            <div><div class="su-name">${name}</div><div class="su-email">${email}</div></div>
+            <div>${loginId}</div>
+            <div>${status}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    } catch(e){
+      body.innerHTML = `<div class="empty" style="padding:20px 0;color:var(--red);">Failed to load: ${escapeHtml(String(e))}</div>`;
+    }
+  }
+
+  // Wire filter buttons + initial load
+  const filterEl = document.getElementById('signup-filter');
+  if (filterEl) {
+    filterEl.querySelectorAll('.scale-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterEl.querySelectorAll('.scale-btn').forEach(b => b.classList.toggle('active', b === btn));
+        loadSignups(btn.dataset.suFilter);
+      });
+    });
+  }
+  loadSignups('all');
+}
+
+// ── Support Tickets tab ──
+async function renderTicketsTab(){
+  const panel = document.querySelector('.modal-panel[data-panel="tickets"]');
+  const tk = REPORT?.tickets;
+  panel.innerHTML = '<div class="empty">Loading history…</div>';
+  const history = await fetchHistory(365);
+  panel.innerHTML = '';
+
+  if (!tk) {
+    panel.innerHTML = '<div class="empty">Ticket data not yet collected. Re-run the nightly daily report.</div>';
+    return;
+  }
+
+  const fmtMin = m => (m == null ? '—' : m < 60 ? Math.round(m)+'m' : m < 1440 ? (m/60).toFixed(1)+'h' : (m/1440).toFixed(1)+'d');
+
+  await renderMetricPanel({
+    panel, state: TICKETS_STATE, metricDefs: TICKETS_METRICS, history,
+    boxes: [
+      { key: 'open_tickets',        label: 'Open tickets',       value: tk.open_tickets ?? 0,                       sub: 'click to chart' },
+      { key: 'unread_from_player',  label: 'Unread msgs',        value: tk.unread_from_player ?? 0,                 sub: 'from players' },
+      { key: 'unanswered_threads',  label: 'Waiting on us',      value: tk.unanswered_threads ?? 0,                 sub: 'threads' },
+      { key: 'inbound_today',       label: 'Inbound today',      value: tk.inbound_today ?? 0,                      sub: tk.outbound_today + ' outbound' },
+      { key: 'avg_response_minutes_7d', label: 'Avg response 7d', value: fmtMin(tk.avg_response_minutes_7d),      sub: 'median ' + fmtMin(tk.median_response_minutes_7d) },
+      { key: 'oldest_unanswered_minutes', label: 'Oldest waiting', value: fmtMin(tk.oldest_unanswered_minutes), sub: 'since last inbound' },
+    ],
+  });
+
+  // Load live open threads
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="chart-wrap" style="padding:0;">
+      <div class="chart-head" style="padding:14px 16px 0;">
+        <div class="chart-title">Currently open threads</div>
+        <a class="draft-btn primary" id="open-admin" href="https://bitcoinbay.com/admin/messages" target="_blank" rel="noopener" style="text-decoration:none;">Open admin →</a>
+      </div>
+      <div id="tickets-list" style="padding:10px 16px 16px;">
+        <div class="empty" style="padding:20px 0;">Loading threads…</div>
+      </div>
+    </div>
+  `);
+
+  try {
+    const res = await fetch('/api/admin/dashboard/tickets/live?limit=30').then(r => r.json());
+    const body = document.getElementById('tickets-list');
+    const threads = res.threads || [];
+    if (!threads.length) {
+      body.innerHTML = '<div class="empty" style="padding:20px 0;">No open threads. Everything caught up ✓</div>';
+      return;
+    }
+    body.innerHTML = `<div class="signup-list">${threads.map(t => {
+      const name = escapeHtml(t.player_name || t.player_id || '?');
+      const pid = escapeHtml(t.player_id || '?');
+      const email = escapeHtml(t.email || '');
+      const unread = t.unread_from_player > 0
+        ? `<span class="su-status" style="background:rgba(245,158,11,0.18);color:var(--amber);">${t.unread_from_player} unread</span>`
+        : '';
+      const waiting = t.waiting_minutes != null
+        ? `<span style="color:var(--red);font-family:ui-monospace,monospace;font-size:11px;font-weight:600;">waiting ${fmtMin(t.waiting_minutes)}</span>`
+        : '<span style="color:var(--mint);font-size:11px;">answered</span>';
+      const snippet = escapeHtml((t.latest_message_text || '').slice(0, 160));
+      const direction = t.latest_message_direction === 'inbound' ? '← ' : '→ ';
+      return `<div class="signup-row" style="grid-template-columns:120px 1fr 140px auto;">
+        <div>
+          <div class="su-name" style="font-size:12px;">${name}</div>
+          <div class="su-email" style="font-family:ui-monospace,monospace;">${pid}</div>
+          ${email ? `<div class="su-email">${email}</div>` : ''}
+        </div>
+        <div>
+          <div class="su-name" style="font-size:12px; color: var(--sub);">${direction}${snippet}</div>
+          <div class="su-email">${t.latest_message_at ? new Date(t.latest_message_at).toLocaleString() : '—'}</div>
+        </div>
+        <div>${waiting}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+          ${unread}
+          <a class="draft-btn" href="${t.admin_url}" target="_blank" rel="noopener" style="font-size:10px;padding:4px 8px;">Reply ↗</a>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  } catch(e) {
+    document.getElementById('tickets-list').innerHTML = `<div class="empty" style="padding:20px 0;color:var(--red);">Failed to load: ${escapeHtml(String(e))}</div>`;
+  }
+}
+
+// ── GA4 tab ──
+async function renderGA4Tab(){
+  const panel = document.querySelector('.modal-panel[data-panel="ga4"]');
+  const g = REPORT?.ga4;
+  if (!g){ panel.innerHTML = '<div class="empty">No GA4 data.</div>'; return; }
+
+  panel.innerHTML = '<div class="empty">Loading history…</div>';
+  const history = await fetchHistory(365);
+  panel.innerHTML = '';
+
+  const dur = Math.round(g.avg_session_duration_seconds||0);
+  await renderMetricPanel({
+    panel, state: GA4_STATE, metricDefs: GA4_METRICS, history,
+    boxes: [
+      { key: 'sessions',         label: 'Sessions today',    value: fmtK(g.sessions),        sub: 'click to chart' },
+      { key: 'page_views',       label: 'Page views today',  value: fmtK(g.page_views),      sub: '' },
+      { key: 'new_users',        label: 'New users today',   value: fmtK(g.new_users),       sub: fmtK(g.total_users)+' total' },
+      { key: 'bounce_rate',      label: 'Bounce rate',       value: (g.bounce_rate*100).toFixed(1)+'%', sub: 'today' },
+      { key: 'engagement_rate',  label: 'Engagement rate',   value: (g.engagement_rate*100).toFixed(1)+'%', sub: 'today' },
+      { key: 'avg_session',      label: 'Avg session',       value: Math.floor(dur/60)+'m '+(dur%60)+'s', sub: '' },
+    ],
+  });
+
+  // Rollups: 7/30 day totals
+  const sum = (arr, k) => arr.reduce((a,h) => a + (h?.ga4?.[k] || 0), 0);
+  const last7  = history.slice(-7);
+  const last30 = history.slice(-30);
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="kmetric-row" style="margin-top:6px;">
+      <div class="kmetric"><div class="kmetric-label">Sessions · 7d</div><div class="kmetric-value">${fmtK(sum(last7,'sessions'))}</div><div class="kmetric-sub">${fmtK(sum(last7,'new_users'))} new users</div></div>
+      <div class="kmetric"><div class="kmetric-label">Sessions · 30d</div><div class="kmetric-value">${fmtK(sum(last30,'sessions'))}</div><div class="kmetric-sub">${fmtK(sum(last30,'new_users'))} new users</div></div>
+      <div class="kmetric"><div class="kmetric-label">Avg daily · 7d</div><div class="kmetric-value">${last7.length ? Math.round(sum(last7,'sessions')/last7.length) : 0}</div><div class="kmetric-sub">sessions/day</div></div>
+      <div class="kmetric"><div class="kmetric-label">Page views · 7d</div><div class="kmetric-value">${fmtK(sum(last7,'page_views'))}</div><div class="kmetric-sub">—</div></div>
+    </div>
+  `);
+
+  // Top sources / pages / countries (today's snapshot)
+  const mkBars = (title, items, kFn, vFn, color) => {
+    if (!items?.length) return '';
+    const mx = Math.max(...items.map(vFn), 1);
+    return `<div class="panel" style="padding:14px 16px;">
+      <div style="font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">${title}</div>
+      ${items.map(it=>`<div class="bar-list-item">
+        <div class="bli-label">${escapeHtml(kFn(it))}</div>
+        <div class="bli-track"><div class="bli-fill" style="width:${(vFn(it)/mx*100).toFixed(0)}%;background:${color};"></div></div>
+        <div class="bli-val">${fmtK(vFn(it))}</div>
+      </div>`).join('')}
+    </div>`;
+  };
+  if (g.top_traffic_sources?.length || g.top_pages?.length || g.top_countries?.length) {
+    panel.insertAdjacentHTML('beforeend', `
+      <div class="chart-title" style="margin-top:8px;">Today's top breakdowns</div>
+      <div class="card-grid-3">
+        ${mkBars('Top Sources',   g.top_traffic_sources, r=>r.source,  r=>r.sessions, '#EE8034')}
+        ${mkBars('Top Pages',     g.top_pages,           r=>r.page,    r=>r.views,    '#34d399')}
+        ${mkBars('Top Countries', g.top_countries,       r=>r.country, r=>r.users,    '#F8932F')}
+      </div>
+    `);
+  }
+}
+
+// ── Search Console tab ──
+async function renderGSCTab(){
+  const panel = document.querySelector('.modal-panel[data-panel="gsc"]');
+  const s = REPORT?.gsc;
+  if (!s){ panel.innerHTML = '<div class="empty">No Search Console data.</div>'; return; }
+
+  panel.innerHTML = '<div class="empty">Loading history…</div>';
+  const history = await fetchHistory(365);
+  panel.innerHTML = '';
+
+  await renderMetricPanel({
+    panel, state: GSC_STATE, metricDefs: GSC_METRICS, history,
+    boxes: [
+      { key: 'clicks',           label: 'Clicks today',       value: fmtK(s.clicks),      sub: 'click to chart' },
+      { key: 'impressions',      label: 'Impressions today',  value: fmtK(s.impressions), sub: '' },
+      { key: 'ctr',              label: 'CTR',                value: (s.ctr*100).toFixed(2)+'%', sub: 'today' },
+      { key: 'average_position', label: 'Avg position',       value: s.average_position ? s.average_position.toFixed(1) : '—', sub: 'today' },
+    ],
+  });
+
+  // Note about GSC 2-3 day delay
+  panel.insertAdjacentHTML('beforeend', `
+    <div style="font-size:10px;color:var(--dim);margin:-8px 0 12px;">
+      Google Search Console data has a 2-3 day delay. Today's numbers will typically show zero until GSC backfills.
+    </div>
+  `);
+
+  // Rollups
+  const sum = (arr, k) => arr.reduce((a,h) => a + (h?.gsc?.[k] || 0), 0);
+  const last7  = history.slice(-7);
+  const last30 = history.slice(-30);
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="kmetric-row" style="margin-top:6px;">
+      <div class="kmetric"><div class="kmetric-label">Clicks · 7d</div><div class="kmetric-value">${fmtK(sum(last7,'clicks'))}</div><div class="kmetric-sub">${fmtK(sum(last7,'impressions'))} imp</div></div>
+      <div class="kmetric"><div class="kmetric-label">Clicks · 30d</div><div class="kmetric-value">${fmtK(sum(last30,'clicks'))}</div><div class="kmetric-sub">${fmtK(sum(last30,'impressions'))} imp</div></div>
+      <div class="kmetric"><div class="kmetric-label">Rolling CTR · 7d</div><div class="kmetric-value">${(function(){ const c=sum(last7,'clicks'), i=sum(last7,'impressions'); return i ? (c/i*100).toFixed(2)+'%' : '—'; })()}</div><div class="kmetric-sub">clicks / imp</div></div>
+      <div class="kmetric"><div class="kmetric-label">Days with data</div><div class="kmetric-value">${last30.filter(h => (h?.gsc?.impressions||0) > 0).length}</div><div class="kmetric-sub">of last 30</div></div>
+    </div>
+  `);
+
+  // Top queries / pages / countries / devices (today's snapshot)
+  const qRows = (s.top_queries || []).slice(0,10);
+  const pRows = (s.top_pages   || []).slice(0,10);
+  const cRows = (s.top_countries || []).slice(0,5);
+  const dRows = s.devices || [];
+
+  if (qRows.length || pRows.length || cRows.length || dRows.length) {
+    const mkBars = (title, items, kFn, vFn, color) => {
+      if (!items?.length) return '<div class="panel"><div class="empty" style="padding:8px 0;">No data yet.</div></div>';
+      const mx = Math.max(...items.map(vFn), 1);
+      return `<div class="panel" style="padding:14px 16px;">
+        <div style="font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">${title}</div>
+        ${items.map(it=>`<div class="bar-list-item">
+          <div class="bli-label">${escapeHtml(kFn(it))}</div>
+          <div class="bli-track"><div class="bli-fill" style="width:${(vFn(it)/mx*100).toFixed(0)}%;background:${color};"></div></div>
+          <div class="bli-val">${fmtK(vFn(it))}</div>
+        </div>`).join('')}
+      </div>`;
+    };
+    panel.insertAdjacentHTML('beforeend', `
+      <div class="chart-title" style="margin-top:8px;">Today's search breakdowns</div>
+      <div class="card-grid-3">
+        ${mkBars('Top Queries',   qRows, r=>r.query,   r=>r.clicks, '#EE8034')}
+        ${mkBars('Top Pages',     pRows, r=>r.page,    r=>r.clicks, '#34d399')}
+        ${mkBars('Top Countries', cRows, r=>r.country, r=>r.clicks, '#F8932F')}
+      </div>
+      ${dRows.length ? `
+        <div class="card-grid-3" style="margin-top:12px;">
+          ${mkBars('Devices (clicks)',      dRows, r=>r.device, r=>r.clicks,      '#9d6ef5')}
+          ${mkBars('Devices (impressions)', dRows, r=>r.device, r=>r.impressions, '#60a5fa')}
+          <div></div>
+        </div>
+      ` : ''}
+    `);
+  }
+}
+
+function relativeTime(iso){
+  if (!iso) return '';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const diffMin = Math.round((Date.now() - t) / 60000);
+  if (diffMin < 1)    return 'just now';
+  if (diffMin < 60)   return `${diffMin}m ago`;
+  if (diffMin < 1440) return `${Math.round(diffMin/60)}h ago`;
+  return `${Math.round(diffMin/1440)}d ago`;
+}
+
+async function patchDraft(id, status){
+  return fetch(`/api/admin/dashboard/engagement-drafts/${id}`, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({status}),
+  });
+}
+
+async function renderTwitterEngagement(){
+  const panel = document.querySelector('.modal-panel[data-panel="engagement"]');
+  panel.innerHTML = '<div class="empty" style="padding:30px 0;">Loading engagement drafts…</div>';
+
+  let drafts = [], stats = {};
+  try {
+    const [draftsRes, statsRes] = await Promise.all([
+      fetch('/api/admin/dashboard/engagement-drafts?status=pending&limit=50').then(r => r.json()),
+      fetch('/api/admin/dashboard/engagement-drafts/stats').then(r => r.json()),
+    ]);
+    drafts = Array.isArray(draftsRes) ? draftsRes : [];
+    stats = statsRes || {};
+  } catch(e){
+    panel.innerHTML = `<div class="empty" style="padding:30px 0;">Failed to load drafts: ${escapeHtml(String(e))}</div>`;
+    return;
+  }
+
+  const statsBar = `
+    <div class="stats-bar">
+      <div class="stat-pill"><span class="sp-label">Pending</span><span class="sp-value" style="color:var(--blurple);">${stats.pending ?? 0}</span></div>
+      <div class="stat-pill"><span class="sp-label">Posted</span><span class="sp-value" style="color:var(--mint);">${stats.posted ?? 0}</span></div>
+      <div class="stat-pill"><span class="sp-label">Dismissed</span><span class="sp-value">${stats.dismissed ?? 0}</span></div>
+      <div class="stat-pill"><span class="sp-label">This week</span><span class="sp-value">${stats.drafted_this_week ?? 0} drafted · ${stats.posted_this_week ?? 0} posted</span></div>
+      <div style="flex:1;"></div>
+      <button class="draft-btn primary" id="run-engagement" title="Discover new hot tweets + draft replies (~30-60s)">Find new drafts</button>
+      <button class="draft-btn icon-only" id="refresh-drafts" title="Refresh the list (doesn't run the finder)" aria-label="Refresh">⟳</button>
+    </div>
+    ${stats.latest_draft_at ? `<div style="font-size:10px;color:var(--dim);margin-bottom:14px;">latest draft saved ${escapeHtml(relativeTime(stats.latest_draft_at))}</div>` : ''}
+  `;
+
+  if (drafts.length === 0){
+    panel.innerHTML = statsBar + `<div class="empty" style="padding:28px 0;">
+      <div style="font-size:28px;margin-bottom:12px;">🎯</div>
+      <div style="color:var(--text);margin-bottom:6px;font-weight:600;">No pending engagement drafts</div>
+      <div style="font-size:12px;max-width:440px;margin:0 auto;">Click <b>Run now</b> above to discover fresh targets. Cron also runs at 10am, 2pm, and 7pm daily.</div>
+    </div>`;
+    wireEngagementControls();
+    return;
+  }
+
+  const draftCard = d => {
+    const age = relativeTime(d.created_at);
+    const targetMeta = [];
+    if (d.target_followers != null) targetMeta.push(`${fmtK(d.target_followers)} followers`);
+    targetMeta.push(`${d.target_likes ?? 0} likes on their reply`);
+    if (age) targetMeta.push(age);
+    const hotMeta = [];
+    if (d.context_hot_likes != null) hotMeta.push(`${fmtK(d.context_hot_likes)} ♥`);
+    if (d.context_hot_replies != null) hotMeta.push(`${fmtK(d.context_hot_replies)} replies`);
+    if (d.context_hot_retweets != null) hotMeta.push(`${fmtK(d.context_hot_retweets)} RT`);
+    if (d.context_hot_impressions) hotMeta.push(`${fmtK(d.context_hot_impressions)} imp`);
+
+    const tier = d.quality_tier || 'med';
+    const tierLabel = { high: 'High', med: 'Medium', low: 'Low' }[tier] || 'Medium';
+    const score = d.quality_score != null ? ` (${d.quality_score})` : '';
+    const qualityReasons = (d.quality_reasons || []).join(' · ');
+    return `<div class="draft-card" data-draft-id="${d._id}">
+      <div class="draft-head">
+        <div class="draft-target">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="draft-handle">@${escapeHtml(d.target_handle||'?')}</span>
+            ${d.target_verified ? '<span class="verified-badge" title="Verified">✓</span>' : ''}
+            <span class="quality-badge q-${tier}" title="${escapeHtml(qualityReasons)}">${tierLabel}${score}</span>
+          </div>
+          <span class="draft-meta">${targetMeta.join(' · ')}${qualityReasons?' · '+escapeHtml(qualityReasons):''}</span>
+        </div>
+        <div class="draft-actions">
+          <button class="draft-btn copy" data-action="copy">Copy reply</button>
+          <a class="draft-btn open" href="${d.reply_to_url}" target="_blank" rel="noopener">Open tweet ↗</a>
+          <button class="draft-btn posted" data-action="posted">Mark posted</button>
+          <button class="draft-btn dismiss" data-action="dismiss">Dismiss</button>
+        </div>
+      </div>
+      <div class="draft-thread">
+        <div class="draft-context">
+          <div class="draft-context-label">
+            Hot thread by @${escapeHtml(d.context_author||'?')}
+            ${hotMeta.length ? `· <span style="color:var(--sub);">${hotMeta.join(' · ')}</span>` : ''}
+            ${d.context_url?`· <a href="${d.context_url}" target="_blank" rel="noopener" style="color:var(--sub);">view ↗</a>`:''}
+          </div>
+          <div class="draft-context-text">${escapeHtml(d.context_tweet||'')}</div>
+        </div>
+        <div class="draft-target-tweet">
+          <div class="draft-context-label">↳ Replying to @${escapeHtml(d.target_handle||'?')}</div>
+          <div class="draft-target-text">${escapeHtml(d.target_tweet_text||'')}</div>
+        </div>
+        <div class="draft-reply">
+          <div class="draft-reply-label">Draft reply</div>
+          <div class="draft-reply-text" data-reply-text>${escapeHtml(d.reply_text||'')}</div>
+          ${d.why_this_reply ? `<div class="draft-why"><span>Why:</span> ${escapeHtml(d.why_this_reply)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  panel.innerHTML = statsBar + `<div class="draft-list">${drafts.map(draftCard).join('')}</div>`;
+
+  wireEngagementControls();
+
+  panel.querySelectorAll('.draft-card').forEach(card => {
+    const id = card.dataset.draftId;
+    card.querySelector('[data-action="copy"]').addEventListener('click', async () => {
+      const text = card.querySelector('[data-reply-text]').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = card.querySelector('[data-action="copy"]');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+      } catch(e){ alert('Copy failed: ' + e.message); }
+    });
+    card.querySelector('[data-action="posted"]').addEventListener('click', async () => {
+      try {
+        await patchDraft(id, 'posted');
+        card.style.transition = 'opacity 0.2s';
+        card.style.opacity = '0';
+        setTimeout(renderTwitterEngagement, 220);
+      } catch(e){ alert('Mark posted failed: ' + e.message); }
+    });
+    card.querySelector('[data-action="dismiss"]').addEventListener('click', async () => {
+      if (!confirm('Dismiss this draft?')) return;
+      try {
+        await patchDraft(id, 'dismissed');
+        card.style.transition = 'opacity 0.2s';
+        card.style.opacity = '0';
+        setTimeout(renderTwitterEngagement, 220);
+      } catch(e){ alert('Dismiss failed: ' + e.message); }
+    });
+  });
+}
+
+let ENGAGEMENT_POLL = null;
+
+// ── Instagram analytics tab ──
+async function renderInstagramAnalytics(){
+  const panel = document.querySelector('.modal-panel[data-panel="analytics"]');
+  const ig = REPORT?.instagram;
+  if (!ig){
+    panel.innerHTML = `<div class="empty" style="padding:28px 0;">
+      <div style="font-size:28px;margin-bottom:10px;">📸</div>
+      <div style="color:var(--text);margin-bottom:6px;font-weight:600;">Instagram not connected</div>
+      <div style="font-size:12px;max-width:440px;margin:0 auto;">Visit <a href="/auth/instagram/connect" style="color:var(--blurple);">/auth/instagram/connect</a> to authenticate, then re-run the daily report.</div>
+    </div>`;
+    return;
+  }
+
+  panel.innerHTML = '<div class="empty">Loading history…</div>';
+  const history = await fetchHistory(365);
+  panel.innerHTML = '';
+
+  await renderMetricPanel({
+    panel, state: INSTAGRAM_STATE, metricDefs: INSTAGRAM_METRICS, history,
+    boxes: [
+      { key: 'followers',               label: 'Followers',         value: fmtK(ig.followers_count),               sub: 'click to chart' },
+      { key: 'reach_today',             label: 'Reach',             value: fmtK(ig.reach_today ?? 0),              sub: 'today · unique accounts' },
+      { key: 'profile_views_today',     label: 'Profile Views',     value: fmtK(ig.profile_views_today ?? 0),      sub: 'today' },
+      { key: 'website_clicks_today',    label: 'Website Clicks',    value: ig.website_clicks_today ?? 0,           sub: 'today · → bitcoinbay.com' },
+      { key: 'accounts_engaged_today',  label: 'Accounts Engaged',  value: fmtK(ig.accounts_engaged_today ?? 0),   sub: 'today' },
+      { key: 'posts_today',             label: 'Posts',             value: ig.posts_today ?? 0,                    sub: 'today' },
+    ],
+  });
+
+  // Rollups
+  const sum = (arr, k) => arr.reduce((a,h) => a + (h?.instagram?.[k] || 0), 0);
+  const last7  = history.slice(-7);
+  const last30 = history.slice(-30);
+  panel.insertAdjacentHTML('beforeend', `
+    <div class="kmetric-row" style="margin-top:6px;">
+      <div class="kmetric"><div class="kmetric-label">Reach · 7d</div><div class="kmetric-value">${fmtK(sum(last7,'reach_today'))}</div><div class="kmetric-sub">unique accounts</div></div>
+      <div class="kmetric"><div class="kmetric-label">Profile Views · 7d</div><div class="kmetric-value">${fmtK(sum(last7,'profile_views_today'))}</div><div class="kmetric-sub">—</div></div>
+      <div class="kmetric"><div class="kmetric-label">Website Clicks · 7d</div><div class="kmetric-value">${sum(last7,'website_clicks_today')}</div><div class="kmetric-sub">→ bitcoinbay.com</div></div>
+      <div class="kmetric"><div class="kmetric-label">Posts · 30d</div><div class="kmetric-value">${sum(last30,'posts_today')}</div><div class="kmetric-sub">${fmtK(sum(last30,'likes_today'))} likes</div></div>
+    </div>
+  `);
+
+  // Top posts last 7 days — our own content
+  const top = ig.top_posts_7d || [];
+  if (top.length) {
+    panel.insertAdjacentHTML('beforeend', `
+      <div class="chart-wrap" style="padding:0;">
+        <div class="chart-title" style="padding:14px 16px 0;">Our top posts · last 7 days (by engagement)</div>
+        <div class="tweet-list" style="padding:10px 16px 16px;">
+          ${top.map(p=>`
+            <a href="${p.permalink}" target="_blank" rel="noopener" class="tweet-row">
+              <div>
+                <div class="tweet-text">${escapeHtml((p.caption||'').slice(0,240))}</div>
+                <div class="tweet-meta">${p.timestamp ? new Date(p.timestamp).toLocaleString() : '—'} · ${p.media_type || '?'}</div>
+              </div>
+              <div class="tweet-stats">
+                <div><span class="tweet-stat-val">${fmtK(p.like_count)}</span> ♥</div>
+                <div><span class="tweet-stat-val">${fmtK(p.comments_count)}</span> 💬</div>
+                <div><span class="tweet-stat-val">${fmtK(p.engagement)}</span> eng</div>
+              </div>
+            </a>`).join('')}
+        </div>
+      </div>
+    `);
+  }
+}
+
+// ── Instagram engagement tab ──
+let INSTAGRAM_POLL = null;
+async function renderInstagramEngagement(){
+  const panel = document.querySelector('.modal-panel[data-panel="engagement"]');
+  panel.innerHTML = '<div class="empty" style="padding:30px 0;">Loading engagement drafts…</div>';
+
+  let drafts = [], stats = {};
+  try {
+    const [draftsRes, statsRes] = await Promise.all([
+      fetch('/api/admin/dashboard/instagram-drafts?status=pending&limit=50').then(r => r.json()),
+      fetch('/api/admin/dashboard/instagram-drafts/stats').then(r => r.json()),
+    ]);
+    drafts = Array.isArray(draftsRes) ? draftsRes : [];
+    stats = statsRes || {};
+  } catch(e){
+    panel.innerHTML = `<div class="empty" style="padding:30px 0;">Failed to load: ${escapeHtml(String(e))}</div>`;
+    return;
+  }
+
+  const statsBar = `
+    <div class="stats-bar">
+      <div class="stat-pill"><span class="sp-label">Pending</span><span class="sp-value" style="color:var(--blurple);">${stats.pending ?? 0}</span></div>
+      <div class="stat-pill"><span class="sp-label">Posted</span><span class="sp-value" style="color:var(--mint);">${stats.posted ?? 0}</span></div>
+      <div class="stat-pill"><span class="sp-label">Dismissed</span><span class="sp-value">${stats.dismissed ?? 0}</span></div>
+      <div class="stat-pill"><span class="sp-label">This week</span><span class="sp-value">${stats.drafted_this_week ?? 0} drafted · ${stats.posted_this_week ?? 0} posted</span></div>
+      <div style="flex:1;"></div>
+      <button class="draft-btn primary" id="run-ig-engagement" title="Run Gemini discovery + Claude drafts (~1-2 min)">Find new drafts</button>
+      <button class="draft-btn icon-only" id="refresh-ig-drafts" title="Reload list only" aria-label="Refresh">⟳</button>
+    </div>
+    ${stats.latest_draft_at ? `<div style="font-size:10px;color:var(--dim);margin-bottom:14px;">latest draft saved ${escapeHtml(relativeTime(stats.latest_draft_at))}</div>` : ''}
+  `;
+
+  if (drafts.length === 0){
+    panel.innerHTML = statsBar + `<div class="empty" style="padding:28px 0;">
+      <div style="font-size:28px;margin-bottom:12px;">📸</div>
+      <div style="color:var(--text);margin-bottom:6px;font-weight:600;">No pending Instagram drafts</div>
+      <div style="font-size:12px;max-width:480px;margin:0 auto;">Click <b>Find new drafts</b> above. Cron also runs at 10am / 2pm / 7pm.<br><br>
+        If "Find new drafts" keeps failing, the IG sessionid cookie may have expired — refresh it at <a href="/auth/instagram/scrape-session" target="_blank" style="color:var(--blurple);">/auth/instagram/scrape-session</a>.
+      </div>
+    </div>`;
+    wireInstagramEngagementControls();
+    return;
+  }
+
+  const card = d => {
+    // Post age = when the IG post was actually posted (live computation if we have timestamp,
+    // else fall back to the snapshot we saved at draft time).
+    let postAgeLabel = '';
+    if (d.post_timestamp) {
+      postAgeLabel = 'post ' + relativeTime(d.post_timestamp);
+    } else if (d.post_age_hours_at_draft != null || d.post_age_hours != null) {
+      const ah = d.post_age_hours_at_draft ?? d.post_age_hours;
+      postAgeLabel = `post ~${ah}h old when drafted`;
+    }
+    // Draft age = when WE drafted this (when Gemini ran). Secondary info.
+    const draftAgeLabel = d.created_at ? 'drafted ' + relativeTime(d.created_at) : '';
+    const likesLabel = d.post_likes != null ? `${fmtK(d.post_likes)} ♥` : '';
+    const mediaLabel = d.media_type === 'reel' ? 'reel' : 'post';
+    const metaParts = [mediaLabel, likesLabel, postAgeLabel, draftAgeLabel].filter(Boolean);
+    return `<div class="draft-card" data-draft-id="${d._id}">
+      <div class="draft-head">
+        <div class="draft-target">
+          <span class="draft-handle">@${escapeHtml(d.target_handle||'?')}</span>
+          <span class="draft-meta">${metaParts.join(' · ')}</span>
+        </div>
+        <div class="draft-actions">
+          <button class="draft-btn copy" data-action="copy">Copy comment</button>
+          <a class="draft-btn open" href="${d.post_url}" target="_blank" rel="noopener">Open post ↗</a>
+          <button class="draft-btn posted" data-action="posted">Mark posted</button>
+          <button class="draft-btn dismiss" data-action="dismiss">Dismiss</button>
+        </div>
+      </div>
+      <div class="draft-thread">
+        <div class="draft-context">
+          <div class="draft-context-label">Instagram post by @${escapeHtml(d.target_handle||'?')}
+            · <a href="${d.post_url}" target="_blank" rel="noopener" style="color:var(--sub);">${d.post_url.replace('https://www.','')}</a>
+          </div>
+          <div class="draft-context-text">${escapeHtml(d.post_caption||'(no caption excerpt)')}</div>
+        </div>
+        <div class="draft-reply">
+          <div class="draft-reply-label">Draft comment</div>
+          <div class="draft-reply-text" data-reply-text>${escapeHtml(d.draft_comment||'')}</div>
+          ${d.why_this_comment ? `<div class="draft-why"><span>Why:</span> ${escapeHtml(d.why_this_comment)}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  panel.innerHTML = statsBar + `<div class="draft-list">${drafts.map(card).join('')}</div>`;
+  wireInstagramEngagementControls();
+
+  panel.querySelectorAll('.draft-card').forEach(c => {
+    const id = c.dataset.draftId;
+    c.querySelector('[data-action="copy"]').addEventListener('click', async () => {
+      const text = c.querySelector('[data-reply-text]').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        const b = c.querySelector('[data-action="copy"]');
+        const o = b.textContent; b.textContent = 'Copied ✓'; b.classList.add('copied');
+        setTimeout(() => { b.textContent = o; b.classList.remove('copied'); }, 1500);
+      } catch(e){ alert('Copy failed: ' + e.message); }
+    });
+    c.querySelector('[data-action="posted"]').addEventListener('click', async () => {
+      try {
+        await fetch(`/api/admin/dashboard/instagram-drafts/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:'posted'})});
+        c.style.transition = 'opacity 0.2s'; c.style.opacity = '0';
+        setTimeout(renderInstagramEngagement, 220);
+      } catch(e){ alert('Mark posted failed: ' + e.message); }
+    });
+    c.querySelector('[data-action="dismiss"]').addEventListener('click', async () => {
+      if (!confirm('Dismiss this draft?')) return;
+      try {
+        await fetch(`/api/admin/dashboard/instagram-drafts/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:'dismissed'})});
+        c.style.transition = 'opacity 0.2s'; c.style.opacity = '0';
+        setTimeout(renderInstagramEngagement, 220);
+      } catch(e){ alert('Dismiss failed: ' + e.message); }
+    });
+  });
+}
+
+function wireInstagramEngagementControls(){
+  const refresh = document.getElementById('refresh-ig-drafts');
+  if (refresh) refresh.addEventListener('click', renderInstagramEngagement);
+  const run = document.getElementById('run-ig-engagement');
+  if (!run) return;
+  run.addEventListener('click', async () => {
+    if (INSTAGRAM_POLL) return;
+    const orig = run.textContent;
+    run.disabled = true;
+    run.textContent = 'Discovering…';
+    try {
+      const res = await fetch('/api/admin/dashboard/instagram-drafts/run', {method:'POST'});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch(e){
+      alert('Run failed: ' + e.message);
+      run.disabled = false; run.textContent = orig; return;
+    }
+    let baseline = 0;
+    try {
+      const s = await fetch('/api/admin/dashboard/instagram-drafts/stats').then(r => r.json());
+      baseline = s.pending ?? 0;
+    } catch(_){}
+    let elapsed = 0; const STEP = 8; const TIMEOUT = 180;
+    INSTAGRAM_POLL = setInterval(async () => {
+      elapsed += STEP;
+      run.textContent = `Discovering… ${Math.min(elapsed, TIMEOUT)}s`;
+      try {
+        const s = await fetch('/api/admin/dashboard/instagram-drafts/stats').then(r => r.json());
+        if ((s.pending ?? 0) > baseline) {
+          clearInterval(INSTAGRAM_POLL); INSTAGRAM_POLL = null;
+          run.disabled = false; run.textContent = orig;
+          renderInstagramEngagement();
+          return;
+        }
+      } catch(_){}
+      if (elapsed >= TIMEOUT) {
+        clearInterval(INSTAGRAM_POLL); INSTAGRAM_POLL = null;
+        run.disabled = false; run.textContent = orig;
+        renderInstagramEngagement();
+      }
+    }, STEP * 1000);
+  });
+}
+
+function wireEngagementControls(){
+  const refresh = document.getElementById('refresh-drafts');
+  if (refresh) refresh.addEventListener('click', renderTwitterEngagement);
+
+  const run = document.getElementById('run-engagement');
+  if (!run) return;
+
+  run.addEventListener('click', async () => {
+    // Don't double-fire while a poll is already running
+    if (ENGAGEMENT_POLL) return;
+
+    const origText = run.textContent;
+    run.disabled = true;
+    run.textContent = 'Discovering…';
+
+    try {
+      const res = await fetch('/api/admin/dashboard/engagement-drafts/run', {method:'POST'});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch(e){
+      alert('Run failed: ' + e.message);
+      run.disabled = false;
+      run.textContent = origText;
+      return;
+    }
+
+    // Snapshot the pending count BEFORE polling so we can detect the increase
+    let baseline = 0;
+    try {
+      const s = await fetch('/api/admin/dashboard/engagement-drafts/stats').then(r => r.json());
+      baseline = s.pending ?? 0;
+    } catch(_){}
+
+    // Poll /stats silently — no full re-render until we detect new drafts
+    let elapsed = 0;
+    const STEP = 6;       // seconds between polls
+    const TIMEOUT = 120;  // give up after 2 minutes
+
+    ENGAGEMENT_POLL = setInterval(async () => {
+      elapsed += STEP;
+      run.textContent = `Discovering… ${Math.min(elapsed, TIMEOUT)}s`;
+      try {
+        const s = await fetch('/api/admin/dashboard/engagement-drafts/stats').then(r => r.json());
+        if ((s.pending ?? 0) > baseline) {
+          // New drafts landed — stop polling, re-render once, re-enable button
+          clearInterval(ENGAGEMENT_POLL); ENGAGEMENT_POLL = null;
+          run.disabled = false;
+          run.textContent = origText;
+          renderTwitterEngagement();
+          return;
+        }
+      } catch(_){ /* ignore transient errors, keep polling */ }
+
+      if (elapsed >= TIMEOUT) {
+        clearInterval(ENGAGEMENT_POLL); ENGAGEMENT_POLL = null;
+        run.disabled = false;
+        run.textContent = origText;
+        // Final re-render in case count didn't change (no new hot tweets found)
+        renderTwitterEngagement();
+      }
+    }, STEP * 1000);
+  });
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+(async()=>{ await fetchDates(); await load(); })();
+</script>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="modal-title-main">Details</span>
+        <span class="handle" id="modal-handle"></span>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+    </div>
+    <div class="modal-tabs"></div>
+    <div class="modal-body"></div>
+  </div>
+</div>
+
+</body>
+</html>
