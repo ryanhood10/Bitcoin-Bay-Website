@@ -4,13 +4,15 @@ Context for Claude (or any dev) working in this repo. The short version: this is
 
 ## What this app does
 
-Three broad capabilities:
+Four broad capabilities:
 
 1. **Public marketing site** — `/`, `/leaderboard`, `/register`, `/forgot-password`, `/reset-password`, `/blog`, `/blog/:slug`, static assets. All served from `server.js` with inline HTML templates or static files.
 
 2. **Account creation & password reset proxy** — `/api/register` and `/api/forgot-password` + `/api/reset-password`. We validate + reCAPTCHA-check on our side, then call the wager backend's endpoints via [agentClient.js](agentClient.js) using a persistent auth chain (see "Agent auth" below).
 
 3. **Private admin messaging dashboard** — `/admin/login`, `/admin/messages`. The operator (Ryan's brother) gets Pushover push notifications when a player messages the agent account, then replies from our dashboard. The reply posts back into the wager backend's `mailAgentNew` endpoint.
+
+4. **Internal analytics dashboard** — `/admin/dashboard` + `/api/admin/dashboard/*`. Shared login with #3. Surfaces GA4, Search Console, signups, support tickets, Twitter, and Instagram metrics with over-time charts, plus AI-drafted engagement replies from the Pi's cron jobs. See **[docs/ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md)** and **[docs/ADMIN_ROLES.md](docs/ADMIN_ROLES.md)** for file tour + endpoint map + extension guides.
 
 ## Files that matter
 
@@ -25,12 +27,25 @@ messagesSync.js      ← Background poll of the wager inbox (every 3 min). Pulls
                        both inbox (type=0) and sent (type=1) buckets. Diffs
                        against Mongo, inserts new, fires operator alerts via
                        Pushover (falls back to Twilio if configured).
-adminMessages.js     ← Express router for /admin/*. Signed-cookie auth,
-                       per-IP login rate limit, thread list + resolve state,
-                       player-info cache, reply API, UI dashboard HTML.
+adminMessages.js     ← Express router for /admin/messages/*. Signed-cookie auth
+                       (shared with dashboard), per-IP login rate limit, thread
+                       list + resolve state, player-info cache, reply API.
+adminAuth.js         ← Shared auth module — cookie sign/verify, role-aware
+                       requireAdmin(role) middleware, Mongo admin lookup.
+adminDashboard.js    ← Express router for /admin/dashboard + /api/admin/dashboard/*.
+                       Reads analytics & engagement data from Mongo.
+authInstagram.js     ← Express router for /auth/instagram/* (OAuth + scraping
+                       cookie refresh page).
+views/admin-dashboard.html ← Full SPA for the analytics dashboard. All inline.
+scripts/manage-admins.js ← CLI (heroku run) to add/list/update Mongo admins.
+tests/*.test.js      ← node:test suite — auth module, dashboard API, IG OAuth.
+                       Run: npm test (36 tests).
 package.json         ← Dependencies. node_modules is checked in (yes, really).
 Procfile             ← web: node server.js for Heroku.
 .env                 ← Local-only secrets. NEVER commit.
+docs/                ← Deeper references for future work:
+                       - ADMIN_DASHBOARD.md (architecture + extension points)
+                       - ADMIN_ROLES.md     (auth/role model + CLI usage)
 ```
 
 ## Agent auth — the critical piece
@@ -91,7 +106,9 @@ Indexes on `bcb_messages` are ensured on boot by `messagesSync.ensureIndexes()` 
 | `GoogleCaptchaSecretKey` / `RECAPTCHA_SECRET` | yes | reCAPTCHA v2 server secret. Either name works. |
 | `AGENT_USERNAME` / `AGENT_PASSWORD` / `AGENT_TOTP_SECRET` | yes | Wager-backend credentials. TOTP secret is the base32 2FA seed from the portal. |
 | `AGENT_TOKEN` | no | Optional JWT seed to skip one fresh login on first boot. |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` / `ADMIN_SESSION_SECRET` | yes for /admin | bcrypt hash, 32+ char secret for HMAC cookie signing. |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` / `ADMIN_SESSION_SECRET` | yes for /admin | bcrypt hash, 32+ char secret for HMAC cookie signing. Always resolves to role=`full`. Additional Mongo admins live in `bcb_admin_users` — see [docs/ADMIN_ROLES.md](docs/ADMIN_ROLES.md). |
+| `MONGO_AUTOMATION_URI` / `MONGO_AUTOMATION_DB` | yes for /admin/dashboard | Usually same cluster as `MONGO_URI` (db `bcbay_automation`). Dashboard falls back to `MONGO_URI` if unset. |
+| `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` / `INSTAGRAM_REDIRECT_URI` / `INSTAGRAM_SCOPES` / `INSTAGRAM_ACCOUNT_HANDLE` | yes for /auth/instagram | Meta Developer app config for the IG Login OAuth flow. See [docs/ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md). |
 | `PUSHOVER_USER_KEY` / `PUSHOVER_APP_TOKEN` | preferred | Operator alerts. No US compliance overhead. |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_API_KEY_SID` / `TWILIO_API_KEY_SECRET` / `TWILIO_FROM_NUMBER` / `OPERATOR_PHONE_NUMBER` | optional | SMS fallback. US 10DLC registration required for carrier delivery. |
 | `SMS_QUIET_HOURS` | no | e.g. `"22-8"` → no alerts from 10pm–8am in `SMS_TIMEZONE`. |
@@ -112,7 +129,7 @@ Heroku buildpack does `npm install --production` on every push, so the committed
 
 When ownership transfers to a new operator (or from Ryan to his brother):
 
-- **Dashboard credentials** stay in `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` — one shared login. If they want separate logins, we'd need a real users table (noted as future work, not built).
+- **Admin logins** are now multi-user (as of the dashboard port). The env-var admin still exists and stays role=`full`. Add new admins via `heroku run node scripts/manage-admins.js add <user> <pass> <full|dashboard>`. Details in [docs/ADMIN_ROLES.md](docs/ADMIN_ROLES.md).
 - **Pushover** — each operator installs the Pushover app on their phone, grabs their User Key, and updates the single `PUSHOVER_USER_KEY` env var on Heroku. The `PUSHOVER_APP_TOKEN` stays the same (it identifies the app sending, not the person receiving).
 - **Twilio** (if we switch back) — the `OPERATOR_PHONE_NUMBER` env var holds the destination. Change to the new operator's number.
 
