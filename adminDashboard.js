@@ -26,6 +26,9 @@
 //   PATCH /api/admin/dashboard/instagram-drafts/:id             — update IG draft status
 //   GET  /api/admin/dashboard/instagram-drafts/stats            — IG drafts counters
 //   POST /api/admin/dashboard/instagram-drafts/run              — queue an IG discovery run
+//   GET  /admin/dashboard/bonus-calculator                      — bonus-calculator page (FULL role only)
+//   GET  /api/admin/dashboard/bonus-reports                     — last 20 weekly leaderboards (FULL role only)
+//   POST /api/admin/dashboard/bonus-report                      — upsert one weekly leaderboard (FULL role only)
 //
 // ---------------------------------------------------------------------------
 
@@ -45,6 +48,8 @@ const THREADS_COLL   = 'bcb_thread_state';
 const MESSAGES_COLL  = 'bcb_messages';
 const PLAYERS_COLL   = 'bcb_player_info';
 const RUN_JOBS       = 'bcb_run_jobs';
+const BONUS_COLL     = 'weekly_leaderboard';
+const ADMIN_LOG_COLL = 'bcb_admin_log';
 
 function getAutomationUri() {
   return process.env.MONGO_AUTOMATION_URI || process.env.MONGO_URI;
@@ -396,6 +401,84 @@ router.post('/api/admin/dashboard/instagram-drafts/run', adminAuth.requireAdmin(
     res.status(202).json({ started: true, queued: true, job_id: r.insertedId.toString(),
                           message: 'Instagram engagement finder queued — Pi will pick up within ~60s' });
   } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ===========================================================================
+// BONUS CALCULATOR — weekly leaderboard tool. FULL role only — this writes
+// to the same `weekly_leaderboard` collection that the public /leaderboard
+// page reads from, so a bad save would corrupt the live leaderboard.
+// ===========================================================================
+
+// Fire-and-forget audit log. Mirrors adminMessages.logAdminAction so both
+// admin surfaces write to the same bcb_admin_log collection.
+async function logAdminAction(record) {
+  try {
+    await withDb(async (db) =>
+      db.collection(ADMIN_LOG_COLL).insertOne({ ...record, created_at: new Date() })
+    );
+  } catch (err) {
+    console.error('[admin-dashboard] audit log failed:', err.message);
+  }
+}
+
+router.get('/admin/dashboard/bonus-calculator', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'bonus-calculator.html'));
+});
+
+router.get('/api/admin/dashboard/bonus-reports', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 20, 100));
+    const docs = await withDb(async (db) =>
+      db.collection(BONUS_COLL)
+        .find({}, { projection: { _id: 0, week_start: 1, week_end: 1, volume_threshold: 1, generated_at: 1, updated_at: 1, bonuses: 1 } })
+        .sort({ updated_at: -1 })
+        .limit(limit)
+        .toArray(),
+    );
+    res.json(docs.map(clean));
+  } catch (e) {
+    console.error('[admin-dashboard] /bonus-reports error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/api/admin/dashboard/bonus-report', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const payload = req.body || {};
+    if (!payload.week_start || !payload.week_end) {
+      return res.status(400).json({ error: 'Missing week_start or week_end in payload' });
+    }
+    if (!Array.isArray(payload.bonuses)) {
+      return res.status(400).json({ error: 'Missing bonuses array in payload' });
+    }
+    const result = await withDb(async (db) =>
+      db.collection(BONUS_COLL).updateOne(
+        { week_start: payload.week_start, week_end: payload.week_end },
+        { $set: { ...payload, updated_at: new Date() } },
+        { upsert: true },
+      ),
+    );
+    const action = result.upsertedCount ? 'inserted' : 'updated';
+    // Audit — non-blocking, best-effort
+    logAdminAction({
+      user: req.admin?.user || 'unknown',
+      role: req.admin?.role || null,
+      action: 'bonus_report_' + action,
+      week_start: payload.week_start,
+      week_end: payload.week_end,
+      accounts: payload.bonuses.length,
+    }).catch(() => {});
+    res.json({
+      success: true,
+      action,
+      week_start: payload.week_start,
+      week_end: payload.week_end,
+      accounts: payload.bonuses.length,
+    });
+  } catch (e) {
+    console.error('[admin-dashboard] /bonus-report error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

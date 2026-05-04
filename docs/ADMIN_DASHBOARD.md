@@ -13,6 +13,7 @@ shares its admin auth.
 | `adminDashboard.js` | Express router: serves the HTML at `/admin/dashboard`, all `/api/admin/dashboard/*` JSON endpoints, plus `/api/admin/dashboard/me` (identity). |
 | `authInstagram.js` | Express router for IG OAuth (`/auth/instagram/connect`, `/callback`, `/status`) and the scrape-session cookie install page (`/auth/instagram/scrape-session`). |
 | `views/admin-dashboard.html` | Single-page dashboard. All HTML + CSS + JS inline. Talks only to `/api/admin/dashboard/*` and `/auth/instagram/status`. |
+| `views/bonus-calculator.html` | Stand-alone weekly-leaderboard tool served at `/admin/dashboard/bonus-calculator` (full-role only). XLSX upload + bonus math runs entirely client-side via SheetJS; only the final top-10 payload POSTs to `/api/admin/dashboard/bonus-report`. |
 
 Plus `scripts/manage-admins.js` — CLI to add/list/remove/set-password/set-role
 on Mongo-stored admins. See [ADMIN_ROLES.md](ADMIN_ROLES.md).
@@ -45,6 +46,8 @@ All in the `bcbay_automation` database.
 | `bcb_admin_users` | additional admin accounts | `scripts/manage-admins.js` CLI |
 | `bcb_run_jobs` | "Run now" job queue | `adminDashboard.js` POSTs, Pi poller consumes |
 | `bcb_messages` / `bcb_thread_state` / `bcb_player_info` | player messaging | `messagesSync.js` (separate subsystem) |
+| `weekly_leaderboard` | one doc per `{week_start, week_end}`; `bonuses[]` = top 10 `{rank, account}`; read by the public `/leaderboard` page | `views/bonus-calculator.html` → POST `/api/admin/dashboard/bonus-report` (full-role only) |
+| `bcb_admin_log` | every admin action (login, reply, resolve, bonus-report save) | `adminMessages.js` + `adminDashboard.js` |
 
 Passwords are projected OUT of `bcb_signups` reads. Never logged.
 
@@ -66,6 +69,10 @@ GET  /api/admin/dashboard/instagram-drafts            — (same shape, IG drafts
 PATCH /api/admin/dashboard/instagram-drafts/:id
 GET  /api/admin/dashboard/instagram-drafts/stats
 POST /api/admin/dashboard/instagram-drafts/run
+
+GET  /admin/dashboard/bonus-calculator        — role: full  → bonus calculator HTML page
+GET  /api/admin/dashboard/bonus-reports       — role: full  → last N saved weekly leaderboards
+POST /api/admin/dashboard/bonus-report        — role: full  → upsert one weekly leaderboard
 
 GET  /auth/instagram/connect            — role: full  → 302 to Instagram OAuth
 GET  /auth/instagram/callback           — public (IDP redirects here); state-checked

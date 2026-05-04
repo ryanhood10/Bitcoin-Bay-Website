@@ -997,6 +997,28 @@ function renderAll(){
 
 
 
+  // ── BONUS CALCULATOR (full-role admins only) ──
+  // Tool that David runs each week to compute the leaderboard the public
+  // /leaderboard page reads from. Hidden from `dashboard`-role admins; the
+  // server-side route is also gated on role=full so this is defense-in-depth.
+  if (canAccessMessages()) {
+    html += `<div class="section-block">
+      <div class="section-header">
+        <div class="section-title-row">
+          <span class="section-title">Bonus Calculator</span>
+          <span class="pill section-details-pill" style="opacity:1;">tool</span>
+        </div>
+        <span class="section-note">Compute &amp; publish the weekly leaderboard</span>
+      </div>
+      <div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="font-size:13px;color:var(--sub);max-width:560px;line-height:1.5;">
+          Drop in this week's activity exports, compute weighted bonuses, and publish the top 10 directly to the live leaderboard at <a href="/leaderboard" target="_blank" rel="noopener" style="color:var(--blurple2);">bitcoinbay.com/leaderboard</a>.
+        </div>
+        <a class="draft-btn primary" href="/admin/dashboard/bonus-calculator" style="text-decoration:none;white-space:nowrap;">Open calculator →</a>
+      </div>
+    </div>`;
+  }
+
   // ── FOOTER ──
   const okCount  = (REPORT.meta?.success?.length  || 0);
   const skipCount = (REPORT.meta?.skipped?.length || 0);

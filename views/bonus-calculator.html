@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonus Calculator · Bitcoin Bay Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #1f2530;
+    --border2: #2a3040;
+    --gold: #f0b429;
+    --gold2: #ffd166;
+    --green: #00d68f;
+    --green-dim: #00a86e;
+    --red: #ff5c5c;
+    --blue: #4a9eff;
+    --text: #e8ecf4;
+    --muted: #5a6478;
+    --muted2: #8892a4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(240,180,41,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,180,41,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+  .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  header { margin-bottom: 40px; }
+  .header-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid rgba(240,180,41,0.3);
+    padding: 4px 10px;
+    border-radius: 3px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--gold); }
+  .subtitle { margin-top: 10px; color: var(--muted2); font-size: 15px; font-weight: 300; }
+
+  /* Config strip */
+  .config-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .config-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .config-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    outline: none;
+  }
+  .config-input:focus { color: var(--gold); }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border2);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--gold);
+    background: rgba(240,180,41,0.04);
+  }
+  .drop-icon { font-size: 32px; margin-bottom: 8px; }
+  .drop-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .drop-sub { color: var(--muted2); font-size: 13px; }
+  #browse-link { color: var(--gold); text-decoration: underline; cursor: pointer; }
+  #file-input { display: none; }
+
+  /* File list */
+  .file-list { margin-bottom: 20px; }
+  .file-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  .badge-sports  { background: rgba(74,158,255,0.15);   color: var(--blue);  border: 1px solid rgba(74,158,255,0.3); }
+  .badge-live    { background: rgba(0,214,143,0.15);    color: var(--green); border: 1px solid rgba(0,214,143,0.3); }
+  .badge-prop    { background: rgba(240,180,41,0.15);   color: var(--gold);  border: 1px solid rgba(240,180,41,0.3); }
+  .badge-casino  { background: rgba(255,92,92,0.12);    color: var(--red);   border: 1px solid rgba(255,92,92,0.3); }
+  .badge-unknown { background: rgba(136,146,164,0.12);  color: var(--muted2);border: 1px solid var(--border2); }
+  .file-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vol-select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .rm-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+  }
+  .rm-btn:hover { color: var(--red); }
+
+  /* Run button */
+  .run-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 30px;
+  }
+  .run-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(240,180,41,0.25); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .error-msg {
+    background: rgba(255,92,92,0.08);
+    border: 1px solid rgba(255,92,92,0.3);
+    color: var(--red);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .error-msg.show { display: block; }
+
+  /* Results */
+  #results { display: none; }
+  #results.show { display: block; }
+
+  .results-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    margin: 30px 0 20px;
+  }
+  .results-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  /* Primary MongoDB save button */
+  .mongo-btn {
+    background: linear-gradient(135deg, var(--green), var(--green-dim));
+    color: #000;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mongo-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,214,143,0.3);
+  }
+  .mongo-btn:disabled { opacity: 0.5; cursor: wait; }
+  .mongo-btn .leaf { font-size: 16px; }
+
+  /* Preview button — secondary, outlined */
+  .preview-btn {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid rgba(240,180,41,0.4);
+    padding: 11px 18px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preview-btn:hover {
+    background: rgba(240,180,41,0.08);
+    border-color: var(--gold);
+  }
+  .preview-btn.active {
+    background: rgba(240,180,41,0.12);
+    border-color: var(--gold);
+  }
+
+  /* Preview panel */
+  .preview-panel {
+    display: none;
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .preview-panel.show { display: block; }
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .preview-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .preview-copy {
+    background: transparent;
+    color: var(--muted2);
+    border: 1px solid var(--border2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .preview-copy:hover { color: var(--gold); border-color: var(--gold); }
+  .preview-copy.copied { color: var(--green); border-color: var(--green); }
+  .preview-content {
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 500px;
+    overflow: auto;
+    white-space: pre-wrap;
+    color: var(--text);
+  }
+  /* JSON syntax-ish coloring */
+  .preview-content .k  { color: var(--gold); }
+  .preview-content .s  { color: var(--green); }
+  .preview-content .n  { color: var(--blue); }
+  .preview-content .b  { color: #c58cf0; }
+
+  .mongo-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .mongo-status.ok  { color: var(--green); border-color: rgba(0,214,143,0.3); background: rgba(0,214,143,0.06); }
+  .mongo-status.err { color: var(--red);   border-color: rgba(255,92,92,0.3); background: rgba(255,92,92,0.06); }
+
+  /* KPI strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .kpi-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .kpi-value.gold  { color: var(--gold); }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.blue  { color: var(--blue); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    background: var(--surface2);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border2);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.eligible    { background: rgba(0,214,143,0.04); }
+  tbody tr.eligible td:first-child { color: var(--green); font-weight: 600; }
+  .num { font-family: 'DM Mono', monospace; text-align: right; }
+  .bonus-amt { color: var(--gold); font-weight: 600; }
+  @media (max-width: 700px) {
+    .col-hide { display: none; }
+    .config-strip { grid-template-columns: 1fr; }
+  }
+
+  .back-link {
+    display: inline-block;
+    color: var(--muted2);
+    font-size: 12px;
+    text-decoration: none;
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+    transition: color 120ms ease;
+  }
+  .back-link:hover { color: var(--gold); }
+
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <a href="/admin/dashboard" class="back-link" aria-label="Back to admin dashboard">← Back to dashboard</a>
+    <span class="header-tag">Weekly Bonus Leaderboard</span>
+    <h1>Bonus <span>Calculator</span></h1>
+    <p class="subtitle">Top 20% of active clients · volume-weighted · $500 cap · writes directly to MongoDB</p>
+  </header>
+
+  <div class="config-strip">
+    <div class="config-card">
+      <div class="config-label">Prize Pool ($)</div>
+      <input class="config-input" type="number" id="pool" value="3000" min="0">
+    </div>
+    <div class="config-card">
+      <div class="config-label">Per-Account Cap ($)</div>
+      <input class="config-input" type="number" id="cap" value="500" min="0">
+    </div>
+    <div class="config-card">
+      <div class="config-label">Top % Eligible</div>
+      <input class="config-input" type="number" id="topPct" value="20" min="1" max="100">
+    </div>
+  </div>
+
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-icon">📂</div>
+    <div class="drop-title">Drop your activity files here</div>
+    <p class="drop-sub">Sports · Live Betting · Prop Builder · Casino · or any combination<br><span id="browse-link">Browse files</span> · Accepts .xlsx</p>
+    <input type="file" id="file-input" multiple accept=".xlsx">
+  </div>
+
+  <div class="file-list" id="file-list"></div>
+  <div class="error-msg" id="error-msg"></div>
+  <button class="run-btn" id="run-btn" disabled>Generate Bonus Report</button>
+
+  <div id="results">
+    <div class="results-header">
+      <div class="results-title">Bonus Distribution</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <span class="mongo-status" id="mongo-status">Ready to save</span>
+        <button class="preview-btn" id="preview-btn">👁 Preview</button>
+        <button class="mongo-btn" id="mongo-btn"><span class="leaf">🍃</span> Save to MongoDB</button>
+      </div>
+    </div>
+    <div class="kpi-strip" id="kpi-strip"></div>
+
+    <!-- Preview panel (toggled by Preview button) -->
+    <div class="preview-panel" id="preview-panel">
+      <div class="preview-header">
+        <span class="preview-title">Payload Preview · will be POSTed to /bonus-report</span>
+        <button class="preview-copy" id="preview-copy">Copy JSON</button>
+      </div>
+      <div class="preview-content" id="preview-content"></div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="result-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Account</th>
+            <th>Agent</th>
+            <th class="col-hide num">Sports</th>
+            <th class="col-hide num">Live</th>
+            <th class="col-hide num">Other</th>
+            <th class="num">Total Vol</th>
+            <th class="num">Vol %</th>
+            <th class="num">Bonus</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const files = []; // { file, name, type, volMethod, data }
+let lastResult = null;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILE TYPE DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+function detectType(name) {
+  const n = name.toLowerCase();
+  if (n.includes('live'))                             return 'live';
+  if (n.includes('prop'))                             return 'prop';
+  if (n.includes('sport'))                            return 'sports';
+  if (n.includes('casino') || n.includes('digital'))  return 'casino';
+  return 'unknown';
+}
+const typeLabel = t => ({ sports:'Sports', live:'Live Betting', prop:'Prop Builder', casino:'Casino', unknown:'Other' }[t] || 'Other');
+const typeBadgeClass = t => ({ sports:'badge-sports', live:'badge-live', prop:'badge-prop', casino:'badge-casino', unknown:'badge-unknown' }[t] || 'badge-unknown');
+const defaultVolMethod = t => {
+  if (t === 'live')   return 'lost_won';
+  if (t === 'casino') return 'wagered';
+  return 'risk';
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATE DETECTION FROM FILENAMES
+// ═══════════════════════════════════════════════════════════════════════════════
+const MONTHS = { january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11 };
+
+function extractDateFromFilename(name) {
+  const clean = name.replace(/_+/g, ' ').replace(/\s+/g, ' ');
+  const m = clean.match(/([a-zA-Z]+)\s+(\d{1,2})\s+(\d{4})/);
+  if (!m) return null;
+  const mo = MONTHS[m[1].toLowerCase()];
+  if (mo === undefined) return null;
+  return new Date(parseInt(m[3]), mo, parseInt(m[2]));
+}
+function fmtFileDate(d) {
+  return String(d.getMonth()+1).padStart(2,'0') + '-' +
+         String(d.getDate()).padStart(2,'0') + '-' + d.getFullYear();
+}
+function getWeekDates() {
+  const dates = files.map(f => extractDateFromFilename(f.name)).filter(Boolean);
+  if (!dates.length) {
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - 6);
+    return { weekStart, weekEnd: today };
+  }
+  const weekEnd = new Date(Math.max(...dates.map(d => d.getTime())));
+  const weekStart = new Date(weekEnd);
+  weekStart.setDate(weekEnd.getDate() - 6);
+  return { weekStart, weekEnd };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DROP ZONE / FILE LIST
+// ═══════════════════════════════════════════════════════════════════════════════
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const fileList  = document.getElementById('file-list');
+const runBtn    = document.getElementById('run-btn');
+const errorMsg  = document.getElementById('error-msg');
+
+document.getElementById('browse-link').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => handleFiles([...e.target.files]));
+['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); }));
+dropZone.addEventListener('drop', e => handleFiles([...e.dataTransfer.files]));
+
+function handleFiles(newFiles) {
+  newFiles.filter(f => f.name.endsWith('.xlsx')).forEach(f => {
+    const t = detectType(f.name);
+    files.push({ file: f, name: f.name, type: t, volMethod: defaultVolMethod(t), data: null });
+  });
+  renderFiles();
+}
+
+function renderFiles() {
+  fileList.innerHTML = '';
+  files.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    row.innerHTML = `
+      <span class="badge ${typeBadgeClass(f.type)}">${typeLabel(f.type)}</span>
+      <span class="file-name" title="${f.name}">${f.name}</span>
+      <select class="vol-select" data-idx="${i}">
+        <option value="risk"       ${f.volMethod==='risk'?'selected':''}>Risk col</option>
+        <option value="lost_won"   ${f.volMethod==='lost_won'?'selected':''}>|Lost|+|Won|</option>
+        <option value="wagered"    ${f.volMethod==='wagered'?'selected':''}>Wagered col</option>
+        <option value="vol_amount" ${f.volMethod==='vol_amount'?'selected':''}>Vol Amount col</option>
+        <option value="exclude"    ${f.volMethod==='exclude'?'selected':''}>Exclude</option>
+      </select>
+      <span></span>
+      <button class="rm-btn" data-idx="${i}">✕</button>
+    `;
+    fileList.appendChild(row);
+  });
+  fileList.querySelectorAll('.vol-select').forEach(el => el.addEventListener('change', e => files[+e.target.dataset.idx].volMethod = e.target.value));
+  fileList.querySelectorAll('.rm-btn').forEach(el => el.addEventListener('click', e => { files.splice(+e.target.dataset.idx, 1); renderFiles(); }));
+  runBtn.disabled = files.length === 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// XLSX PARSING
+// ═══════════════════════════════════════════════════════════════════════════════
+async function readXlsx(file) {
+  const buf  = await file.arrayBuffer();
+  const wb   = XLSX.read(buf, { type: 'array' });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { defval: '' });
+}
+
+function num(v) {
+  if (v === '' || v == null) return 0;
+  const n = parseFloat(String(v).replace(/[,$()]/g, ''));
+  return isNaN(n) ? 0 : Math.abs(n);
+}
+
+function volumeFor(row, method) {
+  switch (method) {
+    case 'risk':       return num(row['Risk']);
+    case 'lost_won':   return num(row['Amount Lost']) + num(row['Amount Won']);
+    case 'wagered':    return num(row['Wagered']) || num(row['Amount Wagered']);
+    case 'vol_amount': return num(row['Volume Amount']);
+    default:           return 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORE LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════
+async function runReport() {
+  errorMsg.classList.remove('show');
+  runBtn.disabled = true;
+  runBtn.textContent = 'Processing...';
+
+  try {
+    // Load all files
+    for (const f of files) if (!f.data) f.data = await readXlsx(f.file);
+
+    // Aggregate by customer
+    const agg = new Map();
+    files.forEach(f => {
+      if (f.volMethod === 'exclude') return;
+      f.data.forEach(row => {
+        const cust = row['Customer'];
+        if (!cust || cust === 'Accounts') return;  // skip totals row
+        const vol = volumeFor(row, f.volMethod);
+        if (!agg.has(cust)) {
+          agg.set(cust, { customer: cust, agent: row['Agent'] || null, sports: 0, live: 0, other: 0, total: 0 });
+        }
+        const rec = agg.get(cust);
+        if (!rec.agent && row['Agent']) rec.agent = row['Agent'];
+        if      (f.type === 'sports') rec.sports += vol;
+        else if (f.type === 'live')   rec.live   += vol;
+        else                          rec.other  += vol;
+        rec.total += vol;
+      });
+    });
+
+    const all      = [...agg.values()];
+    const active   = all.filter(a => a.total > 0).sort((x,y) => y.total - x.total);
+    const inactive = all.filter(a => a.total === 0);
+
+    if (active.length === 0) throw new Error('No active accounts found in the uploaded files.');
+
+    const pool   = parseFloat(document.getElementById('pool').value);
+    const cap    = parseFloat(document.getElementById('cap').value);
+    const topPct = parseFloat(document.getElementById('topPct').value) / 100;
+
+    // Top 20% of active, with min floor of 10
+    const eligCount = Math.max(10, Math.ceil(active.length * topPct));
+    const eligible  = active.slice(0, Math.min(eligCount, active.length));
+    const inelig    = active.slice(eligible.length);
+
+    // Weighted bonus + cap redistribution
+    const totalVol = eligible.reduce((s,a) => s + a.total, 0);
+    if (totalVol === 0) throw new Error('Eligible accounts have zero total volume.');
+
+    const bonuses    = eligible.map(a => (a.total / totalVol) * pool);
+    const capped     = bonuses.map(b => Math.min(b, cap));
+    let   excess     = bonuses.reduce((s,b) => s+b, 0) - capped.reduce((s,b) => s+b, 0);
+
+    // Redistribute excess among uncapped accounts, iteratively
+    for (let iter = 0; iter < 10 && excess > 0.01; iter++) {
+      const uncappedIdx = capped.map((b,i) => b < cap ? i : -1).filter(i => i >= 0);
+      if (!uncappedIdx.length) break;
+      const uncappedVol = uncappedIdx.reduce((s,i) => s + eligible[i].total, 0);
+      let newExcess = 0;
+      uncappedIdx.forEach(i => {
+        const add = (eligible[i].total / uncappedVol) * excess;
+        const next = Math.min(capped[i] + add, cap);
+        newExcess += (capped[i] + add) - next;
+        capped[i] = next;
+      });
+      excess = newExcess;
+    }
+
+    eligible.forEach((a, i) => a.bonus = capped[i]);
+    inelig.forEach(a => a.bonus = 0);
+
+    // Threshold = the volume of the last account that made the cut.
+    // Any account with less volume than this would not be eligible.
+    const threshold = eligible.length ? eligible[eligible.length - 1].total : 0;
+
+    const { weekStart, weekEnd } = getWeekDates();
+
+    lastResult = {
+      all, active, inactive, eligible, inelig,
+      pool, cap, topPct, totalVol, eligCount, threshold,
+      generatedAt: new Date().toISOString(),
+      weekStart:   fmtFileDate(weekStart),
+      weekEnd:     fmtFileDate(weekEnd),
+      bonuses:     capped,
+    };
+
+    renderResults();
+    resetMongoStatus();
+  } catch (err) {
+    errorMsg.textContent = '✗ ' + err.message;
+    errorMsg.classList.add('show');
+  }
+
+  runBtn.disabled = false;
+  runBtn.textContent = 'Generate Bonus Report';
+}
+runBtn.addEventListener('click', runReport);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESULT RENDERING
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderResults() {
+  const { eligible, inelig, inactive, active, pool, cap, topPct, totalVol, eligCount, threshold, bonuses, weekStart, weekEnd } = lastResult;
+
+  const kpiStrip = document.getElementById('kpi-strip');
+  kpiStrip.innerHTML = `
+    <div class="kpi"><div class="kpi-label">Week</div><div class="kpi-value" style="font-size:14px">${weekStart} → ${weekEnd}</div></div>
+    <div class="kpi"><div class="kpi-label">Active</div><div class="kpi-value green">${active.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Excluded (Vol=0)</div><div class="kpi-value" style="color:var(--muted2)">${inactive.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Eligible (Top ${(topPct*100).toFixed(0)}%)</div><div class="kpi-value gold">${eligCount}</div></div>
+    <div class="kpi"><div class="kpi-label">Cutoff Volume</div><div class="kpi-value gold">$${Math.round(threshold).toLocaleString()}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Vol</div><div class="kpi-value blue">$${Math.round(totalVol).toLocaleString()}</div></div>
+    <div class="kpi"><div class="kpi-label">Bonus Paid</div><div class="kpi-value gold">$${bonuses.reduce((s,b)=>s+b,0).toFixed(0)}</div></div>
+  `;
+
+  const body = document.getElementById('result-body');
+  body.innerHTML = '';
+  const rows = [...eligible, ...inelig];
+  rows.forEach((a, i) => {
+    const isElig = i < eligible.length;
+    const pct = totalVol > 0 ? ((a.total / totalVol) * 100).toFixed(2) : '0.00';
+    const tr = document.createElement('tr');
+    if (isElig) tr.className = 'eligible';
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${a.customer}</td>
+      <td>${a.agent || '—'}</td>
+      <td class="col-hide num">${Math.round(a.sports).toLocaleString()}</td>
+      <td class="col-hide num">${Math.round(a.live).toLocaleString()}</td>
+      <td class="col-hide num">${Math.round(a.other).toLocaleString()}</td>
+      <td class="num">${Math.round(a.total).toLocaleString()}</td>
+      <td class="num">${pct}%</td>
+      <td class="num bonus-amt">${isElig && a.bonus > 0 ? '$'+a.bonus.toFixed(2) : '—'}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⬇ SAVE TO MONGODB (replaces local JSON download)
+// ═══════════════════════════════════════════════════════════════════════════════
+const MONGO_ENDPOINT = '/api/admin/dashboard/bonus-report';
+const mongoBtn      = document.getElementById('mongo-btn');
+const mongoStatus   = document.getElementById('mongo-status');
+const previewBtn    = document.getElementById('preview-btn');
+const previewPanel  = document.getElementById('preview-panel');
+const previewBody   = document.getElementById('preview-content');
+const previewCopy   = document.getElementById('preview-copy');
+
+function resetMongoStatus() {
+  mongoStatus.className = 'mongo-status';
+  mongoStatus.textContent = 'Ready to save';
+  previewPanel.classList.remove('show');
+  previewBtn.classList.remove('active');
+}
+
+// Shared payload builder — used by both Preview and Save, so they can never drift
+function buildPayload() {
+  const { eligible, threshold, generatedAt, weekStart, weekEnd } = lastResult;
+  return {
+    generated_at:     generatedAt,
+    week_start:       weekStart,
+    week_end:         weekEnd,
+    volume_threshold: Math.round(threshold),
+    bonuses: eligible.slice(0, 10).map((a, i) => ({
+      rank:    i + 1,
+      account: (a.customer || '').trim(),
+    })),
+  };
+}
+
+// Simple JSON syntax highlighter for the preview panel
+function highlightJson(obj) {
+  const json = JSON.stringify(obj, null, 2)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return json.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?)/g,
+    m => {
+      let cls = 'n';
+      if (/^"/.test(m))             cls = /:$/.test(m) ? 'k' : 's';
+      else if (/true|false/.test(m)) cls = 'b';
+      else if (/null/.test(m))       cls = 'b';
+      return `<span class="${cls}">${m}</span>`;
+    }
+  );
+}
+
+// Preview button: toggle the panel
+previewBtn.addEventListener('click', () => {
+  if (!lastResult) return;
+  const showing = previewPanel.classList.toggle('show');
+  previewBtn.classList.toggle('active', showing);
+  if (showing) {
+    previewBody.innerHTML = highlightJson(buildPayload());
+    previewPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
+
+// Copy JSON to clipboard
+previewCopy.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(buildPayload(), null, 2));
+    previewCopy.textContent = 'Copied ✓';
+    previewCopy.classList.add('copied');
+    setTimeout(() => { previewCopy.textContent = 'Copy JSON'; previewCopy.classList.remove('copied'); }, 1500);
+  } catch (err) {
+    previewCopy.textContent = 'Copy failed';
+    setTimeout(() => { previewCopy.textContent = 'Copy JSON'; }, 1500);
+  }
+});
+
+mongoBtn.addEventListener('click', async () => {
+  if (!lastResult) return;
+  const payload = buildPayload();
+
+  mongoBtn.disabled = true;
+  mongoStatus.className = 'mongo-status';
+  mongoStatus.textContent = 'Sending…';
+
+  try {
+    const res  = await fetch(MONGO_ENDPOINT, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    mongoStatus.className = 'mongo-status ok';
+    mongoStatus.textContent = `✓ ${data.action} · ${data.week_start} → ${data.week_end}`;
+  } catch (err) {
+    mongoStatus.className = 'mongo-status err';
+    mongoStatus.textContent = err.message.includes('fetch') || err.message.includes('Failed')
+      ? '✗ Server unreachable — check your connection'
+      : '✗ ' + err.message;
+  }
+
+  mongoBtn.disabled = false;
+});
+</script>
+</body>
+</html>

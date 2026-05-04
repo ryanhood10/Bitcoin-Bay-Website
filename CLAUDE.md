@@ -12,7 +12,7 @@ Four broad capabilities:
 
 3. **Private admin messaging dashboard** — `/admin/login`, `/admin/messages`. The operator (Ryan's brother) gets Pushover push notifications when a player messages the agent account, then replies from our dashboard. The reply posts back into the wager backend's `mailAgentNew` endpoint.
 
-4. **Internal analytics dashboard** — `/admin/dashboard` + `/api/admin/dashboard/*`. Shared login with #3. Surfaces GA4, Search Console, signups, support tickets, Twitter, and Instagram metrics with over-time charts, plus AI-drafted engagement replies from the Pi's cron jobs. See **[docs/ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md)** and **[docs/ADMIN_ROLES.md](docs/ADMIN_ROLES.md)** for file tour + endpoint map + extension guides.
+4. **Internal analytics dashboard** — `/admin/dashboard` + `/api/admin/dashboard/*`. Shared login with #3. Surfaces GA4, Search Console, signups, support tickets, Twitter, and Instagram metrics with over-time charts, plus AI-drafted engagement replies from the Pi's cron jobs. Also hosts the **Bonus Calculator** (`/admin/dashboard/bonus-calculator`, full-role only) — a stand-alone tool that takes weekly XLSX activity exports, computes the volume-weighted top-10 bonus leaderboard client-side via SheetJS, and upserts the result into the `weekly_leaderboard` collection that the public `/leaderboard` page reads from. See **[docs/ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md)** and **[docs/ADMIN_ROLES.md](docs/ADMIN_ROLES.md)** for file tour + endpoint map + extension guides.
 
 ## Files that matter
 
@@ -37,9 +37,12 @@ adminDashboard.js    ← Express router for /admin/dashboard + /api/admin/dashbo
 authInstagram.js     ← Express router for /auth/instagram/* (OAuth + scraping
                        cookie refresh page).
 views/admin-dashboard.html ← Full SPA for the analytics dashboard. All inline.
+views/bonus-calculator.html ← Stand-alone weekly-leaderboard tool. Drag-drop
+                       XLSX, compute top-10 client-side via SheetJS, POST to
+                       /api/admin/dashboard/bonus-report. Full-role admins only.
 scripts/manage-admins.js ← CLI (heroku run) to add/list/update Mongo admins.
-tests/*.test.js      ← node:test suite — auth module, dashboard API, IG OAuth.
-                       Run: npm test (36 tests).
+tests/*.test.js      ← node:test suite — auth module, dashboard API, IG OAuth,
+                       bonus calculator. Run: npm test (48 tests).
 package.json         ← Dependencies. node_modules is checked in (yes, really).
 Procfile             ← web: node server.js for Heroku.
 .env                 ← Local-only secrets. NEVER commit.
@@ -93,6 +96,7 @@ Each is tagged with `direction: 'inbound' | 'outbound'` and inserted into Mongo.
 | `bcb_reset_log`      | Every password-reset attempt (rate-limit + audit) | auto |
 | `bcb_admin_log`      | Every admin dashboard action (login, reply, resolve) | auto |
 | `bcb_blog_posts`     | Blog content (pre-existing, separate admin flow) | `slug` |
+| `weekly_leaderboard` | Weekly bonus leaderboard — top 10 `{rank, account}` per `{week_start, week_end}`. Public `/leaderboard` page reads from here. | `{week_start, week_end}` |
 
 Indexes on `bcb_messages` are ensured on boot by `messagesSync.ensureIndexes()` — `wager_id` is unique.
 
