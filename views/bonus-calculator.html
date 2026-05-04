@@ -635,19 +635,23 @@ async function runReport() {
     // Load all files
     for (const f of files) if (!f.data) f.data = await readXlsx(f.file);
 
-    // Aggregate by customer
+    // Aggregate by account # (normalized so whitespace / case variants
+    // of the same account collapse into a single leaderboard entry)
     const agg = new Map();
     files.forEach(f => {
       if (f.volMethod === 'exclude') return;
       f.data.forEach(row => {
-        const cust = row['Customer'];
-        if (!cust || cust === 'Accounts') return;  // skip totals row
+        const rawCust = row['Customer'];
+        if (rawCust == null) return;
+        const cust = String(rawCust).trim();
+        if (!cust || cust.toLowerCase() === 'accounts') return;  // skip blanks / totals row
+        const key = cust.toUpperCase();
         const vol = volumeFor(row, f.volMethod);
-        if (!agg.has(cust)) {
-          agg.set(cust, { customer: cust, agent: row['Agent'] || null, sports: 0, live: 0, other: 0, total: 0 });
+        if (!agg.has(key)) {
+          agg.set(key, { customer: cust, agent: (row['Agent'] || '').toString().trim() || null, sports: 0, live: 0, other: 0, total: 0 });
         }
-        const rec = agg.get(cust);
-        if (!rec.agent && row['Agent']) rec.agent = row['Agent'];
+        const rec = agg.get(key);
+        if (!rec.agent && row['Agent']) rec.agent = String(row['Agent']).trim() || null;
         if      (f.type === 'sports') rec.sports += vol;
         else if (f.type === 'live')   rec.live   += vol;
         else                          rec.other  += vol;
