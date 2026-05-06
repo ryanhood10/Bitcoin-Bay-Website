@@ -65,28 +65,22 @@ function getAnthropic() {
   return _client;
 }
 
-// ── BB VOICE BLOCK ──
-// Anchored on the persona blocks the operator already trusts in the Pi
-// engagement scripts. The constants in those scripts (Pi: VOICE_BRIEF for X,
-// the inline brand-voice paragraph at the top of gemini_draft_comment for IG)
-// are the source of truth. Mirror them here so the post drafter sounds the
-// way the operator already approves replies.
-const BB_VOICE = `
+// ── BB VOICE BLOCKS ──
+// Three voice variants, all grounded in real-world samples pulled from the
+// live @BitcoinBay_com (Twitter) and @bitcoin_bay (Instagram) accounts on
+// 2026-05-06. The current accounts post:
+//   Twitter: 3-7 word reactions, heavy emoji, first-name basis with athletes
+//            ("OH NO SGA 😳", "Bane doing the most per usual", "💰💰💰💰")
+//   IG:      1-3 sentence highlight-reel captions with 5-6 sport hashtags
+//            ("Doing this at 41 is crazy. The KING 👑")
+// The earlier "Sharp handicapper at the beach bar" framing was off-voice for
+// these accounts; the meme/reaction voice is what the operator actually posts.
+// Professional/news is kept as a separate variant so the drafter can produce
+// both per Twitter topic and let the operator pick (Phase 6.2).
+const BB_VOICE_BASE = `
 You are drafting an ORIGINAL post for Bitcoin Bay (@BitcoinBay_com on X,
 @bitcoin_bay on Instagram). Bitcoin Bay is a bitcoin-native sports-betting
 platform and casino. Audience: people who love sports AND love crypto.
-
-VOICE (mirror what the operator already approves on engagement-side replies):
-- Sharp handicapper at the beach bar with a hardware wallet in their pocket.
-- Authoritative on sports AND crypto. Sports-fluent, bitcoin-native.
-  Confident, data-driven when data exists, takes-driven otherwise.
-- Beach-coded but never silly. Relaxed delivery, never corporate, never shilly.
-- "Fun sportsbook social" energy similar to DraftKings/FanDuel/ESPN BET on
-  socials — punchy, talky, occasionally funny — MINUS their predatory promo
-  voice and their tout-speak. Channel the energy, not the regulatory shape.
-- Adds real value: data, insight, historical context, or genuine wit.
-  One punchy idea per post.
-- Journalism first, product plug last. Talk about the topic, not about us.
 
 NEVER:
 - Name competitors (DraftKings, FanDuel, BetMGM, Caesars, BetRivers, ESPN BET,
@@ -99,11 +93,72 @@ NEVER:
 - Use US-style promo voice: "Sign up now!", "100% match!", "Bonus boost!",
   excessive exclamation, urgency-bait.
 - Drop generic links or "DM me / check out / visit our site". The post stands
-  on its own. Source URLs are fine when citing news; the operator's profile
-  is the only CTA.
-- Spam emoji. One or two emoji per post is fine if the topic earns them. Stop
-  if you're using more than one. ZERO emoji is the safe default for X.
+  on its own.
 `.trim();
+
+const BB_VOICE_TWITTER_MEME = `${BB_VOICE_BASE}
+
+PLATFORM VOICE: TWITTER, MEME / REACTION VARIANT (default).
+
+Anchor on the actual @BitcoinBay_com voice — these are real recent tweets:
+  "OH NO SGA 😳"
+  "Bane doing the most per usual"
+  "Greatest shot in history??"
+  "Can't take DB seriously in this suit"
+  "Wolves & Nuggets game got me like"
+  "💰💰💰💰"
+  "How do you lose this series @Celtics"
+
+Rules:
+- 3-12 words is the sweet spot. Short. Punchy. Reaction-style.
+- 1-3 emoji on the right beat is fine (😳 🔥 💰 🎯 👑 🥶 ✍️). NEVER spam emoji.
+- First-name basis with athletes (Bane, SGA, Mahomes, DB, Jaylen).
+- Casual sports-fan voice. "got me like", "doing the most", "no chance", etc.
+- ZERO hashtags. Twitter hides them and they kill reach.
+- ZERO inline links in the text body. If a source URL exists, it appends to
+  the tweet on its own line for the quote-tweet-card render. Otherwise no URL.
+- React, don't lecture. If you're tempted to analyze, stop and just react.`.trim();
+
+const BB_VOICE_TWITTER_PROFESSIONAL = `${BB_VOICE_BASE}
+
+PLATFORM VOICE: TWITTER, PROFESSIONAL / NEWS VARIANT.
+
+This variant exists for posts where a meme reaction would be off-key — data
+days, breaking athlete×crypto news, line-move explainers, BTC-volatility
+reads. The operator picks this variant via the swap toggle when warranted.
+
+Rules:
+- 1-2 short sentences. 100-220 chars total (excluding URL).
+- Data-led or news-led. Cite a number, a fact, a name.
+- ZERO emoji.
+- ZERO hashtags.
+- Cite the source URL at the end if present (X auto-renders it as a card).
+- Never tout-speak. Analysis fine; guarantees not.
+- Conversational-but-informative; not corporate, not stiff.`.trim();
+
+const BB_VOICE_IG = `${BB_VOICE_BASE}
+
+PLATFORM VOICE: INSTAGRAM, HYPE-FAN VARIANT.
+
+Anchor on the actual @bitcoin_bay voice — these are real recent captions:
+  "Doing this at 41 is crazy. The KING 👑"
+  "This man is such a cheat code 👽"
+  "Brooks and the Suns are ready for a BATTLE."
+  "HUGE WIN FOR THE TIDE!! 🐘"
+  "Ice in his veins 🥶🐜"
+  "This lucky customer got his Super Bowl…but something was a little off 😂"
+
+Rules:
+- 1-3 short sentences typical. 50-250 chars target. NOT 600-1100.
+- Hype-fan voice. Conversational. Light commentary, not analysis.
+- 1-2 emoji where they earn the spot (👑 🔥 🐘 🥶 👽 😂 💰 ✍️).
+- 5-7 sport-specific hashtags at the end (separate paragraph). Mix broad +
+  specific (e.g. #nba + #celtics, #nflfootball + #chiefs).
+- First-name basis with athletes.
+- The funniest observations perform best — lean into that without forcing it.`.trim();
+
+// Backward-compat alias (slide-only carousel regen path uses this)
+const BB_VOICE = BB_VOICE_IG;
 
 // ── COMPLIANCE BLOCK (verbatim from bcbay_research.py:COMPLIANCE_RULES) ──
 const COMPLIANCE = `
@@ -150,32 +205,41 @@ Constraints (compliance still applies):
 // ── PROMPT BUILDERS ──
 
 function buildTwitterPrompt(topic, ctx) {
+  // voiceKind: 'meme' (default) or 'professional'. Phase 6.2 calls this twice
+  // per topic to pre-generate both variants and let the operator swap.
+  const voiceKind = ctx.voiceKind === 'professional' ? 'professional' : 'meme';
+  const voiceBlock = voiceKind === 'professional'
+    ? BB_VOICE_TWITTER_PROFESSIONAL
+    : BB_VOICE_TWITTER_MEME;
   const humorBlock = (ctx.humorPass || topic.allow_humor) ? HUMOR_BLOCK : '';
   const sourceLine = topic.source_url
-    ? `Cite the source URL at the end of the tweet (X auto-renders it as a card). URL: ${topic.source_url}`
+    ? (voiceKind === 'professional'
+        ? `Cite the source URL at the end of the tweet (X auto-renders it as a card). URL: ${topic.source_url}`
+        : `Source URL is available; append it on its own line at the end so X renders the quote-tweet card. URL: ${topic.source_url}`)
     : 'No source URL — make the take stand on its own.';
-  return `${BB_VOICE}
+  return `${voiceBlock}
 
 ${COMPLIANCE}
 
 ${humorBlock}
 
 PLATFORM: X (Twitter), @BitcoinBay_com.
-HARD LIMIT: 270 characters total (tweet text + URL combined). Hashtags optional.
+HARD LIMIT: 270 characters total (tweet text + URL combined).
 
 TOPIC FOR THIS DRAFT:
 - Topic: ${topic.topic || ''}
 - Angle: ${topic.angle || ''}
 - Primary keyword: ${topic.primary_keyword || ''}
 - Format hint: ${topic.format_hint || 'take'}
+- Voice variant: ${voiceKind.toUpperCase()}
 - ${sourceLine}
 
-${ctx.athleteCryptoPin ? `🚨 ATHLETE×CRYPTO MOAT: This is the override post. Lead with the news. Tag @BitcoinBay_com if natural. Never bury the lede.` : ''}
+${ctx.athleteCryptoPin ? `🚨 ATHLETE×CRYPTO MOAT: This is the override post. Lead with the news. Never bury the lede.` : ''}
 
 Return STRICT JSON, exactly this shape, no markdown, no commentary:
 {
   "text": "the tweet, ≤270 chars including any URL",
-  "hashtags": ["0-3 lowercase hashtags or empty array — be sparing"],
+  "hashtags": [],
   "suggested_image_subject": "1-3 word visual subject for hero photo lookup. ALWAYS use FULL athlete names, never abbreviations (Shai Gilgeous-Alexander, not SGA). Avoid abstract verb-subjects (use 'Stephen Curry shooting' not 'Curry celebration').",
   "image_overlay_text": null,
   "image_scene_prompt": "string|null — set ONLY when a real photo of this exact moment is unlikely to exist (e.g. 'Shai Gilgeous-Alexander celebrating after a clutch shot, confetti falling, NBA arena background, photorealistic editorial photo'). Operator-triggered AI generation will use this. Leave null when image_subject + a real photo will work fine.",
@@ -187,17 +251,19 @@ Return STRICT JSON, exactly this shape, no markdown, no commentary:
 function buildInstagramSinglePrompt(topic, ctx) {
   const humorBlock = (ctx.humorPass || topic.allow_humor) ? HUMOR_BLOCK : '';
   const sourceLine = topic.source_url
-    ? `Source URL (link in caption end-line, since IG can't auto-link): ${topic.source_url}`
+    ? `Source URL (mention briefly in the caption end-line): ${topic.source_url}`
     : 'No source URL — caption stands on its own.';
   const isBranded = topic.format_hint === 'branded_promo';
-  return `${BB_VOICE}
+  return `${BB_VOICE_IG}
 
 ${COMPLIANCE}
 
 ${humorBlock}
 
 PLATFORM: Instagram (single image), @bitcoin_bay.
-CAPTION LIMIT: 2200 chars (target 600-1100 — IG users skim the first 2 lines).
+CAPTION TARGET: 50-250 chars (1-3 short sentences). Hard limit 2200 but DO NOT
+approach it — the live account averages 80 chars per caption. Hook in the
+first 5 words.
 
 TOPIC FOR THIS DRAFT:
 - Topic: ${topic.topic || ''}
@@ -211,8 +277,8 @@ ${isBranded ? '🎨 BRANDED PROMO — this post is ABOUT Bitcoin Bay (leaderboar
 
 Return STRICT JSON, exactly this shape, no markdown, no commentary:
 {
-  "caption": "2-4 short paragraphs separated by blank lines. Hook in the first line. End with the @bitcoin_bay handle on its own line if it adds.",
-  "hashtags": ["10-15 lowercase IG hashtags, mix broad + niche, no spaces, no #"],
+  "caption": "1-3 short sentences (50-250 chars). Hype-fan voice. Light commentary, not analysis. End with hashtags on a separate line.",
+  "hashtags": ["5-7 lowercase IG hashtags, mix broad (#nba) + specific (#celtics), no spaces, no #"],
   "suggested_image_subject": "${topic.image_subject || 'BitcoinBay branded card'}",
   "image_overlay_text": "≤8 words for the on-image headline",
   "image_scene_prompt": "string|null — set ONLY when a real photo of this exact moment is unlikely to exist (e.g. 'Travis Kelce reacting to a Bitcoin price chart on a phone, locker room background, photorealistic editorial photo'). Operator-triggered AI generation will use this. Leave null when image_subject + a real photo will work fine.",
@@ -225,7 +291,7 @@ function buildInstagramCarouselPrompt(topic, ctx) {
   const slidesBrief = (topic.slides || []).map((s, i) => (
     `  Slide ${i + 1} (${s.slide_role}): subject="${s.image_subject || ''}", proposed-headline="${s.headline || ''}", body-hint="${s.body_caption_hint || ''}"`
   )).join('\n');
-  return `${BB_VOICE}
+  return `${BB_VOICE_IG}
 
 ${COMPLIANCE}
 
@@ -238,7 +304,7 @@ TOPIC FOR THIS DRAFT:
 - Angle: ${topic.angle || ''}
 - Primary keyword: ${topic.primary_keyword || ''}
 - Slide count: ${(topic.slides || []).length}
-- Source URL (cite in caption end-line): ${topic.source_url || '(none)'}
+- Source URL (mention briefly in deck caption): ${topic.source_url || '(none)'}
 
 PROPOSED SLIDE SEQUENCE (improve where you see fit, but keep slide_role + image_subject):
 ${slidesBrief}
@@ -246,22 +312,20 @@ ${slidesBrief}
 CAROUSEL RULES:
 - Slide 1 (lead_photo) hooks the eye — strong headline, real-photo subject.
 - Story flows slide-by-slide. Each slide stands alone if someone stops swiping.
-- Final slide is usually the CTA (cta role) — soft pointer to bitcoinbay.com or
-  a related blog post; never an aggressive sign-up push.
-- The overall caption (under-deck) tells the story end-to-end so even
-  non-swipers get it.
-- Each slide's headline ≤8 words; each slide's body_text ≤30 words.
+- Final slide is the CTA — soft pointer; never an aggressive sign-up push.
+- Each slide's headline ≤8 words; each slide's body_text ≤20 words.
+- Deck-level caption is SHORT (100-300 chars), not a 1200-char essay.
 
 Return STRICT JSON, exactly this shape, no markdown, no commentary:
 {
-  "caption": "deck-level caption shown under all slides. 600-1200 chars. Hook → context → key-insight → soft-CTA. Plain newlines for line breaks.",
-  "hashtags": ["10-15 lowercase IG hashtags, no #"],
+  "caption": "deck-level caption shown under all slides. 100-300 chars. Hype-fan voice. Hook → key-insight. Plain newlines for line breaks.",
+  "hashtags": ["5-7 lowercase IG hashtags, mix broad + specific, no #"],
   "slides": [
     {
       "slide_role": "lead_photo|secondary_photo|data_card|key_quote|cta",
       "image_subject": "exact visual subject for image lookup (string). FULL athlete names, no abbreviations. Avoid abstract verb-subjects.",
       "headline": "≤8-word on-image overlay text",
-      "body_text": "≤30 words — the alt-text/storytelling layer (not on the image, used for accessibility and dev preview)",
+      "body_text": "≤20 words — the alt-text/storytelling layer (not on the image, used for accessibility and dev preview)",
       "image_scene_prompt": "string|null — set ONLY when a real photo of this slide's exact moment is unlikely. Used for operator-triggered AI scene generation per-slide. Leave null when image_subject works.",
       "source_url": "string or null"
     }
@@ -316,7 +380,34 @@ function extractJSON(text) {
 }
 
 // ── DRAFT BUILDERS — convert Claude output + topic into a Mongo doc ──
-function buildTwitterDraft({ topic, briefDate, parsed, athleteCryptoPin, humorPass }) {
+
+// Parse one Twitter variant (meme or professional) into the variant subdoc shape.
+function buildTwitterVariant(kind, parsed, topic) {
+  return {
+    variant_kind: kind,
+    text: String(parsed.text || '').slice(0, 280),
+    hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 5) : [],
+    image_overlay_text: parsed.image_overlay_text || null,
+    image_scene_prompt: parsed.image_scene_prompt || null,
+    suggested_image_subject: parsed.suggested_image_subject || topic?.image_subject || null,
+    takeaway_one_liner: parsed.takeaway_one_liner || null,
+    source_url: parsed.source_url || topic?.source_url || null,
+  };
+}
+
+// Build a Twitter draft with a `variants` array. parsedByKind is a map
+// `{ meme: parsed_obj_or_null, professional: parsed_obj_or_null }`. The first
+// non-null variant becomes the active one; meme is preferred when both exist.
+function buildTwitterDraft({ topic, briefDate, parsedByKind, athleteCryptoPin, humorPass }) {
+  const variants = [];
+  for (const kind of ['meme', 'professional']) {
+    const parsed = parsedByKind?.[kind];
+    if (parsed) variants.push(buildTwitterVariant(kind, parsed, topic));
+  }
+  if (variants.length === 0) throw new Error('buildTwitterDraft: no parsed variants');
+  // active = meme if available, else the first parsed variant
+  const activeIdx = 0;
+  const active = variants[activeIdx];
   return {
     platform: 'twitter',
     brief_date: briefDate,
@@ -324,17 +415,22 @@ function buildTwitterDraft({ topic, briefDate, parsed, athleteCryptoPin, humorPa
     angle: topic.angle || '',
     format_hint: topic.format_hint || 'take',
     allow_humor: !!(topic.allow_humor || humorPass),
-    text: String(parsed.text || '').slice(0, 280),
-    hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 5) : [],
-    source_url: parsed.source_url || topic.source_url || null,
-    image_subject: parsed.suggested_image_subject || topic.image_subject || null,
-    image_overlay_text: parsed.image_overlay_text || null,
-    image_scene_prompt: parsed.image_scene_prompt || null,
+    // Top-level fields mirror the active variant for backward-compat with the
+    // approve/PATCH/render pipeline. /swap-variant flips which variant is
+    // mirrored to the top level.
+    text: active.text,
+    hashtags: active.hashtags,
+    source_url: active.source_url,
+    image_subject: active.suggested_image_subject,
+    image_overlay_text: active.image_overlay_text,
+    image_scene_prompt: active.image_scene_prompt,
     image_url: null,
     image_attribution: null,
     image_status: 'pending',
-    takeaway_one_liner: parsed.takeaway_one_liner || null,
+    takeaway_one_liner: active.takeaway_one_liner,
     athlete_crypto_pin: !!athleteCryptoPin,
+    variants,
+    active_variant_index: activeIdx,
     status: 'draft',
     created_at: new Date(),
     updated_at: new Date(),
@@ -411,18 +507,32 @@ async function runDrafter({ briefDate, dryRun = false } = {}) {
   const drafts = [];
 
   // ── Twitter (3 drafts; first one pinned to athlete-crypto if override active) ──
+  // Phase 6.2: each topic produces TWO variants in parallel — meme + professional.
+  // Operator can swap between them via the ⇄ button without re-prompting Claude.
   for (let i = 0; i < ppt.twitter.length; i++) {
     const topic = ppt.twitter[i];
     const isPin = forcedOverride && i === 0;
-    const prompt = buildPrompt('twitter', topic, { athleteCryptoPin: isPin });
-    const raw = await callClaude(prompt);
-    let parsed;
-    try { parsed = extractJSON(raw); }
-    catch (e) {
-      console.error(`[contentDrafter] twitter[${i}] JSON parse failed: ${e.message}`);
+    let memeRaw = null, profRaw = null;
+    try {
+      [memeRaw, profRaw] = await Promise.all([
+        callClaude(buildPrompt('twitter', topic, { athleteCryptoPin: isPin, voiceKind: 'meme' })),
+        callClaude(buildPrompt('twitter', topic, { athleteCryptoPin: isPin, voiceKind: 'professional' })),
+      ]);
+    } catch (e) {
+      console.error(`[contentDrafter] twitter[${i}] both variant calls failed: ${e.message}`);
       continue;
     }
-    drafts.push(buildTwitterDraft({ topic, briefDate: date, parsed, athleteCryptoPin: isPin }));
+    let memeParsed = null, profParsed = null;
+    try { if (memeRaw) memeParsed = extractJSON(memeRaw); }
+    catch (e) { console.error(`[contentDrafter] twitter[${i}] meme parse failed: ${e.message}`); }
+    try { if (profRaw) profParsed = extractJSON(profRaw); }
+    catch (e) { console.error(`[contentDrafter] twitter[${i}] professional parse failed: ${e.message}`); }
+    if (!memeParsed && !profParsed) continue;
+    drafts.push(buildTwitterDraft({
+      topic, briefDate: date,
+      parsedByKind: { meme: memeParsed, professional: profParsed },
+      athleteCryptoPin: isPin,
+    }));
   }
 
   // ── Instagram (single OR carousel) ──
@@ -514,9 +624,9 @@ async function regenerateDraft(draftId, opts = {}) {
   if (draft.platform === 'instagram_carousel' && Number.isInteger(slideIndex)) {
     const slide = (topic.slides || [])[slideIndex];
     if (!slide) throw new Error(`slide ${slideIndex} not in brief`);
-    const slidePrompt = `${BB_VOICE}\n${COMPLIANCE}\n\nRewrite ONE carousel slide for the deck topic:
+    const slidePrompt = `${BB_VOICE_IG}\n${COMPLIANCE}\n\nRewrite ONE carousel slide for the deck topic:
 "${draft.topic}". Slide role: ${slide.slide_role}. Subject hint: ${slide.image_subject}.
-Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "headline": "≤8 words", "body_text": "≤30 words", "image_scene_prompt": "string|null — set ONLY when a real photo of this moment is unlikely; used for operator-triggered AI generation"}`;
+Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "headline": "≤8 words", "body_text": "≤20 words", "image_scene_prompt": "string|null — set ONLY when a real photo of this moment is unlikely; used for operator-triggered AI generation"}`;
     const raw = await callClaude(slidePrompt, { maxTokens: 700 });
     const parsed = extractJSON(raw);
     const newSlides = [...(draft.slides || [])];
@@ -538,6 +648,42 @@ Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "he
 
   // Full-card regen
   const platform = draft.platform;
+
+  // Twitter draft with variants[] → regenerate ONLY the active variant.
+  // The other variant stays untouched so swap still works without a re-call.
+  if (platform === 'twitter' && Array.isArray(draft.variants) && draft.variants.length > 0) {
+    const activeIdx = Number.isInteger(draft.active_variant_index) ? draft.active_variant_index : 0;
+    const activeKind = draft.variants[activeIdx]?.variant_kind === 'professional'
+      ? 'professional' : 'meme';
+    const prompt = buildPrompt('twitter', topic, {
+      athleteCryptoPin: !!draft.athlete_crypto_pin,
+      humorPass,
+      voiceKind: activeKind,
+    });
+    const raw = await callClaude(prompt, { maxTokens: 3000 });
+    const parsed = extractJSON(raw);
+    const newVariant = buildTwitterVariant(activeKind, parsed, topic);
+    const newVariants = [...draft.variants];
+    newVariants[activeIdx] = newVariant;
+    await withDb((db) => db.collection(DRAFTS_COLL).updateOne(
+      { _id },
+      { $set: {
+        variants: newVariants,
+        // Mirror to top-level (since this is the active variant)
+        text: newVariant.text,
+        hashtags: newVariant.hashtags,
+        image_overlay_text: newVariant.image_overlay_text,
+        image_scene_prompt: newVariant.image_scene_prompt,
+        takeaway_one_liner: newVariant.takeaway_one_liner,
+        // image_subject stays — keeps the existing image stable across regens.
+        // Operator can change it via PATCH if they want a different photo.
+        updated_at: new Date(),
+      }}
+    ));
+    return { ok: true, draft_id: draftId, variant_kind: activeKind };
+  }
+
+  // Legacy / IG path — single-prompt regen, full draft replacement
   const prompt = buildPrompt(platform, topic, {
     athleteCryptoPin: !!draft.athlete_crypto_pin,
     humorPass,
@@ -549,8 +695,13 @@ Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "he
 
   let next;
   if (platform === 'twitter') {
-    next = buildTwitterDraft({ topic, briefDate: draft.brief_date, parsed,
-      athleteCryptoPin: !!draft.athlete_crypto_pin, humorPass });
+    // Legacy single-variant Twitter draft (no variants[]). Treat the regen as
+    // a fresh meme variant.
+    next = buildTwitterDraft({
+      topic, briefDate: draft.brief_date,
+      parsedByKind: { meme: parsed },
+      athleteCryptoPin: !!draft.athlete_crypto_pin, humorPass,
+    });
   } else if (platform === 'instagram_single') {
     next = buildInstagramSingleDraft({ topic, briefDate: draft.brief_date, parsed, humorPass });
   } else {
@@ -565,7 +716,12 @@ Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "he
   return { ok: true, draft_id: draftId };
 }
 
-module.exports = { runDrafter, regenerateDraft, BB_VOICE, COMPLIANCE };
+module.exports = {
+  runDrafter, regenerateDraft, COMPLIANCE,
+  BB_VOICE_BASE, BB_VOICE_TWITTER_MEME, BB_VOICE_TWITTER_PROFESSIONAL, BB_VOICE_IG,
+  // Backward-compat alias (== BB_VOICE_IG)
+  BB_VOICE,
+};
 
 // ── CLI ──
 if (require.main === module) {
