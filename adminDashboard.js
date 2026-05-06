@@ -37,12 +37,16 @@
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate        — re-prompt Claude (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/swap-variant      — flip Twitter draft active variant (meme ↔ professional) (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/generate-art      — Replicate InstantID AI scene gen (FULL, ~$0.05/call)
+//   POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — re-run image pipeline for the whole draft (FULL)
+//   POST /api/admin/dashboard/post-drafts/:id/add-cta-slide     — append a BB-branded CTA slide to a carousel (FULL)
+//   GET  /api/admin/dashboard/post-drafts/:id/zip               — stream ZIP of all carousel slide images (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/skip              — mark skipped (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/approve           — mark approved (Phase 7 wires publish) (FULL)
 //   POST /api/admin/dashboard/run-drafter                       — fire-and-forget drafter run (FULL)
 //
 // ---------------------------------------------------------------------------
 
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
@@ -829,6 +833,163 @@ router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requi
     console.error('[admin-dashboard] /post-drafts/generate-art error:', e.message);
     const code = /not found/i.test(e.message) ? 404 : 500;
     res.status(code).json({ success: false, error: e.message });
+  }
+});
+
+// Re-run the image pipeline for the entire draft. Use case: operator edited
+// slide subjects / overlay coords / colors and wants fresh composites without
+// re-prompting Claude for the deck text. Fire-and-forget — returns 202.
+router.post('/api/admin/dashboard/post-drafts/:id/regenerate-all-images', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const draft = await withDb((db) => db.collection(POST_DRAFTS).findOne({ _id: new ObjectId(id) }));
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    // Fire and forget — don't block the response
+    Promise.resolve()
+      .then(async () => {
+        const patch = await getImageRenderer().saveDraftImages(draft, { draftId: id });
+        await withDb((db) => db.collection(POST_DRAFTS).updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { ...patch, updated_at: new Date() } }
+        ));
+        await logAdminAction({
+          action: 'content-drafter:regenerate-all-images',
+          admin: req.admin?.user, draft_id: id,
+          slides_count: Array.isArray(patch.slides) ? patch.slides.length : null,
+        });
+      })
+      .catch((err) => console.error('[admin-dashboard] regenerate-all-images bg error:', err.message));
+    res.status(202).json({ success: true, accepted: true,
+      note: 'Image regeneration started. Poll /post-drafts in ~30s for fresh URLs.' });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/regenerate-all-images error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Append a BB-branded CTA slide to a carousel draft. Body:
+//   - headline?: string (default "Sharp picks. Bitcoin only.")
+//   - subhead?:  string (default "bitcoinbay.com")
+// Renders via composeBrandedCard (BB logo + headline + brand palette).
+// Caps the slides[] at 10 (Meta's hard limit; we typically cap at 5 in Claude
+// output but allow this manual extension up to 10).
+router.post('/api/admin/dashboard/post-drafts/:id/add-cta-slide', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const draft = await withDb((db) => db.collection(POST_DRAFTS).findOne({ _id: new ObjectId(id) }));
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    if (draft.platform !== 'instagram_carousel') {
+      return res.status(409).json({ success: false, error: 'CTA slide only valid on instagram_carousel drafts' });
+    }
+    const slides = Array.isArray(draft.slides) ? draft.slides : [];
+    if (slides.length >= 10) {
+      return res.status(409).json({ success: false, error: 'carousel already at max 10 slides' });
+    }
+
+    const headline = (req.body?.headline || 'Sharp picks. Bitcoin only.').toString().slice(0, 80);
+    const subhead = (req.body?.subhead || 'bitcoinbay.com').toString().slice(0, 80);
+
+    const date = draft.brief_date || new Date().toISOString().slice(0, 10);
+    const newIdx = slides.length;
+    const outPath = path.join(__dirname, 'public', 'post-images', date, id, `slide-${newIdx}.jpg`);
+    const composite = await getImageRenderer().composeBrandedCard({
+      headline, subhead, kind: 'promo', outPath,
+    });
+
+    const newSlide = {
+      slide_role: 'cta',
+      image_subject: 'Bitcoin Bay CTA',
+      headline,
+      body_text: subhead,
+      image_url: composite.url,
+      composite_url: composite.url,
+      image_attribution: composite.attribution,
+      image_source: 'branded',
+      source_url: null,
+      is_cta_slide: true,
+    };
+    const newSlides = [...slides, newSlide];
+
+    await withDb((db) => db.collection(POST_DRAFTS).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { slides: newSlides, updated_at: new Date() } }
+    ));
+    await logAdminAction({
+      action: 'content-drafter:add-cta-slide',
+      admin: req.admin?.user, draft_id: id, headline, subhead,
+    });
+    res.json({ success: true, slide_index: newIdx, slides_count: newSlides.length });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/add-cta-slide error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Stream a ZIP of all carousel slide JPEGs for one draft. Source files live
+// on the dyno's local filesystem under public/post-images/{date}/{id}/. Heads
+// up: Heroku's filesystem is ephemeral — files older than the last dyno
+// restart will be missing and the endpoint returns 404.
+router.get('/api/admin/dashboard/post-drafts/:id/zip', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const draft = await withDb((db) => db.collection(POST_DRAFTS).findOne({ _id: new ObjectId(id) }));
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    const slides = Array.isArray(draft.slides) ? draft.slides : [];
+    if (slides.length === 0) {
+      return res.status(400).json({ success: false, error: 'draft has no slides' });
+    }
+    const date = draft.brief_date || new Date().toISOString().slice(0, 10);
+    const dir = path.join(__dirname, 'public', 'post-images', date, id);
+
+    // Inventory which slide files exist on disk (prefer AI scene over composite)
+    const filesToZip = [];
+    for (let i = 0; i < slides.length; i++) {
+      const aiPath = path.join(dir, `slide-${i}-ai.jpg`);
+      const compositePath = path.join(dir, `slide-${i}.jpg`);
+      const filePath = fs.existsSync(aiPath) ? aiPath
+                     : (fs.existsSync(compositePath) ? compositePath : null);
+      if (filePath) filesToZip.push({ filePath, name: `slide-${i + 1}.jpg` });
+    }
+    if (filesToZip.length === 0) {
+      return res.status(404).json({ success: false,
+        error: 'no slide images found on disk (dyno restart wiped them — re-render via 🔁 Regen all images)' });
+    }
+
+    const archiver = require('archiver');
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (err) => {
+      console.error('[admin-dashboard] ZIP archive error:', err.message);
+      try { res.status(500).end(); } catch (_) {}
+    });
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="bbay-${id}-slides.zip"`);
+    archive.pipe(res);
+    for (const f of filesToZip) archive.file(f.filePath, { name: f.name });
+    await archive.finalize();
+
+    await logAdminAction({
+      action: 'content-drafter:zip-download',
+      admin: req.admin?.user, draft_id: id, slides_count: filesToZip.length,
+    });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/zip error:', e.message);
+    if (!res.headersSent) res.status(500).json({ success: false, error: e.message });
   }
 });
 

@@ -497,5 +497,210 @@ test('POST /post-drafts/:id/generate-art — full-role passes auth+validation, f
   }
 });
 
+// ---------------------------------------------------------------------------
+// /swap-variant — Phase 6.2 — flips Twitter draft active variant
+// ---------------------------------------------------------------------------
+test('POST /post-drafts/:id/swap-variant — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/swap-variant`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/swap-variant — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/swap-variant`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('dashboard'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/swap-variant — 400 invalid ObjectId', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/post-drafts/banana/swap-variant', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /invalid id/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/swap-variant — full-role passes auth, fails at Mongo', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/swap-variant`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 500);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
+// /regenerate-all-images — Phase 6.4 — re-runs imageRenderer.saveDraftImages
+// ---------------------------------------------------------------------------
+test('POST /post-drafts/:id/regenerate-all-images — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/regenerate-all-images`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/regenerate-all-images — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/regenerate-all-images`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('dashboard'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/regenerate-all-images — 400 invalid ObjectId', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/post-drafts/banana/regenerate-all-images', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/regenerate-all-images — full-role passes auth, fails at Mongo', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/regenerate-all-images`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 500);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
+// /add-cta-slide — Phase 6.4 — appends a BB-branded CTA slide
+// ---------------------------------------------------------------------------
+test('POST /post-drafts/:id/add-cta-slide — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/add-cta-slide`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/add-cta-slide — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/add-cta-slide`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('dashboard'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/add-cta-slide — 400 invalid ObjectId', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/post-drafts/banana/add-cta-slide', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/add-cta-slide — full-role passes auth, fails at Mongo', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/add-cta-slide`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { headline: 'test', subhead: 'test' },
+    });
+    assert.equal(r.status, 500);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
+// /zip — Phase 6.5 — streams ZIP of slide JPEGs
+// ---------------------------------------------------------------------------
+test('GET /post-drafts/:id/zip — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/zip`);
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('GET /post-drafts/:id/zip — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/zip`, {
+      headers: { Cookie: cookieFor('dashboard') },
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('GET /post-drafts/:id/zip — 400 invalid ObjectId', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/post-drafts/banana/zip', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('GET /post-drafts/:id/zip — full-role passes auth, fails at Mongo', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/zip`, {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 500);
+  } finally { await stopServer(server); }
+});
+
 // Restore stderr in case other suites need it
 test.after(() => { console.error = _origErr; });

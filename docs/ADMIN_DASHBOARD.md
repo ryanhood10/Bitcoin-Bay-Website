@@ -98,9 +98,13 @@ POST /api/admin/dashboard/bonus-report        — role: full  → upsert one wee
 GET  /admin/dashboard/content                            — role: full  → content drafts review/approve HTML
 GET  /api/admin/dashboard/post-briefs/latest             — any admin   → today's brief metadata
 GET  /api/admin/dashboard/post-drafts?date=&platform=&status= — any admin → list draft posts
-PATCH /api/admin/dashboard/post-drafts/:id               — role: full  → edit text/caption/hashtags/slides/image_url/image_overlay_text/image_scene_prompt
-POST /api/admin/dashboard/post-drafts/:id/regenerate     — role: full  → re-prompt Claude (body: { humor_pass?, slide_index?, new_angle? })
+PATCH /api/admin/dashboard/post-drafts/:id               — role: full  → edit text/caption/hashtags/slides/image_url/image_overlay_text/image_scene_prompt (slides may include overlay_x/overlay_y/overlay_color per slide for the drag editor)
+POST /api/admin/dashboard/post-drafts/:id/regenerate     — role: full  → re-prompt Claude (body: { humor_pass?, slide_index?, new_angle? }); for Twitter drafts with `variants[]`, regenerates only the active variant
+POST /api/admin/dashboard/post-drafts/:id/swap-variant   — role: full  → flip Twitter draft between meme + professional variants (no Claude call; both pre-generated)
 POST /api/admin/dashboard/post-drafts/:id/generate-art   — role: full  → Replicate InstantID AI scene generation (~$0.05/call, audit-logged; 503 if REPLICATE_API_TOKEN unset)
+POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — role: full  → re-runs imageRenderer.saveDraftImages on the draft; fire-and-forget (202)
+POST /api/admin/dashboard/post-drafts/:id/add-cta-slide  — role: full  → append a BB-branded CTA slide to a carousel (body: { headline?, subhead? }); cap 10 slides
+GET  /api/admin/dashboard/post-drafts/:id/zip            — role: full  → stream a ZIP attachment of all carousel slide JPEGs
 POST /api/admin/dashboard/post-drafts/:id/skip           — role: full  → mark skipped + reason
 POST /api/admin/dashboard/post-drafts/:id/approve        — role: full  → mark approved (Phase 7 will wire publish)
 POST /api/admin/dashboard/run-drafter                    — role: full  → fire-and-forget contentDrafter run, returns 202
@@ -167,6 +171,39 @@ function body for tuning (`num_inference_steps`, `guidance_scale`,
 `POST /api/admin/dashboard/post-drafts/:id/generate-art` is the only caller;
 runDrafter does NOT auto-trigger AI generation (operator-only). Cost per call
 is estimated at $0.05 and logged to `bcb_admin_log` for spend tracking.
+
+### Carousel layout editor (Phase 6.4)
+
+Each slide in a carousel renders an `.overlay-canvas` containing the
+composite image plus a draggable `.overlay-headline` HTML element overlaid
+on top. The operator can:
+
+1. **Drag the headline** anywhere within the canvas — coords saved as
+   percentages 0–100 in the slide's `overlay_x` / `overlay_y` fields.
+2. **Pick a headline color** via 4 BB-palette swatches (white, gold, orange,
+   accent green) or a native `<input type="color">` for arbitrary hex.
+3. **Click "💾 Save layout"** — PATCHes the new `slides[]` then triggers
+   `POST /regenerate-all-images` (fire-and-forget; UI re-polls in 30s).
+
+Server-side, `imageRenderer.composeOverlayCard` accepts optional
+`overlayX`, `overlayY`, `overlayColor` params; when present, the SVG
+overlay is anchored at that point with a stroke-shadow for readability
+(no gradient). When absent, the default bottom-left layout with a darken
+gradient is used (existing behavior).
+
+### Carousel CTA slide
+
+The "➕ Add BB CTA slide" button calls `POST /add-cta-slide` which
+appends a new slide to the carousel using `composeBrandedCard` (BB logo
++ headline + subhead + brand-palette gradient + bitcoinbay.com footer).
+The new slide has `slide_role: 'cta'` and `is_cta_slide: true` for UI
+distinction. Operator picks the headline + subhead via a prompt dialog;
+the rest is the same template every time.
+
+The CTA slide is the ONLY place BB branding appears on regular content
+posts. Real-photo overlay slides stay clean (no watermark). This was an
+explicit operator decision — branded watermarks on regular posts hurt
+social-media reach.
 
 ## Common gotchas
 

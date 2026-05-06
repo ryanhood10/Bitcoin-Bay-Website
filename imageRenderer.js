@@ -475,7 +475,7 @@ function wrapHeadline(text, charBudget, maxLines = 2) {
   return lines;
 }
 
-function overlaySVG({ width, height, headline, badgeKind }) {
+function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, overlayColor }) {
   const badgeMap = {
     breaking:           { text: 'BREAKING',          color: BB_PALETTE.accentGreen },
     live:               { text: 'LIVE',              color: BB_PALETTE.orange },
@@ -484,7 +484,6 @@ function overlaySVG({ width, height, headline, badgeKind }) {
   const badge = badgeMap[badgeKind];
 
   // Adaptive font sizing: shrink on long headlines so they don't clip the edge.
-  // Char budget ≈ how many chars fit at this font size at this width.
   const headlineLen = String(headline || '').length;
   let fontSize, charBudget, maxLines;
   if (headlineLen <= 22)      { fontSize = Math.round(width / 16); charBudget = 22; maxLines = 1; }
@@ -492,31 +491,48 @@ function overlaySVG({ width, height, headline, badgeKind }) {
   else                        { fontSize = Math.round(width / 28); charBudget = 36; maxLines = 3; }
   const lines = wrapHeadline(headline, charBudget, maxLines);
   const lineHeight = Math.round(fontSize * 1.1);
-  // Anchor the LAST line at headlineY; earlier lines stack above
-  const headlineY = height - 80;
+
+  // Custom position via Phase 6.4 drag editor: overlayX, overlayY are 0-100
+  // percentages relative to width/height. Default is anchored bottom-left.
+  // overlayColor (#hex) overrides the white text color.
+  const useCustomPos = Number.isFinite(overlayX) && Number.isFinite(overlayY);
+  const headlineX = useCustomPos ? Math.round((Math.max(0, Math.min(100, overlayX)) / 100) * width) : 60;
+  const headlineY = useCustomPos ? Math.round((Math.max(0, Math.min(100, overlayY)) / 100) * height) : (height - 80);
+  const fillColor = (typeof overlayColor === 'string' && /^#[0-9a-f]{3,8}$/i.test(overlayColor))
+    ? overlayColor : BB_PALETTE.textPrimary;
+
+  // Custom positions get a stroke shadow (paint-order="stroke") so text stays
+  // readable against any background. Default position relies on the gradient.
+  const strokeAttrs = useCustomPos
+    ? `stroke="${BB_PALETTE.bgDark}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round"`
+    : '';
+
   const tspans = lines.map((ln, i) => {
     const y = headlineY - (lines.length - 1 - i) * lineHeight;
-    return `<text x="60" y="${y}" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="${BB_PALETTE.textPrimary}">${escapeXml(ln)}</text>`;
+    return `<text x="${headlineX}" y="${y}" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="${fillColor}" ${strokeAttrs}>${escapeXml(ln)}</text>`;
   }).join('\n    ');
-  // Resize gradient to cover the headline block
-  const gradientStartY = Math.round(headlineY - lines.length * lineHeight - 20);
 
-  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
+  // Gradient only renders for default (bottom-anchored) overlays. Custom-
+  // positioned headlines rely on the stroke for contrast.
+  const gradientStartY = Math.round(headlineY - lines.length * lineHeight - 20);
+  const gradient = useCustomPos ? '' : `<defs>
       <linearGradient id="darken" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="${BB_PALETTE.bgDark}" stop-opacity="0"/>
         <stop offset="60%" stop-color="${BB_PALETTE.bgDark}" stop-opacity="0.20"/>
         <stop offset="100%" stop-color="${BB_PALETTE.bgDark}" stop-opacity="0.94"/>
       </linearGradient>
     </defs>
-    <rect x="0" y="${Math.max(0, gradientStartY)}" width="100%" height="${height - Math.max(0, gradientStartY)}" fill="url(#darken)"/>
+    <rect x="0" y="${Math.max(0, gradientStartY)}" width="100%" height="${height - Math.max(0, gradientStartY)}" fill="url(#darken)"/>`;
+
+  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    ${gradient}
     ${badge ? `<rect x="60" y="60" rx="6" ry="6" width="${Math.max(180, badge.text.length * 16 + 30)}" height="42" fill="${badge.color}"/>
        <text x="${75}" y="92" font-family="Inter,Helvetica,Arial,sans-serif" font-size="22" font-weight="800" fill="${BB_PALETTE.bgDark}">${escapeXml(badge.text)}</text>` : ''}
     ${tspans}
   </svg>`;
 }
 
-async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080 }) {
+async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor }) {
   if (!imageUrl) throw new Error('composeOverlayCard requires imageUrl');
   // Download the source image (can be remote)
   const srcRes = await fetch(imageUrl, { signal: TIMEOUT(20000) });
@@ -526,8 +542,8 @@ async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targ
   const baseBuf = await sharp(srcBuf)
     .resize(targetW, targetH, { fit: 'cover', position: 'center' })
     .toBuffer();
-  // Compose overlay SVG on top
-  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind });
+  // Compose overlay SVG on top (with optional custom position + color)
+  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind, overlayX, overlayY, overlayColor });
   const composed = sharp(baseBuf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]);
   await ensureDir(path.dirname(outPath));
   await composed.jpeg({ quality: 88 }).toFile(outPath);
@@ -622,7 +638,9 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
           console.warn(`[imageRenderer] slide ${i} branded composite failed: ${e.message}`);
         }
       }
-      // Real-photo path — intent auto-inferred from slide subject
+      // Real-photo path — intent auto-inferred from slide subject.
+      // Overlay coords + color come from the slide if the operator dragged
+      // them via the Phase 6.4 layout editor; absent → default bottom-left/white.
       const hit = await findHeroImage(s.image_subject);
       let composite = null;
       if (hit?.url) {
@@ -633,6 +651,9 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
             headline: s.headline || '',
             badgeKind: i === 0 ? (draft.angle?.toLowerCase().includes('athlete') ? 'athlete_x_crypto' : 'breaking') : null,
             outPath,
+            overlayX: Number.isFinite(s.overlay_x) ? s.overlay_x : undefined,
+            overlayY: Number.isFinite(s.overlay_y) ? s.overlay_y : undefined,
+            overlayColor: typeof s.overlay_color === 'string' ? s.overlay_color : undefined,
           });
         } catch (e) {
           console.warn(`[imageRenderer] slide ${i} composite failed: ${e.message}`);

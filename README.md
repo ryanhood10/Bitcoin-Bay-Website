@@ -27,7 +27,7 @@ betting backend at **wager.bitcoinbay.com**.
 npm install
 cp .env.example .env             # fill in real values
 node server.js                   # http://localhost:8800
-npm test                         # 97 tests, ~1s
+npm test                         # 113 tests, ~1s
 ```
 
 ## Deploy
