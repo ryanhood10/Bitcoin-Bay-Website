@@ -1,5 +1,10 @@
 # Bitcoin Bay Redesign — Cutover Status
 
+> **Status: historical artifact.** The 2025 redesign cutover is long-merged
+> and deployed. This doc is kept for reference; the URL table below
+> reflects the state right before the cut, not the current site. For the
+> live architecture, see [CLAUDE.md](CLAUDE.md).
+
 ## Current state — CUTOVER COMPLETE LOCALLY (not yet deployed)
 
 The new design is now wired to the live URLs. Old pages are kept on disk and reachable via `/legacy/*` for rollback. Heroku has not been touched.

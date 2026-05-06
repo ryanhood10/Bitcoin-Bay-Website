@@ -1,5 +1,10 @@
 # Bitcoin Bay Redesign — Handoff to Claude Code
 
+> **Status: historical artifact.** This doc captures the handoff for the
+> 2025 marketing-site redesign port. That work is long-merged and live; the
+> file/route/cutover details below are kept for reference only. For
+> ongoing architecture, start with [CLAUDE.md](CLAUDE.md).
+
 ## Should you move this work to Claude Code? **Yes, for the next phase.**
 
 The Cowork session was a good fit for the *integration* phase: porting HTML files, wiring forms, fixing route handlers, and writing the cutover plan. All of that is done and verified.

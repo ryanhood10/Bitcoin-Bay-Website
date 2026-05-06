@@ -5,32 +5,51 @@ Internal analytics dashboard at `/admin/dashboard`. Ported from the Flask
 cloudflared tunnel. Now lives inside the bitcoinbay.com Express app and
 shares its admin auth.
 
-## The 4 files
+## The files
 
 | File | Role |
 |---|---|
 | `adminAuth.js` | Shared auth module — cookie signing/verifying, `requireAdmin(role)` middleware factory, Mongo admin lookup, bcrypt password compare. Used by both `/admin/messages` and `/admin/dashboard`. |
-| `adminDashboard.js` | Express router: serves the HTML at `/admin/dashboard`, all `/api/admin/dashboard/*` JSON endpoints, plus `/api/admin/dashboard/me` (identity). |
+| `adminDashboard.js` | Express router: serves the HTML at `/admin/dashboard`, all `/api/admin/dashboard/*` JSON endpoints (analytics + engagement + bonus + post-drafts), plus `/api/admin/dashboard/me` (identity). |
 | `authInstagram.js` | Express router for IG OAuth (`/auth/instagram/connect`, `/callback`, `/status`) and the scrape-session cookie install page (`/auth/instagram/scrape-session`). |
+| `contentDrafter.js` | Phase 3+ — daily X + IG post drafter. Reads `bcb_post_briefs` (Pi-written), runs three Claude prompts (twitter / instagram_single / instagram_carousel), writes `bcb_post_drafts`. CLI: `node contentDrafter.js --date YYYY-MM-DD [--dry-run]`. Lazy-loaded by `adminDashboard.js`. |
+| `imageRenderer.js` | Phase 4+ — real-photo cascade (Wikimedia → Unsplash → Pexels) with intent-aware source ordering and off-topic Pexels rejection. BB-branded `sharp` SVG composites for promo subjects. Optional Replicate InstantID AI scene generation (operator-triggered via 🎨 button). Public helpers: `findHeroImage`, `findCarouselImages`, `composeBrandedCard`, `composeOverlayCard`, `saveDraftImages`, `generateAIScene`, `inferIntent`, `isBBSubject`. |
 | `views/admin-dashboard.html` | Single-page dashboard. All HTML + CSS + JS inline. Talks only to `/api/admin/dashboard/*` and `/auth/instagram/status`. |
+| `views/content-drafts.html` | Phase 5+ — single-page review/approve UI for daily X + IG drafts. Served at `/admin/dashboard/content` (full-role only). Per-card edit, regenerate, funny-twist, 🎨 generate-scene, skip, approve. Per-slide editor for IG carousels. |
 | `views/bonus-calculator.html` | Stand-alone weekly-leaderboard tool served at `/admin/dashboard/bonus-calculator` (full-role only). XLSX upload + bonus math runs entirely client-side via SheetJS; only the final top-10 payload POSTs to `/api/admin/dashboard/bonus-report`. |
 
 Plus `scripts/manage-admins.js` — CLI to add/list/remove/set-password/set-role
 on Mongo-stored admins. See [ADMIN_ROLES.md](ADMIN_ROLES.md).
 
+For the content-drafter feature in detail, see
+[CONTENT_CREATION_HANDOFF.md](CONTENT_CREATION_HANDOFF.md) +
+[CONTENT_CREATION_PLAN.md](CONTENT_CREATION_PLAN.md).
+
 ## Data flow (at 10,000 ft)
 
 ```
-Raspberry Pi (cron)                Heroku (this app)            User's browser
-─────────────────────              ─────────────────            ──────────────
-bcbay_daily_report.py      ─┐
-bcbay_twitter_engagement.py ─┼─► Mongo Atlas ◄──── adminDashboard.js ───► admin-dashboard.html
-bcbay_instagram_engagement.py ─┘  (bcbay_automation db)     (Express routes)     (fetch /api/admin/dashboard/*)
-bcbay_run_jobs_poller.py   ◄── drains bcb_run_jobs ◄── POST /.../run
+Raspberry Pi (cron)                Heroku (this app)              User's browser
+─────────────────────              ─────────────────              ──────────────
+bcbay_daily_report.py        ─┐
+bcbay_twitter_engagement.py  ─┼──► Mongo Atlas ◄── adminDashboard.js ──► admin-dashboard.html
+bcbay_instagram_engagement.py─┤   (bcbay_automation)  (Express)            (analytics SPA)
+bcbay_research.py            ─┘                                         ┐
+                                  contentDrafter.js writes ────────────┼──► content-drafts.html
+                                  bcb_post_drafts ◄── reads brief from │   (operator review/approve SPA)
+                                  bcb_post_briefs                      │
+                                  imageRenderer.js renders/composites ─┤
+                                  generateAIScene → Replicate (opt-in) ┘
+bcbay_run_jobs_poller.py     ◄── drains bcb_run_jobs ◄── POST /.../run
 ```
 
-Pi writes. Heroku reads. Dashboard UI renders. One Mongo cluster
-(`bcbay_automation` database) is the contract between them.
+Pi writes the daily research brief + engagement-side reply drafts. Heroku
+runs the post drafter on top of the brief and serves both review surfaces.
+One Mongo cluster (`bcbay_automation` database) is the contract between them.
+
+External services touched only by Heroku:
+- **Anthropic Claude API** — `contentDrafter.js` for X/IG post drafting
+- **Wikimedia Commons / Pexels / Unsplash** — `imageRenderer.js` real-photo cascade
+- **Replicate (InstantID)** — `imageRenderer.generateAIScene`, operator-triggered only via the dashboard 🎨 button (~$0.05/call, audit-logged)
 
 ## Mongo collections
 
@@ -47,7 +66,9 @@ All in the `bcbay_automation` database.
 | `bcb_run_jobs` | "Run now" job queue | `adminDashboard.js` POSTs, Pi poller consumes |
 | `bcb_messages` / `bcb_thread_state` / `bcb_player_info` | player messaging | `messagesSync.js` (separate subsystem) |
 | `weekly_leaderboard` | one doc per `{week_start, week_end}`; `bonuses[]` = top 10 `{rank, account}`; read by the public `/leaderboard` page | `views/bonus-calculator.html` → POST `/api/admin/dashboard/bonus-report` (full-role only) |
-| `bcb_admin_log` | every admin action (login, reply, resolve, bonus-report save) | `adminMessages.js` + `adminDashboard.js` |
+| `bcb_post_briefs` | one doc per `date` (YYYY-MM-DD); `per_platform_topics.twitter[]`, `per_platform_topics.instagram` (single OR carousel-with-slides), plus the broader research blob | `bcbay_research.py` (Pi, nightly) |
+| `bcb_post_drafts` | per-platform post drafts (twitter / instagram_single / instagram_carousel). Lifecycle: `draft` → `approved` → `posted`/`skipped`. Carries text, hashtags, image_subject, image_overlay_text, image_scene_prompt, image_url, slides[] | `contentDrafter.js` writes; PATCH/regenerate/skip/approve/generate-art via `adminDashboard.js` |
+| `bcb_admin_log` | every admin action (login, reply, resolve, bonus-report save, content-drafter run/regenerate/generate-art/skip/approve) | `adminMessages.js` + `adminDashboard.js` |
 
 Passwords are projected OUT of `bcb_signups` reads. Never logged.
 
@@ -73,6 +94,16 @@ POST /api/admin/dashboard/instagram-drafts/run
 GET  /admin/dashboard/bonus-calculator        — role: full  → bonus calculator HTML page
 GET  /api/admin/dashboard/bonus-reports       — role: full  → last N saved weekly leaderboards
 POST /api/admin/dashboard/bonus-report        — role: full  → upsert one weekly leaderboard
+
+GET  /admin/dashboard/content                            — role: full  → content drafts review/approve HTML
+GET  /api/admin/dashboard/post-briefs/latest             — any admin   → today's brief metadata
+GET  /api/admin/dashboard/post-drafts?date=&platform=&status= — any admin → list draft posts
+PATCH /api/admin/dashboard/post-drafts/:id               — role: full  → edit text/caption/hashtags/slides/image_url/image_overlay_text/image_scene_prompt
+POST /api/admin/dashboard/post-drafts/:id/regenerate     — role: full  → re-prompt Claude (body: { humor_pass?, slide_index?, new_angle? })
+POST /api/admin/dashboard/post-drafts/:id/generate-art   — role: full  → Replicate InstantID AI scene generation (~$0.05/call, audit-logged; 503 if REPLICATE_API_TOKEN unset)
+POST /api/admin/dashboard/post-drafts/:id/skip           — role: full  → mark skipped + reason
+POST /api/admin/dashboard/post-drafts/:id/approve        — role: full  → mark approved (Phase 7 will wire publish)
+POST /api/admin/dashboard/run-drafter                    — role: full  → fire-and-forget contentDrafter run, returns 202
 
 GET  /auth/instagram/connect            — role: full  → 302 to Instagram OAuth
 GET  /auth/instagram/callback           — public (IDP redirects here); state-checked
@@ -108,6 +139,34 @@ Wrap the Express route with `adminAuth.requireAdmin('full')` (full-only) or
 `adminAuth.requireAdmin()` (any admin). Client-side: call
 `canAccessMessages()` from the dashboard's inline JS — it returns true iff
 `CURRENT_ADMIN.role === 'full'`.
+
+### Add a new content-drafter prompt or platform
+
+1. **`contentDrafter.js`** — add a new `build<Platform>Prompt` function
+   modeled on `buildTwitterPrompt` / `buildInstagramSinglePrompt`. Add the
+   platform string to the `buildPrompt` router. Add a corresponding
+   `build<Platform>Draft` builder so the parsed JSON lands in `bcb_post_drafts`
+   with the right shape.
+2. **Pi side (`bcbay_research.py`)** — extend `per_platform_topics` to
+   include the new platform's topic stream.
+3. **`views/content-drafts.html`** — add a `render<Platform>Card` function
+   modeled on the existing `renderTwitterCard` / `renderInstagramSingleCard`.
+   Wire it into `loadDrafts()`'s column rendering.
+4. **`imageRenderer.js`** — usually no change needed; `saveDraftImages` is
+   shape-agnostic.
+5. **Tests** — extend `tests/admin-content.test.js` for any new endpoint
+   variants. Helpers in `imageRenderer.js` already covered by
+   `tests/image-renderer.test.js`.
+
+### Tweak the AI scene-generation behavior
+
+`imageRenderer.generateAIScene` is a single function — change the model via
+`BCBAY_REPLICATE_MODEL` env override, or edit the input object in the
+function body for tuning (`num_inference_steps`, `guidance_scale`,
+`negative_prompt`). The endpoint at
+`POST /api/admin/dashboard/post-drafts/:id/generate-art` is the only caller;
+runDrafter does NOT auto-trigger AI generation (operator-only). Cost per call
+is estimated at $0.05 and logged to `bcb_admin_log` for spend tracking.
 
 ## Common gotchas
 

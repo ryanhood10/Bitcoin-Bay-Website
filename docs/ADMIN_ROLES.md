@@ -7,13 +7,18 @@ single-admin setup.
 
 | Role | Access |
 |---|---|
-| `full` | `/admin/messages` (player tickets) + `/admin/dashboard` + `/auth/instagram/*` |
-| `dashboard` | `/admin/dashboard` only |
+| `full` | `/admin/messages` (player tickets) + `/admin/dashboard` + `/admin/dashboard/bonus-calculator` + `/admin/dashboard/content` + `/auth/instagram/*` + all write endpoints (engagement-drafts PATCH, post-drafts PATCH/regenerate/generate-art/skip/approve, bonus-report POST) |
+| `dashboard` | `/admin/dashboard` (analytics page only) + read-only endpoints (`/api/admin/dashboard/report`, `/post-drafts` GET, `/post-briefs/latest` GET, etc.) |
 
 Role is determined at login and baked into the signed cookie. Middleware
 `adminAuth.requireAdmin('full')` returns 403 for `dashboard` users. The
-dashboard UI additionally hides buttons that link into `/admin/messages`
-(via the `canAccessMessages()` helper).
+dashboard UI additionally hides buttons that link into `/admin/messages` and
+`/admin/dashboard/content` (via the `canAccessMessages()` helper and
+role-gated link rendering).
+
+Cost-bearing routes that hit paid APIs (Anthropic, Replicate) are all
+gated as `full`-role only — a `dashboard`-role admin cannot trigger
+spend even by hitting URLs directly.
 
 ## Where admins live
 
