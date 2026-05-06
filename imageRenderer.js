@@ -1,0 +1,550 @@
+// ---------------------------------------------------------------------------
+// imageRenderer.js — pulls real editorial photos for post drafts and
+// composes BB-branded SVG cards for promo content.
+//
+// Strategy (cascade, in priority order):
+//   1. Wikimedia Commons  — CC/PD athletes, teams, stadiums, leagues, crypto
+//      (port of ~/bcbay/bcbay_blog.py:fetch_wikimedia_image — same scoring
+//      logic, same subject-name guard, same good/bad keyword lists)
+//   2. Pexels API         — broader sports/lifestyle/abstract editorial,
+//      free for commercial use, attribution rendered into IG captions
+//   3. (future) Unsplash  — placeholder; activates if UNSPLASH_ACCESS_KEY set
+//   4. Manual paste       — handled in the dashboard, not here
+//   5. Branded composite  — for format_hint='branded_promo' + CTA slides
+//      (BB logo + headline + brand-palette gradient via sharp)
+//   6. (opt-in) FLUX      — per-card "Generate art" button, not default
+//
+// All non-branded images carry an `attribution` string that the IG caption
+// renders as "Photo: {credit} / {license}". X drops it (280 char limit).
+//
+// Generated images for IG publish are saved to:
+//   public/post-images/{date}/{draft_id}[/{slide_index}].jpg
+// served by express.static('public') so the IG Graph API can pull them.
+//
+// Public exports:
+//   findHeroImage(subject, { intent? })
+//   findCarouselImages(slides)                   // distinct subjects per slide
+//   composeBrandedCard({ headline, subhead?, kind, outPath })
+//   composeOverlayCard({ imageUrl, headline, badgeKind?, outPath })
+//   saveDraftImages(draft, { dateDir, draftId }) — full pipeline for one draft
+//   BB_PALETTE                                   // brand color const
+// ---------------------------------------------------------------------------
+
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+// Use native fetch (Node 18+). The `node-fetch` v3 dep is ESM-only and would
+// require dynamic import; native fetch is identical for our needs.
+const TIMEOUT = (ms) => AbortSignal.timeout(ms);
+
+// ── BB BRAND PALETTE — extracted from index.html :root ──
+const BB_PALETTE = {
+  gold:        '#F7941D',
+  goldLight:   '#FDCB6E',
+  goldDark:    '#D47812',
+  orange:      '#F26522',
+  bgDark:      '#0A1628',
+  bgCard:      '#0D2240',
+  bgSurface:   '#163060',
+  accentBlue:  '#56CCF2',
+  accentGreen: '#22C55E',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#B0C4DE',
+  textMuted:   '#6B8DB5',
+};
+
+const PUBLIC_DIR = path.join(__dirname, 'public', 'post-images');
+const LOGO_PATH = path.join(__dirname, 'bb-logo.png');
+const WIKIMEDIA_USER_AGENT = 'BitcoinBay-ContentDrafter/1.0 (https://bitcoinbay.com; ops@bitcoinbay.com)';
+const WIKIMEDIA_MIN_SCORE = 3;
+
+// ── WIKIMEDIA SCORING KEYWORDS (port from bcbay_blog.py) ──
+const WIKI_GOOD_KEYWORDS = [
+  'portrait','headshot','press','official','official photo',
+  'pose','posing','closeup','close-up','close up',
+  'nba','nfl','mlb','nhl','mls','ufc','fifa',
+  'basketball','football','baseball','hockey','soccer',
+  'stadium','arena','court','pitch','field',
+  'photograph','photo of','profile','individual',
+  'ceo','president','founder','director','senator',
+  'keynote','conference','speech','speaking',
+];
+const WIKI_BAD_KEYWORDS = [
+  'party','drinking','beer','wine','drunk','beach party',
+  'group','crowd','fans','audience','spectators','selfie',
+  'event','event photo','gala',
+  'family','wife','husband','kids','children','baby',
+  'funeral','memorial','hospital','injured',
+  'meme','parody','cartoon','illustration','drawing','fan art',
+  'protest','riot','arrest','mugshot','courtroom',
+  'costume','halloween','cosplay',
+  'monument','statue','plaque','gravestone',
+  'graffiti','street art','mural',
+  'map','flag','coat of arms','logo',
+  'bird','animal','insect','flower','plant','landscape','starling',
+  'butterfly','fish','wildlife','nature','sunset','sunrise',
+];
+
+// ── HELPERS ──
+function stripHtml(s) {
+  return String(s || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function slugify(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+async function ensureDir(p) {
+  await fs.promises.mkdir(p, { recursive: true });
+}
+
+// ── WIKIMEDIA SEARCH ──
+function scoreWikimediaResult(result, subject) {
+  const haystack = [result.title, result.description, result.object_name].join(' ').toLowerCase();
+  const subjectWords = (String(subject || '').match(/[A-Za-z]+/g) || [])
+    .filter((w) => w.length >= 3)
+    .map((w) => w.toLowerCase());
+  if (subjectWords.length === 0) return -999;
+  const nameHits = subjectWords.filter((w) => haystack.includes(w)).length;
+  if (nameHits === 0) return -999;
+  if (subjectWords.length >= 2 && nameHits < 2) return -999;
+  let score = nameHits;
+  for (const kw of WIKI_GOOD_KEYWORDS) if (haystack.includes(kw)) score += 1;
+  for (const kw of WIKI_BAD_KEYWORDS) if (haystack.includes(kw)) score -= 2;
+  const w = result.width || 0, h = result.height || 0;
+  if (w && h) {
+    if (w >= h) score += 1;
+    if (w >= 1200 && h >= 800) score += 1;
+  }
+  return score;
+}
+
+async function wikimediaSearch(subject, { limit = 15 } = {}) {
+  if (!subject) return [];
+  try {
+    const searchUrl = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({
+      action: 'query', format: 'json', list: 'search',
+      srsearch: subject, srnamespace: '6', srlimit: String(limit),
+    }).toString();
+    const res = await fetch(searchUrl, { headers: { 'User-Agent': WIKIMEDIA_USER_AGENT }, signal: TIMEOUT(15000) });
+    const data = await res.json();
+    const hits = data?.query?.search || [];
+    if (!hits.length) return [];
+
+    const titles = hits.map((h) => h.title).join('|');
+    const infoUrl = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams({
+      action: 'query', format: 'json', titles,
+      prop: 'imageinfo', iiprop: 'url|extmetadata|size|mime', iiurlwidth: '1600',
+    }).toString();
+    const res2 = await fetch(infoUrl, { headers: { 'User-Agent': WIKIMEDIA_USER_AGENT }, signal: TIMEOUT(15000) });
+    const info = await res2.json();
+    const pages = info?.query?.pages || {};
+
+    const results = [];
+    for (const page of Object.values(pages)) {
+      const ii = (page.imageinfo || [])[0] || {};
+      if (!['image/jpeg', 'image/png'].includes(ii.mime)) continue;
+      const width = ii.width || 0, height = ii.height || 0;
+      if (width < 800 || height < 450) continue;
+      if (height > width * 1.5) continue; // skip wildly vertical
+      const ext = ii.extmetadata || {};
+      const license = (ext.LicenseShortName || {}).value || '';
+      const llower = license.toLowerCase();
+      if (['fair use', 'non-free', 'copyright'].some((bad) => llower.includes(bad))) continue;
+      const artist = stripHtml((ext.Artist || {}).value || '');
+      const description = stripHtml((ext.ImageDescription || {}).value || '');
+      const objectName = stripHtml((ext.ObjectName || {}).value || '');
+      const r = {
+        title: page.title || '',
+        url: ii.thumburl || ii.url || '',
+        width, height, license, artist, description, object_name: objectName,
+        descriptionurl: ii.descriptionurl || '',
+      };
+      r.score = scoreWikimediaResult(r, subject);
+      results.push(r);
+    }
+    return results.filter((r) => r.score > -999).sort((a, b) => b.score - a.score);
+  } catch (e) {
+    console.warn(`[imageRenderer] wikimedia search failed for "${subject}": ${e.message}`);
+    return [];
+  }
+}
+
+async function findWikimediaImage(subject) {
+  if (!subject) return null;
+  let results = await wikimediaSearch(subject);
+  if (!results.length) {
+    const words = String(subject).split(/\s+/).slice(0, 2).join(' ');
+    if (words && words !== subject) {
+      results = await wikimediaSearch(words);
+    }
+  }
+  if (!results.length) return null;
+  const best = results[0];
+  if (best.score < WIKIMEDIA_MIN_SCORE) return null;
+  const credit = best.artist ? `Photo: ${best.artist}` : 'Photo: Wikimedia Commons';
+  return {
+    url: best.url,
+    source: 'wikimedia',
+    attribution: best.license ? `${credit} / ${best.license}` : credit,
+    license: best.license,
+    descriptionurl: best.descriptionurl,
+  };
+}
+
+// ── PEXELS SEARCH ──
+async function findPexelsImage(subject) {
+  if (!subject) return null;
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) return null;
+  try {
+    const url = 'https://api.pexels.com/v1/search?' + new URLSearchParams({
+      query: subject, orientation: 'landscape', size: 'large', per_page: '5',
+    }).toString();
+    const res = await fetch(url, {
+      headers: { Authorization: key },
+      signal: TIMEOUT(12000),
+    });
+    if (!res.ok) {
+      console.warn(`[imageRenderer] pexels HTTP ${res.status} for "${subject}"`);
+      return null;
+    }
+    const data = await res.json();
+    const photo = (data.photos || [])[0];
+    if (!photo) return null;
+    return {
+      url: photo.src?.large2x || photo.src?.large || photo.src?.original,
+      source: 'pexels',
+      attribution: `Photo: ${photo.photographer} on Pexels`,
+      license: 'Pexels License',
+      descriptionurl: photo.url,
+    };
+  } catch (e) {
+    console.warn(`[imageRenderer] pexels search failed for "${subject}": ${e.message}`);
+    return null;
+  }
+}
+
+// ── UNSPLASH (placeholder; active if UNSPLASH_ACCESS_KEY set) ──
+async function findUnsplashImage(subject) {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key || !subject) return null;
+  try {
+    const url = 'https://api.unsplash.com/search/photos?' + new URLSearchParams({
+      query: subject, orientation: 'landscape', per_page: '5', content_filter: 'high',
+    }).toString();
+    const res = await fetch(url, {
+      headers: { Authorization: `Client-ID ${key}` },
+      signal: TIMEOUT(12000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const photo = (data.results || [])[0];
+    if (!photo) return null;
+    return {
+      url: photo.urls?.regular || photo.urls?.full,
+      source: 'unsplash',
+      attribution: `Photo: ${photo.user?.name} on Unsplash`,
+      license: 'Unsplash License',
+      descriptionurl: photo.links?.html,
+    };
+  } catch (e) {
+    console.warn(`[imageRenderer] unsplash failed for "${subject}": ${e.message}`);
+    return null;
+  }
+}
+
+// ── HERO CASCADE ──
+async function findHeroImage(subject, opts = {}) {
+  if (!subject) return null;
+  const intent = opts.intent || 'sport_action';
+  // Athletes/teams/stadiums lean Wikimedia first; abstract topics try Unsplash/Pexels first
+  const order = ['athlete', 'team', 'stadium', 'league'].includes(intent)
+    ? [findWikimediaImage, findUnsplashImage, findPexelsImage]
+    : [findUnsplashImage, findPexelsImage, findWikimediaImage];
+  for (const fn of order) {
+    const hit = await fn(subject);
+    if (hit && hit.url) return hit;
+  }
+  return null;
+}
+
+async function findCarouselImages(slides) {
+  // Distinct subjects required; small de-dup pass on URLs as final guard.
+  const seen = new Set();
+  const out = [];
+  for (const slide of slides || []) {
+    let hit = await findHeroImage(slide.image_subject, { intent: 'sport_action' });
+    if (hit && seen.has(hit.url)) {
+      // Try a fallback search with the secondary subject hint if duplicate
+      hit = await findHeroImage(`${slide.image_subject} stadium`, { intent: 'stadium' });
+    }
+    if (hit) seen.add(hit.url);
+    out.push(hit);
+  }
+  return out;
+}
+
+// ── BB-BRANDED COMPOSITE (sharp + SVG) ──
+function escapeXml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function brandedSVG({ width, height, headline, subhead = '', accent = BB_PALETTE.gold }) {
+  const headlineLen = String(headline || '').length;
+  let fontSize, charBudget;
+  if (headlineLen <= 18)      { fontSize = Math.round(width / 12); charBudget = 18; }
+  else if (headlineLen <= 40) { fontSize = Math.round(width / 18); charBudget = 26; }
+  else                        { fontSize = Math.round(width / 24); charBudget = 32; }
+  const lines = wrapHeadline(headline, charBudget, 3);
+  const lineHeight = Math.round(fontSize * 1.05);
+  // Center the headline block vertically around 45% from top
+  const blockTop = Math.round(height * 0.40);
+  const tspans = lines.map((ln, i) =>
+    `<text x="60" y="${blockTop + (i + 1) * lineHeight}" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="${BB_PALETTE.textPrimary}">${escapeXml(ln)}</text>`
+  ).join('\n    ');
+  const subY = blockTop + (lines.length + 1) * lineHeight + 12;
+  const sub = escapeXml(subhead);
+
+  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${BB_PALETTE.bgDark}"/>
+        <stop offset="60%" stop-color="${BB_PALETTE.bgCard}"/>
+        <stop offset="100%" stop-color="${BB_PALETTE.bgSurface}"/>
+      </linearGradient>
+      <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="${accent}"/>
+        <stop offset="100%" stop-color="${BB_PALETTE.orange}"/>
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#bg)"/>
+    <rect x="0" y="0" width="100%" height="6" fill="url(#accent)"/>
+    <rect x="0" y="${height - 6}" width="100%" height="6" fill="url(#accent)"/>
+    ${tspans}
+    ${sub ? `<text x="60" y="${subY}" font-family="Inter,Helvetica,Arial,sans-serif"
+          font-size="${Math.round(width / 36)}" font-weight="400" fill="${BB_PALETTE.textSecondary}">${sub}</text>` : ''}
+    <text x="60" y="${height - 60}" font-family="Inter,Helvetica,Arial,sans-serif"
+          font-size="${Math.round(width / 50)}" font-weight="600" fill="${accent}">bitcoinbay.com</text>
+  </svg>`;
+}
+
+async function composeBrandedCard({ headline, subhead, kind = 'promo', outPath }) {
+  // Aspect ratios: IG 1080x1080, X 1200x675, IG portrait 1080x1350
+  const dimensions = {
+    promo:           { w: 1080, h: 1080 },
+    leaderboard_cta: { w: 1080, h: 1080 },
+    register_cta:    { w: 1080, h: 1080 },
+    bonus_cta:       { w: 1080, h: 1350 },
+  };
+  const { w, h } = dimensions[kind] || dimensions.promo;
+  const svg = brandedSVG({ width: w, height: h, headline, subhead });
+  let pipeline = sharp(Buffer.from(svg));
+  // Composite the BB logo in top-left if available
+  if (fs.existsSync(LOGO_PATH)) {
+    const logoBuf = await sharp(LOGO_PATH).resize({ width: Math.round(w * 0.18) }).toBuffer();
+    pipeline = pipeline.composite([{ input: logoBuf, top: 60, left: 60 }]);
+  }
+  await ensureDir(path.dirname(outPath));
+  await pipeline.jpeg({ quality: 88 }).toFile(outPath);
+  return { url: pathToPublicUrl(outPath), source: 'branded', attribution: 'Bitcoin Bay', license: 'Owned' };
+}
+
+// ── REAL-PHOTO + OVERLAY COMPOSITE ──
+// Wrap a headline string into lines that fit a given character budget.
+// Approximates pixel-aware wrapping by treating each line as ~charBudget
+// characters wide. Result is up to maxLines lines; longer text gets
+// truncated with an ellipsis on the last line.
+function wrapHeadline(text, charBudget, maxLines = 2) {
+  const words = String(text || '').trim().split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    if (!cur) { cur = w; continue; }
+    if ((cur + ' ' + w).length <= charBudget) cur = cur + ' ' + w;
+    else { lines.push(cur); cur = w; if (lines.length >= maxLines) break; }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
+    // Truncate last line if there's overflow
+    const last = lines[lines.length - 1];
+    if (last.length > charBudget - 3) {
+      lines[lines.length - 1] = last.slice(0, charBudget - 3).replace(/\s+\S*$/, '') + '…';
+    } else {
+      lines[lines.length - 1] = last + '…';
+    }
+  }
+  return lines;
+}
+
+function overlaySVG({ width, height, headline, badgeKind }) {
+  const badgeMap = {
+    breaking:           { text: 'BREAKING',          color: BB_PALETTE.accentGreen },
+    live:               { text: 'LIVE',              color: BB_PALETTE.orange },
+    athlete_x_crypto:   { text: 'ATHLETE × CRYPTO',  color: BB_PALETTE.gold },
+  };
+  const badge = badgeMap[badgeKind];
+
+  // Adaptive font sizing: shrink on long headlines so they don't clip the edge.
+  // Char budget ≈ how many chars fit at this font size at this width.
+  const headlineLen = String(headline || '').length;
+  let fontSize, charBudget, maxLines;
+  if (headlineLen <= 22)      { fontSize = Math.round(width / 16); charBudget = 22; maxLines = 1; }
+  else if (headlineLen <= 50) { fontSize = Math.round(width / 22); charBudget = 28; maxLines = 2; }
+  else                        { fontSize = Math.round(width / 28); charBudget = 36; maxLines = 3; }
+  const lines = wrapHeadline(headline, charBudget, maxLines);
+  const lineHeight = Math.round(fontSize * 1.1);
+  // Anchor the LAST line at headlineY; earlier lines stack above
+  const headlineY = height - 80;
+  const tspans = lines.map((ln, i) => {
+    const y = headlineY - (lines.length - 1 - i) * lineHeight;
+    return `<text x="60" y="${y}" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="${BB_PALETTE.textPrimary}">${escapeXml(ln)}</text>`;
+  }).join('\n    ');
+  // Resize gradient to cover the headline block
+  const gradientStartY = Math.round(headlineY - lines.length * lineHeight - 20);
+
+  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="darken" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${BB_PALETTE.bgDark}" stop-opacity="0"/>
+        <stop offset="60%" stop-color="${BB_PALETTE.bgDark}" stop-opacity="0.20"/>
+        <stop offset="100%" stop-color="${BB_PALETTE.bgDark}" stop-opacity="0.94"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="${Math.max(0, gradientStartY)}" width="100%" height="${height - Math.max(0, gradientStartY)}" fill="url(#darken)"/>
+    ${badge ? `<rect x="60" y="60" rx="6" ry="6" width="${Math.max(180, badge.text.length * 16 + 30)}" height="42" fill="${badge.color}"/>
+       <text x="${75}" y="92" font-family="Inter,Helvetica,Arial,sans-serif" font-size="22" font-weight="800" fill="${BB_PALETTE.bgDark}">${escapeXml(badge.text)}</text>` : ''}
+    ${tspans}
+  </svg>`;
+}
+
+async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080 }) {
+  if (!imageUrl) throw new Error('composeOverlayCard requires imageUrl');
+  // Download the source image (can be remote)
+  const srcRes = await fetch(imageUrl, { signal: TIMEOUT(20000) });
+  if (!srcRes.ok) throw new Error(`download failed: HTTP ${srcRes.status}`);
+  const srcBuf = Buffer.from(await srcRes.arrayBuffer());
+  // Cover-crop to target dimensions
+  const baseBuf = await sharp(srcBuf)
+    .resize(targetW, targetH, { fit: 'cover', position: 'center' })
+    .toBuffer();
+  // Compose overlay SVG on top
+  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind });
+  const composed = sharp(baseBuf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]);
+  await ensureDir(path.dirname(outPath));
+  await composed.jpeg({ quality: 88 }).toFile(outPath);
+  return pathToPublicUrl(outPath);
+}
+
+function pathToPublicUrl(absPath) {
+  // Convert /…/public/post-images/2026-05-06/abc.jpg → /post-images/2026-05-06/abc.jpg
+  const idx = absPath.indexOf('/public/');
+  if (idx < 0) return absPath;
+  return absPath.slice(idx + '/public'.length);
+}
+
+// ── DRAFT-LEVEL PIPELINE ──
+async function saveDraftImages(draft, { dateDir, draftId } = {}) {
+  // Returns the patches needed on the draft doc.
+  const date = draft.brief_date || new Date().toISOString().slice(0, 10);
+  const dir = dateDir || path.join(PUBLIC_DIR, date);
+  const id = draftId || draft._id?.toString() || slugify(draft.topic).slice(0, 24);
+
+  if (draft.platform === 'instagram_carousel') {
+    const slides = draft.slides || [];
+    const hits = await findCarouselImages(slides);
+    const newSlides = [];
+    for (let i = 0; i < slides.length; i++) {
+      const s = slides[i];
+      const hit = hits[i];
+      let composite = null;
+      if (hit?.url) {
+        try {
+          const outPath = path.join(dir, id, `slide-${i}.jpg`);
+          composite = await composeOverlayCard({
+            imageUrl: hit.url,
+            headline: s.headline || '',
+            badgeKind: i === 0 ? (draft.angle?.toLowerCase().includes('athlete') ? 'athlete_x_crypto' : 'breaking') : null,
+            outPath,
+          });
+        } catch (e) {
+          console.warn(`[imageRenderer] slide ${i} composite failed: ${e.message}`);
+        }
+      }
+      newSlides.push({
+        ...s,
+        image_url: hit?.url || null,
+        image_attribution: hit?.attribution || null,
+        composite_url: composite,
+      });
+    }
+    const ready = newSlides.filter((s) => s.composite_url || s.image_url).length;
+    return {
+      slides: newSlides,
+      image_status: ready === slides.length ? 'ready' : (ready === 0 ? 'failed' : 'partial'),
+    };
+  }
+
+  // Single-image (Twitter or IG single)
+  if (draft.format_hint === 'branded_promo') {
+    const outPath = path.join(dir, id, 'main.jpg');
+    const composite = await composeBrandedCard({
+      headline: draft.image_overlay_text || draft.topic || 'Bitcoin Bay',
+      subhead: draft.angle || '',
+      kind: 'promo',
+      outPath,
+    });
+    return {
+      image_url: composite.url,
+      image_attribution: composite.attribution,
+      image_status: 'ready',
+    };
+  }
+
+  const subject = draft.image_subject;
+  if (!subject) return { image_status: 'failed' };
+  const hit = await findHeroImage(subject, { intent: 'sport_action' });
+  if (!hit?.url) return { image_status: 'failed' };
+
+  // For IG single, compose with overlay; for X, leave the raw real photo
+  // (X auto-renders the URL as a card and the tweet text carries the headline).
+  if (draft.platform === 'instagram_single' && draft.image_overlay_text) {
+    try {
+      const outPath = path.join(dir, id, 'main.jpg');
+      const composite = await composeOverlayCard({
+        imageUrl: hit.url,
+        headline: draft.image_overlay_text,
+        outPath,
+      });
+      return {
+        image_url: composite,
+        image_source_url: hit.url,
+        image_attribution: hit.attribution,
+        image_status: 'ready',
+      };
+    } catch (e) {
+      console.warn(`[imageRenderer] IG single composite failed: ${e.message}`);
+    }
+  }
+
+  return {
+    image_url: hit.url,
+    image_attribution: hit.attribution,
+    image_status: 'ready',
+  };
+}
+
+module.exports = {
+  BB_PALETTE,
+  findHeroImage,
+  findCarouselImages,
+  composeBrandedCard,
+  composeOverlayCard,
+  saveDraftImages,
+  // exposed for tests / debugging:
+  wikimediaSearch,
+  scoreWikimediaResult,
+  findWikimediaImage,
+  findPexelsImage,
+  findUnsplashImage,
+};

@@ -1,3 +1,8 @@
 node_modules/
 .env
 .claude/
+
+# Auto-generated post images (regenerated nightly by contentDrafter.js).
+# Served by express.static so the IG Graph API can pull them, but rebuilt
+# on every drafter run — no value committing them.
+public/post-images/

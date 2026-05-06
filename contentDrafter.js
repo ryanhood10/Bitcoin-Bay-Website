@@ -30,6 +30,7 @@
 const path = require('path');
 const { MongoClient, ObjectId } = require('mongodb');
 const Anthropic = require('@anthropic-ai/sdk').default || require('@anthropic-ai/sdk');
+const imageRenderer = require('./imageRenderer');
 
 const MONGO_DB        = process.env.MONGO_AUTOMATION_DB || 'bcbay_automation';
 const BRIEFS_COLL     = 'bcb_post_briefs';
@@ -434,9 +435,17 @@ async function runDrafter({ briefDate, dryRun = false } = {}) {
     console.error(`[contentDrafter] instagram (${igPlatform}) JSON parse failed: ${e.message}`);
   }
 
-  if (dryRun) return { brief_date: date, drafts };
+  if (dryRun) {
+    // In dry-run we skip both Mongo writes AND image rendering (image rendering
+    // hits the network + writes JPEGs to disk). The text + structure is what
+    // matters in dry-run.
+    return { brief_date: date, drafts };
+  }
 
-  // ── Persist ──
+  // ── Persist text drafts first (cheap), then attach images in a second pass ──
+  // Image rendering is slower (~2-10s per draft due to remote image fetches);
+  // doing it after the insert means the dashboard can render text immediately
+  // and image_status flips from "pending" to "ready" as renders complete.
   const ids = await withDb(async (db) => {
     const coll = db.collection(DRAFTS_COLL);
     // Delete prior drafts for this date so reruns produce a clean batch
@@ -448,9 +457,29 @@ async function runDrafter({ briefDate, dryRun = false } = {}) {
       drafts_count: drafts.length,
       created_at: new Date(),
     });
-    return Object.values(result.insertedIds).map((id) => id.toString());
+    return Object.values(result.insertedIds);
   });
-  return { brief_date: date, drafts_count: drafts.length, ids };
+
+  // Image pass — sequential to avoid hammering Wikimedia/Pexels rate limits
+  for (let i = 0; i < drafts.length; i++) {
+    const draft = drafts[i];
+    const _id = ids[i];
+    try {
+      const patch = await imageRenderer.saveDraftImages(draft, { draftId: _id.toString() });
+      await withDb((db) => db.collection(DRAFTS_COLL).updateOne(
+        { _id },
+        { $set: { ...patch, updated_at: new Date() } }
+      ));
+    } catch (e) {
+      console.warn(`[contentDrafter] image render failed for draft ${_id}: ${e.message}`);
+      await withDb((db) => db.collection(DRAFTS_COLL).updateOne(
+        { _id },
+        { $set: { image_status: 'failed', image_error: e.message, updated_at: new Date() } }
+      ));
+    }
+  }
+
+  return { brief_date: date, drafts_count: drafts.length, ids: ids.map((id) => id.toString()) };
 }
 
 // ── PUBLIC: regenerateDraft ──
