@@ -30,6 +30,14 @@
 //   GET  /api/admin/dashboard/bonus-reports                     — last 20 weekly leaderboards (FULL role only)
 //   POST /api/admin/dashboard/bonus-report                      — upsert one weekly leaderboard (FULL role only)
 //
+//   GET  /api/admin/dashboard/post-briefs/latest                — most recent brief metadata
+//   GET  /api/admin/dashboard/post-drafts?date=...&platform=... — list draft posts
+//   PATCH /api/admin/dashboard/post-drafts/:id                  — edit text/hashtags/manual-image-URL (FULL)
+//   POST /api/admin/dashboard/post-drafts/:id/regenerate        — re-prompt Claude (FULL)
+//   POST /api/admin/dashboard/post-drafts/:id/skip              — mark skipped (FULL)
+//   POST /api/admin/dashboard/post-drafts/:id/approve           — mark approved (Phase 7 wires publish) (FULL)
+//   POST /api/admin/dashboard/run-drafter                       — fire-and-forget drafter run (FULL)
+//
 // ---------------------------------------------------------------------------
 
 const path = require('path');
@@ -50,6 +58,26 @@ const PLAYERS_COLL   = 'bcb_player_info';
 const RUN_JOBS       = 'bcb_run_jobs';
 const BONUS_COLL     = 'weekly_leaderboard';
 const ADMIN_LOG_COLL = 'bcb_admin_log';
+const POST_BRIEFS    = 'bcb_post_briefs';
+const POST_DRAFTS    = 'bcb_post_drafts';
+
+// Lazy-load contentDrafter so server boot doesn't pay the Anthropic SDK +
+// sharp init cost up front. Only the /run-drafter and /:id/regenerate
+// handlers ever need it.
+let _contentDrafter = null;
+function getContentDrafter() {
+  if (!_contentDrafter) _contentDrafter = require('./contentDrafter');
+  return _contentDrafter;
+}
+
+// Allowed values for the Mongo update fields. Anything else is rejected at
+// PATCH so a malformed UI patch can't sneak arbitrary fields into a draft doc.
+const PATCH_ALLOWED = new Set([
+  'text', 'caption', 'hashtags',
+  'image_subject', 'image_overlay_text', 'image_url', 'image_attribution',
+  'slides',
+  // status changes go through dedicated endpoints (skip/approve), not PATCH
+]);
 
 function getAutomationUri() {
   return process.env.MONGO_AUTOMATION_URI || process.env.MONGO_URI;
@@ -481,6 +509,228 @@ router.post('/api/admin/dashboard/bonus-report', adminAuth.requireAdmin(adminAut
     console.error('[admin-dashboard] /bonus-report error:', e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ===========================================================================
+// CONTENT DRAFTER (Phase 6)
+// All FULL-role only — these endpoints either trigger AI calls (cost) or
+// will eventually post to live X/IG accounts (Phase 7). The dashboard-role
+// admin can never touch them.
+// ===========================================================================
+
+// Latest brief metadata — used by the dashboard to render an "as of" chip.
+// Read-only; any admin role can see this.
+router.get('/api/admin/dashboard/post-briefs/latest', adminAuth.requireAdmin(), async (req, res) => {
+  try {
+    const doc = await withDb(async (db) =>
+      db.collection(POST_BRIEFS).findOne({}, { sort: { date: -1 }, projection: {
+        _id: 0, date: 1, saved_at: 1,
+        'blog_research.topic_category': 1, 'blog_research.topic': 1,
+        'per_platform_topics.twitter': 1, 'per_platform_topics.instagram.format_hint': 1,
+      } })
+    );
+    if (!doc) return res.status(404).json({ success: false, error: 'No brief found' });
+    res.json({ success: true, brief: clean(doc) });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-briefs/latest error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// List drafts. Filters: ?date=YYYY-MM-DD (defaults to latest brief),
+//                       ?platform=twitter|instagram_single|instagram_carousel,
+//                       ?status=draft|approved|posted|skipped (default: all).
+router.get('/api/admin/dashboard/post-drafts', adminAuth.requireAdmin(), async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.date) filter.brief_date = String(req.query.date);
+    if (req.query.platform) filter.platform = String(req.query.platform);
+    if (req.query.status) filter.status = String(req.query.status);
+
+    const docs = await withDb(async (db) => {
+      const coll = db.collection(POST_DRAFTS);
+      // If no date filter, default to the latest brief_date so the operator
+      // sees today's batch by default.
+      if (!filter.brief_date) {
+        const latest = await coll.findOne({}, { sort: { brief_date: -1 }, projection: { brief_date: 1 } });
+        if (latest?.brief_date) filter.brief_date = latest.brief_date;
+      }
+      return coll.find(filter).sort({ platform: 1, created_at: 1 }).toArray();
+    });
+
+    // Stringify _ids and clean dates so the dashboard JS can pass them
+    // back as path parameters easily.
+    const out = docs.map((d) => {
+      const id = d._id?.toString();
+      delete d._id;
+      for (const k of Object.keys(d)) {
+        if (d[k] instanceof Date) d[k] = d[k].toISOString();
+      }
+      return { _id: id, ...d };
+    });
+    res.json({ success: true, drafts: out });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts list error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Edit a draft. Whitelist of allowed fields: text/caption/hashtags/image_*/slides.
+// Status transitions go through dedicated /skip and /approve endpoints — not here.
+router.patch('/api/admin/dashboard/post-drafts/:id', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const body = req.body || {};
+    const updates = {};
+    for (const k of Object.keys(body)) {
+      if (PATCH_ALLOWED.has(k)) updates[k] = body[k];
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, error: 'no allowed fields in body' });
+    }
+    // Light shape checks on the riskier fields
+    if (updates.hashtags && !Array.isArray(updates.hashtags)) {
+      return res.status(400).json({ success: false, error: 'hashtags must be an array' });
+    }
+    if (updates.slides && !Array.isArray(updates.slides)) {
+      return res.status(400).json({ success: false, error: 'slides must be an array' });
+    }
+    updates.updated_at = new Date();
+
+    const result = await withDb(async (db) =>
+      db.collection(POST_DRAFTS).updateOne({ _id: new ObjectId(id) }, { $set: updates })
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    await logAdminAction({
+      action: 'content-drafter:patch',
+      admin: req.admin?.user, draft_id: id, fields: Object.keys(updates).filter((k) => k !== 'updated_at'),
+    });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts PATCH error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Regenerate a draft. Body: { humor_pass?: bool, slide_index?: number, new_angle?: string }
+// slide_index regenerates one carousel slide; full-card regen otherwise.
+router.post('/api/admin/dashboard/post-drafts/:id/regenerate', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const body = req.body || {};
+    const opts = {
+      humorPass: !!body.humor_pass,
+      slideIndex: Number.isInteger(body.slide_index) ? body.slide_index : null,
+      newAngle: typeof body.new_angle === 'string' ? body.new_angle : null,
+    };
+    const result = await getContentDrafter().regenerateDraft(id, opts);
+    await logAdminAction({
+      action: 'content-drafter:regenerate',
+      admin: req.admin?.user, draft_id: id, ...opts,
+    });
+    res.json({ success: true, ...result });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/regenerate error:', e.message);
+    const code = /not found/i.test(e.message) ? 404 : 500;
+    res.status(code).json({ success: false, error: e.message });
+  }
+});
+
+// Skip a draft. Body: { reason?: string }
+router.post('/api/admin/dashboard/post-drafts/:id/skip', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const reason = (req.body?.reason || '').toString().trim().slice(0, 500);
+    const result = await withDb(async (db) =>
+      db.collection(POST_DRAFTS).updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: 'skipped', skip_reason: reason || null, updated_at: new Date() } }
+      )
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    await logAdminAction({
+      action: 'content-drafter:skip',
+      admin: req.admin?.user, draft_id: id, reason,
+    });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/skip error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Approve. Phase 6 just marks status='approved' and audit-logs. Phase 7 will
+// extend this handler to call socialPublisher and flip to 'posted' on success.
+router.post('/api/admin/dashboard/post-drafts/:id/approve', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const draft = await withDb((db) => db.collection(POST_DRAFTS).findOne({ _id: new ObjectId(id) }));
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    if (draft.status === 'posted') {
+      return res.status(409).json({ success: false, error: 'already posted' });
+    }
+    await withDb((db) => db.collection(POST_DRAFTS).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: 'approved', approved_at: new Date(), updated_at: new Date(),
+                approved_by: req.admin?.user || null } }
+    ));
+    await logAdminAction({
+      action: 'content-drafter:approve',
+      admin: req.admin?.user, draft_id: id, platform: draft.platform,
+    });
+    // Phase 7 will inline-call socialPublisher.publishX(draft) here.
+    res.json({ success: true, status: 'approved', published: false,
+               note: 'Publish wiring lands in Phase 7 — for now, copy text/image to native X/IG manually.' });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/approve error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Run drafter — fire-and-forget. Returns 202 immediately so the dashboard
+// can poll /post-drafts to see drafts land. Async pattern matches Eldrin's.
+router.post('/api/admin/dashboard/run-drafter', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
+  const briefDate = (req.body?.date || '').toString().trim() || undefined;
+  const adminUser = req.admin?.user;
+
+  // Fire and forget — don't await
+  Promise.resolve()
+    .then(() => getContentDrafter().runDrafter({ briefDate }))
+    .then((out) => {
+      logAdminAction({
+        action: 'content-drafter:run',
+        admin: adminUser, brief_date: out.brief_date, drafts_count: out.drafts_count,
+      }).catch(() => {});
+      console.log(`[admin-dashboard] runDrafter complete for ${out.brief_date}: ${out.drafts_count} drafts`);
+    })
+    .catch((e) => {
+      console.error('[admin-dashboard] runDrafter background error:', e.message);
+      logAdminAction({
+        action: 'content-drafter:run-failed',
+        admin: adminUser, brief_date: briefDate, error: e.message,
+      }).catch(() => {});
+    });
+
+  res.status(202).json({ success: true, accepted: true,
+    note: 'Drafter started in background. Poll /api/admin/dashboard/post-drafts in ~30-60s for results.' });
 });
 
 module.exports = router;
