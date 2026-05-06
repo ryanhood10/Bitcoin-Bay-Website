@@ -51,8 +51,10 @@ Eldrin is an **AI/SaaS company** posting about LinkedIn, AI tools, founder voice
 | Image strategy | FLUX (Replicate) + Cloudinary overlays + mascot wizard | **Wikimedia Commons** (free editorial photos of athletes/teams — already wired in `bcbay_blog.py`), fallback to FLUX for non-photo decks. NO mascot — BB doesn't have one. |
 | Hero post category | "Founder takes" | **"Athlete × Crypto"** — the moat. Pi research has a dedicated detector that pre-empts day rotation when fresh athlete-crypto news drops (last 7d). |
 
-**Voice constraints (from `bcbay_research.py:TONE`):**
+**Voice constraints (from `bcbay_research.py:TONE`, with May-5 amendment):**
 > "Authoritative on sports and crypto, relaxed in delivery, beach-coded without being silly. Think: a sharp handicapper writing from a beach bar with a hardware wallet in their pocket. Data-driven when data exists. Never fear-mongering, never salesy, never tout-speak. Journalism first, product plug last."
+
+**May-5 amendment from Ryan:** *fun sports-theme energy, similar to other sportsbook social accounts (DraftKings/FanDuel feel — minus the predatory promo voice). An occasional humor angle is welcome — roughly 1 in 5 posts can lead with a funny take ("Bills fans, look away" energy). The drafter prompt should expose a `humor_pass` knob the operator can toggle per-card to regenerate with a punchier comedic angle.*
 
 Twitter voice = sharper, punchier, takes-driven. Instagram voice = more visual, athlete-card aesthetic, win/loss graphics, lean into the beach/sportsbook brand. Both share the underlying tone above.
 
@@ -151,9 +153,12 @@ Path prefix: `/Users/ryanhood/Projects/EldrinMasterRepo/EldrinAI/` — Ryan's ot
 
 | Tool to set up | Notes |
 |---|---|
-| **Cloudinary** (optional) | Free tier is enough. Eldrin uses it for `l_text` overlays on hero images. BB alternative: render overlays via `sharp` on Heroku (one fewer dependency, slightly more code). Start without; add if needed. |
-| **Replicate / FLUX** (optional) | Only if Ryan wants synthetic art (e.g. for Athlete×Crypto posts where no real photo of the athlete-with-crypto angle exists on Commons). Cost: ~$0.02/image. Add later. |
-| **Twitter app `tweet.write` scope** | Verify the existing X dev app has it. If not, redo the OAuth flow with the right scope set. |
+| **Unsplash API key** | Free tier (50 req/hr) is plenty. Register an app at https://unsplash.com/developers → store as `UNSPLASH_ACCESS_KEY`. Each rendered image must include the photographer credit in the IG caption per Unsplash terms. |
+| **Pexels API key** | Free tier (200 req/hr). Register at https://www.pexels.com/api/ → store as `PEXELS_API_KEY`. Attribution is optional but we render it anyway (cheap insurance). |
+| **`sharp` package** | Already battle-tested in the Heroku Node ecosystem. Used for overlay text composites + BB-branded promo cards (logo + headline on brand-palette gradient). `npm install sharp` — bumps slug size by ~30 MB but worth it (no Cloudinary dependency). |
+| **Cloudinary** (optional) | Free tier is enough. Eldrin uses it for `l_text` overlays on hero images. **BB alternative chosen: `sharp` on Heroku** (one fewer external dependency, full control over overlay design with the brand palette baked in). |
+| **Replicate / FLUX** (opt-in only) | Per-card "Generate art" button only — not default. Reserved for athlete×crypto posts where no real-photo angle exists on Commons/Unsplash/Pexels. Cost: ~$0.02/image. Set up `REPLICATE_API_TOKEN` only when first used. |
+| **Twitter app `tweet.write` scope** | Per Ryan (May 5): "we should already have twitter configed on the app." Confirmed by user as not blocking — verify the actual scope when Phase 7 lands; if missing, 1h OAuth re-flow. |
 
 ---
 
@@ -165,11 +170,16 @@ These are the calls where the new session should pause for Ryan:
    - Eldrin chose daily for X+IG; LinkedIn 3x/week (later 5x/week with personal added).
    - **Recommendation: daily for both** — BB has 7 day-of-week categories already in `bcbay_research.py`, so the cadence is already weekly. Don't waste research output.
 
-2. **Image strategy v1** — Wikimedia-only? Wikimedia + FLUX fallback? FLUX-only?
-   - **Recommendation: Wikimedia first**, FLUX fallback for athlete×crypto where Commons has nothing. The blog script already does this exact lookup; reuse `bcbay_blog.py:fetch_wikimedia_image()`.
+2. **Image strategy v1** — ~~Wikimedia-only? Wikimedia + FLUX fallback? FLUX-only?~~ **DECIDED (May 5):** real-photo-first via three free editorial sources, with branded composites (logo + headline) for BB-promo posts. **No general "scrape the internet"** — Getty/AP/Reuters wire shots are licensed and we cannot use them.
+   - **Tier 1 — Wikimedia Commons** (CC/PD): athletes, teams, stadiums, leagues, crypto/finance imagery. Already wired in `bcbay_blog.py:fetch_wikimedia_image()` — port to JS.
+   - **Tier 2 — Unsplash API** (free for commercial with attribution): broader sports/lifestyle/abstract editorial photos. Token: `UNSPLASH_ACCESS_KEY` (need to create dev app).
+   - **Tier 3 — Pexels API** (free for commercial): similar coverage to Unsplash, useful for fallback. Token: `PEXELS_API_KEY`.
+   - **Tier 4 — Manual paste**: the dashboard exposes a "paste image URL" field per draft for cases where the operator has a specific photo (their own, athlete's official social, BB internal screenshot). Operator owns the rights call.
+   - **Tier 5 — BB-branded composite**: when the post is *about Bitcoin Bay itself* (promo, bonus, leaderboard, register CTA), generate a clean `bb-logo.png + headline + brand palette` SVG composite via `sharp`. No real photo needed — this is owned brand content. **Brand palette extracted from `index.html`:** `--gold #F7941D`, `--gold-light #FDCB6E`, `--gold-dark #D47812`, `--orange #F26522`, `--bg-dark #0A1628`, `--bg-card #0D2240`, `--accent-blue #56CCF2`, `--accent-green #22C55E`. Fonts: Inter / Space Grotesk.
+   - **Tier 6 — FLUX (Replicate)**: only as opt-in per-card "Generate art" button, e.g. for athlete×crypto posts where no real-photo angle exists on Commons. Not default; operator-triggered.
+   - All non-branded images carry an `attribution` field that the IG caption renders as "Photo: [credit] / [license]". Twitter doesn't render it (280-char limit) but it's stored on the draft for audit.
 
-3. **Carousel on Mondays** — Mon = Game Recap. A 4-slide IG carousel (recap → top performers → upset of the week → bankroll lesson) would be the natural format. But carousel rendering is the most complex piece (HTML+Puppeteer + Heroku H12 dance).
-   - **Recommendation: skip in v1**. Single hero IG post per day. Add carousel only if Ryan explicitly asks after seeing v1 work.
+3. **Carousel** — ~~Skip in v1.~~ **DECIDED (May 5):** **carousels are in v1** — IG-style breaking-news photo decks (3–5 slides) for Mondays (Recap), Sundays (Slate at the Bay), and Athlete×Crypto when the news angle has multiple distinct visual beats. Modeled after how ESPN/Bleacher Report do IG: photo lead → secondary photo → data card → key quote → CTA. **Each slide is a real photo** (from the same Wikimedia/Unsplash/Pexels chain) with optional overlay headline. **No HTML+Puppeteer renderer yet** — slides are just hero photos with optional `sharp` text overlay. Rendering time stays under Heroku's H12 budget.
 
 4. **Athlete×Crypto special handling** — When the Pi detector fires, should the drafter:
    - (A) Replace one of the day's 3 X drafts with the athlete-crypto take?
@@ -230,13 +240,14 @@ If you're picking this up cold:
 
 ## What NOT to build in v1
 
-- ❌ Carousel rendering (HTML+Puppeteer dance — defer)
+- ❌ ~~Carousel rendering~~ — **carousels ARE in v1** (per May-5 amendment). Just no HTML+Puppeteer renderer; slides are real photos with optional `sharp` overlay text.
 - ❌ Multi-account fan-out (BB has one X handle, one IG)
 - ❌ TikTok/YouTube originals (separate Dell-side pipeline per Eldrin precedent)
 - ❌ Auto-posting without operator approval (compliance risk)
 - ❌ Performance attribution / "did this post drive conversions" (deferred — engagement metrics already tracked)
 - ❌ The mascot. BB doesn't have one. Don't invent one mid-build.
 - ❌ Animated/video posts. Eldrin's animation pipeline was for AI-tool demos. BB sports content lives or dies on still imagery + text.
+- ❌ Generic "scrape the internet for images" (Getty/AP/Reuters wire shots are licensed — we use Wikimedia + Unsplash + Pexels + manual paste + BB-branded composites only).
 
 ---
 
@@ -244,13 +255,14 @@ If you're picking this up cold:
 
 | Item | Per-day | Per-month |
 |---|---|---|
-| Anthropic — drafter (X×3 + IG×1 = 4 Claude calls × ~$0.02) | $0.08 | ~$2.40 |
+| Anthropic — drafter (X×3 + IG single + IG carousel × 4 slides each = ~7 Claude calls × ~$0.02) | $0.14 | ~$4.20 |
 | Anthropic — research (already running, no change) | $0.20 | ~$6.00 |
-| FLUX/Replicate (only if used; ~3/week × $0.02) | $0.01 | ~$0.30 |
+| FLUX/Replicate (opt-in only; ~2/week × $0.02) | <$0.01 | ~$0.20 |
 | Wikimedia Commons | $0 | $0 |
-| Cloudinary (free tier suffices) | $0 | $0 |
-| Heroku — no new dyno needed (Express handles it) | $0 | $0 |
-| **Total new spend** | **~$0.10** | **~$3** |
+| Unsplash API (free tier, 50/hr) | $0 | $0 |
+| Pexels API (free tier, 200/hr) | $0 | $0 |
+| Heroku — no new dyno needed (Express handles `sharp` composites in-process) | $0 | $0 |
+| **Total new spend** | **~$0.15** | **~$4.40** |
 
 Rounding error against BB's existing infrastructure cost.
 
