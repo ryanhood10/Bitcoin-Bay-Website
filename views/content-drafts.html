@@ -103,6 +103,16 @@
 
   .card-actions { padding: 10px 14px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
 
+  /* Scene-prompt panel — hidden until the operator clicks 🎨 Generate scene.
+     Operator-triggered AI image generation (Replicate InstantID, ~$0.05/call). */
+  .scene-panel { display: none; padding: 12px 14px; background: var(--surface2); border-top: 1px dashed var(--border2); }
+  .scene-panel.open { display: block; }
+  .scene-prompt { width: 100%; min-height: 80px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-family: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
+  .scene-prompt:focus { outline: none; border-color: var(--orange); }
+  .scene-buttons { display: flex; gap: 6px; margin-top: 10px; align-items: center; }
+  .scene-cost { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .scene-hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
   /* CAROUSEL */
   .slide-tabs { display: flex; gap: 4px; padding: 8px 10px 0; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; }
   .slide-tab { display: flex; flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 6px 6px 0 0; cursor: pointer; min-width: 80px; border: 1px solid transparent; border-bottom: none; background: transparent; color: var(--muted2); font-size: 11px; flex-shrink: 0; }
@@ -241,6 +251,7 @@ function renderTwitterCard(d) {
         <input class="field-input" data-field="image_url" placeholder="paste a public image URL" value="${escapeHtml(d.image_url_override || '')}" ${isLocked ? 'disabled' : ''} />
       </div>
     </div>
+    ${renderScenePanel(d)}
     ${renderActions(d, isLocked)}
   </div>`;
 }
@@ -281,6 +292,7 @@ function renderInstagramSingleCard(d) {
         <input class="field-input" data-field="image_url" placeholder="paste a public image URL" value="${escapeHtml(d.image_url || '')}" ${isLocked ? 'disabled' : ''} />
       </div>
     </div>
+    ${renderScenePanel(d)}
     ${renderActions(d, isLocked)}
   </div>`;
 }
@@ -325,7 +337,9 @@ function renderInstagramCarouselCard(d) {
       ${compositeBlock}
       <div style="margin-top:10px; display:flex; gap:6px;">
         <button class="btn small" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''}>🔄 Regenerate this slide</button>
+        <button class="btn small" data-action="generate-art" data-slide-index="${i}" ${isLocked ? 'disabled' : ''}>🎨 Generate scene</button>
       </div>
+      ${renderScenePanel(d, i)}
     </div>`;
   }).join('');
 
@@ -366,16 +380,47 @@ function renderImageBlock(d) {
   </div>`;
 }
 
+// Scene-prompt panel for operator-triggered AI image generation.
+// `slideIndex` is null for single-image cards (Twitter, IG single), or the
+// slide index for carousel slides. The panel is hidden until the operator
+// clicks 🎨 Generate scene; submit calls /generate-art and replaces the image.
+function renderScenePanel(d, slideIndex) {
+  const isSlide = Number.isInteger(slideIndex);
+  const slide = isSlide ? (d.slides || [])[slideIndex] : null;
+  const prefilled = isSlide ? (slide?.image_scene_prompt || '') : (d.image_scene_prompt || '');
+  const refUrl = isSlide ? (slide?.image_url || '') : (d.image_url || '');
+  const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
+  const panelKey = isSlide ? slideIndex : '';
+  return `<div class="scene-panel" data-scene-panel="${panelKey}">
+    <div class="field-label">🎨 Generate AI scene with athlete's face (Replicate InstantID)</div>
+    <textarea class="scene-prompt" data-scene-field="prompt" ${sIdxAttr} placeholder="e.g. 'Shai Gilgeous-Alexander celebrating after a clutch shot, confetti falling, NBA arena background, photorealistic editorial photo'">${escapeHtml(prefilled)}</textarea>
+    <div class="scene-hint">InstantID preserves the face from the reference image while restyling the surroundings to match your prompt. Use a Wikimedia/Pexels editorial photo of the athlete as the reference.</div>
+    <div class="field-label" style="margin-top:8px;">Reference image URL (face source — defaults to current image)</div>
+    <input class="field-input" data-scene-field="reference" ${sIdxAttr} value="${escapeHtml(refUrl)}" placeholder="https://..." />
+    <div class="scene-buttons">
+      <button class="btn small primary" data-action="generate-art-submit" ${sIdxAttr}>Generate scene</button>
+      <button class="btn small ghost" data-action="generate-art-cancel" ${sIdxAttr}>Cancel</button>
+      <span class="scene-cost">~$0.05 · operator-triggered, audit-logged</span>
+    </div>
+  </div>`;
+}
+
 function renderActions(d, isLocked) {
   if (isLocked) {
     return `<div class="card-actions">
       <span style="color:var(--muted2); font-size:12px; padding: 4px 0;">${d.status === 'posted' ? '✓ Posted' : '⛔ Skipped'} · ${formatTimestamp(d.updated_at)}</span>
     </div>`;
   }
+  // Carousel cards skip the deck-level 🎨 button — scene generation is
+  // per-slide there (each slide has its own image).
+  const sceneBtn = d.platform === 'instagram_carousel'
+    ? ''
+    : '<button class="btn small" data-action="generate-art">🎨 Generate scene</button>';
   return `<div class="card-actions">
     <button class="btn small" data-action="save">💾 Save edits</button>
     <button class="btn small" data-action="regen">🔄 Regenerate</button>
     <button class="btn small" data-action="humor">😄 Funny twist</button>
+    ${sceneBtn}
     <button class="btn small danger" data-action="skip">⛔ Skip</button>
     <button class="btn small success" data-action="approve" style="margin-left:auto;">✓ Approve &amp; post</button>
   </div>`;
@@ -419,7 +464,8 @@ function wireCardActions(cardEl) {
   cardEl.querySelectorAll('[data-action]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const action = btn.dataset.action;
-      const slideIdx = btn.dataset.slideIndex ? Number(btn.dataset.slideIndex) : null;
+      const slideIdx = btn.dataset.slideIndex !== undefined && btn.dataset.slideIndex !== ''
+        ? Number(btn.dataset.slideIndex) : null;
       try {
         btn.disabled = true;
         if (action === 'save') await actionSave(id, cardEl);
@@ -428,6 +474,9 @@ function wireCardActions(cardEl) {
         else if (action === 'humor') await actionRegenerate(id, { humor_pass: true });
         else if (action === 'skip') await actionSkip(id);
         else if (action === 'approve') await actionApprove(id, cardEl);
+        else if (action === 'generate-art') toggleScenePanel(cardEl, slideIdx);
+        else if (action === 'generate-art-submit') await actionGenerateArt(id, cardEl, slideIdx);
+        else if (action === 'generate-art-cancel') closeScenePanel(cardEl, slideIdx);
       } catch (e) {
         toast(e.message || 'Action failed', 'error');
       } finally {
@@ -435,6 +484,23 @@ function wireCardActions(cardEl) {
       }
     });
   });
+}
+
+// Locate the scene panel for a card (slideIndex=null) or carousel slide.
+// Empty string in the dataset matches null/undefined slide index.
+function findScenePanel(cardEl, slideIndex) {
+  const key = Number.isInteger(slideIndex) ? String(slideIndex) : '';
+  return cardEl.querySelector(`.scene-panel[data-scene-panel="${key}"]`);
+}
+
+function toggleScenePanel(cardEl, slideIndex) {
+  const panel = findScenePanel(cardEl, slideIndex);
+  if (panel) panel.classList.toggle('open');
+}
+
+function closeScenePanel(cardEl, slideIndex) {
+  const panel = findScenePanel(cardEl, slideIndex);
+  if (panel) panel.classList.remove('open');
 }
 
 function gatherEdits(cardEl) {
@@ -509,6 +575,34 @@ async function actionSkip(id) {
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.error || 'skip failed');
   toast('Skipped', '');
+  await loadDrafts();
+}
+
+async function actionGenerateArt(id, cardEl, slideIndex) {
+  const panel = findScenePanel(cardEl, slideIndex);
+  if (!panel) throw new Error('scene panel not found');
+  const promptEl = panel.querySelector('[data-scene-field="prompt"]');
+  const refEl = panel.querySelector('[data-scene-field="reference"]');
+  const scenePrompt = (promptEl?.value || '').trim();
+  if (scenePrompt.length < 10) throw new Error('Scene prompt must be at least 10 characters');
+  const referenceImageUrl = (refEl?.value || '').trim();
+  const body = { scene_prompt: scenePrompt };
+  if (referenceImageUrl) body.reference_image_url = referenceImageUrl;
+  if (Number.isInteger(slideIndex)) body.slide_index = slideIndex;
+  toast('Generating scene — this takes 30-60s…', '');
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/generate-art`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    if (res.status === 503) {
+      throw new Error('Replicate is not configured — add REPLICATE_API_TOKEN to Heroku config');
+    }
+    throw new Error(json.error || 'generate-art failed');
+  }
+  toast('Scene generated · ~$0.05 logged', 'success');
   await loadDrafts();
 }
 

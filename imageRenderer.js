@@ -10,23 +10,32 @@
 //      free for commercial use, attribution rendered into IG captions
 //   3. (future) Unsplash  — placeholder; activates if UNSPLASH_ACCESS_KEY set
 //   4. Manual paste       — handled in the dashboard, not here
-//   5. Branded composite  — for format_hint='branded_promo' + CTA slides
-//      (BB logo + headline + brand-palette gradient via sharp)
-//   6. (opt-in) FLUX      — per-card "Generate art" button, not default
+//   5. Branded composite  — for format_hint='branded_promo' OR a BB-named
+//      image_subject ("Bitcoin Bay logo", "BB sportsbook"). Routed via
+//      isBBSubject() before the real-photo cascade ever runs. (BB logo +
+//      headline + brand-palette gradient via sharp.)
+//   6. (opt-in) Replicate InstantID — operator-only via the dashboard 🎨
+//      "Generate scene" button. Real-person AI: takes a Wikimedia photo of
+//      the athlete + a scene prompt, generates the athlete in the new scene
+//      with their actual face. ~$0.05/image, audit-logged.
 //
 // All non-branded images carry an `attribution` string that the IG caption
 // renders as "Photo: {credit} / {license}". X drops it (280 char limit).
+// NO watermarks on regular overlay cards — they hurt social-media reach. Only
+// branded composites carry BB branding; real-photo overlays stay clean.
 //
 // Generated images for IG publish are saved to:
 //   public/post-images/{date}/{draft_id}[/{slide_index}].jpg
 // served by express.static('public') so the IG Graph API can pull them.
 //
 // Public exports:
-//   findHeroImage(subject, { intent? })
+//   findHeroImage(subject, { intent? })          // auto-infers intent
 //   findCarouselImages(slides)                   // distinct subjects per slide
 //   composeBrandedCard({ headline, subhead?, kind, outPath })
 //   composeOverlayCard({ imageUrl, headline, badgeKind?, outPath })
-//   saveDraftImages(draft, { dateDir, draftId }) — full pipeline for one draft
+//   saveDraftImages(draft, { dateDir, draftId }) // full pipeline for one draft
+//   generateAIScene({ scenePrompt, referenceImageUrl, outPath, width?, height? })
+//   inferIntent / isBBSubject / inferBrandedKind / pexelsOffTopic   // helpers
 //   BB_PALETTE                                   // brand color const
 // ---------------------------------------------------------------------------
 
@@ -94,6 +103,73 @@ function slugify(s) {
 }
 async function ensureDir(p) {
   await fs.promises.mkdir(p, { recursive: true });
+}
+
+// ── SUBJECT INFERENCE / ROUTING HELPERS ──
+//
+// Three concerns handled here:
+//   1) Detect when a subject is about Bitcoin Bay itself (CTA / promo / logo) —
+//      route those to composeBrandedCard, never to the real-photo cascade. Was
+//      the source of the May-6 "Bitcoin Bay logo → random Pexels wood-sticker"
+//      miss when this routing didn't exist.
+//   2) Infer the right `intent` from the subject string so findHeroImage can
+//      pick the right source order (athletes → Wikimedia first; abstract topics
+//      → Unsplash/Pexels first). Was the source of the May-6 "always
+//      sport_action" deprioritization of Wikimedia for athlete subjects.
+//   3) Off-topic deny-list for Pexels matches when intent is sport-flavored —
+//      reject "birthday party", "wedding", etc. that Pexels happily returns
+//      for queries like "celebration" when subject is an athlete.
+const BB_TOKENS = /\b(bitcoin\s*bay|bitcoinbay|bb\s+logo|bb\s+sportsbook)\b/i;
+const TEAM_TOKENS = /\b(lakers|warriors|celtics|knicks|bulls|heat|bucks|nets|cowboys|patriots|chiefs|ravens|eagles|49ers|packers|yankees|dodgers|red\s+sox|cubs|mets|braves|rangers|bruins|leafs|canadiens|maple\s+leafs|oilers|flames)\b/i;
+const STADIUM_TOKENS = /\b(stadium|arena|court|field|park|dome|garden|coliseum)\b/i;
+const CRYPTO_TOKENS = /\b(btc|bitcoin|eth|ethereum|sol|solana|crypto|blockchain|wallet|hardware\s+wallet|hodl|halving)\b/i;
+const FINANCE_TOKENS = /\b(market|chart|price|index|rally|dip|pump|dump|liquidation|orderbook|volume)\b/i;
+
+function isBBSubject(subject) {
+  return BB_TOKENS.test(String(subject || ''));
+}
+
+function inferBrandedKind(draft) {
+  const s = `${draft?.topic || ''} ${draft?.angle || ''} ${draft?.image_subject || ''}`.toLowerCase();
+  if (/\b(leaderboard|weekly winners|top 10)\b/.test(s)) return 'leaderboard_cta';
+  if (/\b(register|sign up|sign-up|create account)\b/.test(s)) return 'register_cta';
+  if (/\b(bonus|deposit match|promo)\b/.test(s)) return 'bonus_cta';
+  return 'promo';
+}
+
+function inferIntent(subject) {
+  const s = String(subject || '').trim();
+  if (!s) return 'sport_action';
+  // Order matters. Stadium/team checks BEFORE crypto/finance so subjects
+  // like "Crypto.com Arena" (an actual NBA stadium) and "Madison Square
+  // Garden" route to 'stadium' rather than 'crypto'/'abstract_finance'.
+  // Athlete pattern is checked last so "Bitcoin Halving" (capitalized
+  // 2-word phrase that matches crypto vocabulary) doesn't get mistaken
+  // for an athlete name.
+  if (STADIUM_TOKENS.test(s)) return 'stadium';
+  if (TEAM_TOKENS.test(s)) return 'team';
+  if (CRYPTO_TOKENS.test(s)) return 'crypto';
+  if (FINANCE_TOKENS.test(s)) return 'abstract_finance';
+  // Capitalized full name: 2-4 words, each starts with uppercase letter.
+  // Allows hyphens/apostrophes (Shai Gilgeous-Alexander, D'Andre Swift).
+  const words = s.split(/\s+/);
+  if (words.length >= 2 && words.length <= 4 &&
+      words.every((w) => /^[A-Z][a-zA-Z'\-]+$/.test(w))) {
+    return 'athlete';
+  }
+  return 'sport_action';
+}
+
+const SPORT_INTENTS = new Set(['sport_action', 'athlete', 'team', 'stadium']);
+const PEXELS_OFF_TOPIC_SPORT = [
+  'party','birthday','wedding','baby','gala','christmas','holiday','easter',
+  'family portrait','children','toddler','kids','beach party','drinking',
+  'drunk','halloween','costume','funeral','memorial','candles','balloon',
+];
+function pexelsOffTopic(photo, intent) {
+  if (!SPORT_INTENTS.has(intent)) return false;
+  const hay = `${photo.alt || ''} ${photo.url || ''}`.toLowerCase();
+  return PEXELS_OFF_TOPIC_SPORT.some((bad) => hay.includes(bad));
 }
 
 // ── WIKIMEDIA SEARCH ──
@@ -191,13 +267,17 @@ async function findWikimediaImage(subject) {
 }
 
 // ── PEXELS SEARCH ──
-async function findPexelsImage(subject) {
+// `intent` is threaded in so we can reject obviously off-topic matches when the
+// subject is sport-flavored (Pexels happily returns birthday-party photos for
+// queries like "celebration"). Without an intent guard, "SGA celebration" once
+// returned a literal birthday party with balloons.
+async function findPexelsImage(subject, intent = 'sport_action') {
   if (!subject) return null;
   const key = process.env.PEXELS_API_KEY;
   if (!key) return null;
   try {
     const url = 'https://api.pexels.com/v1/search?' + new URLSearchParams({
-      query: subject, orientation: 'landscape', size: 'large', per_page: '5',
+      query: subject, orientation: 'landscape', size: 'large', per_page: '10',
     }).toString();
     const res = await fetch(url, {
       headers: { Authorization: key },
@@ -208,15 +288,21 @@ async function findPexelsImage(subject) {
       return null;
     }
     const data = await res.json();
-    const photo = (data.photos || [])[0];
-    if (!photo) return null;
-    return {
-      url: photo.src?.large2x || photo.src?.large || photo.src?.original,
-      source: 'pexels',
-      attribution: `Photo: ${photo.photographer} on Pexels`,
-      license: 'Pexels License',
-      descriptionurl: photo.url,
-    };
+    const photos = data.photos || [];
+    for (const photo of photos) {
+      if (pexelsOffTopic(photo, intent)) {
+        console.log(`[imageRenderer] pexels rejected off-topic match for "${subject}" (intent=${intent}, alt="${photo.alt}")`);
+        continue;
+      }
+      return {
+        url: photo.src?.large2x || photo.src?.large || photo.src?.original,
+        source: 'pexels',
+        attribution: `Photo: ${photo.photographer} on Pexels`,
+        license: 'Pexels License',
+        descriptionurl: photo.url,
+      };
+    }
+    return null;
   } catch (e) {
     console.warn(`[imageRenderer] pexels search failed for "${subject}": ${e.message}`);
     return null;
@@ -255,13 +341,24 @@ async function findUnsplashImage(subject) {
 // ── HERO CASCADE ──
 async function findHeroImage(subject, opts = {}) {
   if (!subject) return null;
-  const intent = opts.intent || 'sport_action';
-  // Athletes/teams/stadiums lean Wikimedia first; abstract topics try Unsplash/Pexels first
-  const order = ['athlete', 'team', 'stadium', 'league'].includes(intent)
-    ? [findWikimediaImage, findUnsplashImage, findPexelsImage]
-    : [findUnsplashImage, findPexelsImage, findWikimediaImage];
-  for (const fn of order) {
-    const hit = await fn(subject);
+  // Auto-infer intent from the subject text unless caller forced one. This is
+  // the fix for the "saveDraftImages always passed sport_action" bug — athlete
+  // subjects now correctly route Wikimedia first.
+  const intent = opts.intent || inferIntent(subject);
+  const isPersonOrPlace = ['athlete', 'team', 'stadium', 'league'].includes(intent);
+  const sources = isPersonOrPlace
+    ? [
+        () => findWikimediaImage(subject),
+        () => findUnsplashImage(subject),
+        () => findPexelsImage(subject, intent),
+      ]
+    : [
+        () => findUnsplashImage(subject),
+        () => findPexelsImage(subject, intent),
+        () => findWikimediaImage(subject),
+      ];
+  for (const fn of sources) {
+    const hit = await fn();
     if (hit && hit.url) return hit;
   }
   return null;
@@ -269,10 +366,11 @@ async function findHeroImage(subject, opts = {}) {
 
 async function findCarouselImages(slides) {
   // Distinct subjects required; small de-dup pass on URLs as final guard.
+  // Intent is auto-inferred per slide via findHeroImage's default.
   const seen = new Set();
   const out = [];
   for (const slide of slides || []) {
-    let hit = await findHeroImage(slide.image_subject, { intent: 'sport_action' });
+    let hit = await findHeroImage(slide.image_subject);
     if (hit && seen.has(hit.url)) {
       // Try a fallback search with the secondary subject hint if duplicate
       hit = await findHeroImage(`${slide.image_subject} stadium`, { intent: 'stadium' });
@@ -443,6 +541,54 @@ function pathToPublicUrl(absPath) {
   return absPath.slice(idx + '/public'.length);
 }
 
+// ── AI SCENE GENERATION (Replicate InstantID, operator-only) ──
+// Operator-triggered only via the dashboard 🎨 button. NOT called by runDrafter
+// automatically. Cost: ~$0.05/image. Audit-logged at the route layer.
+//
+// InstantID preserves the face from `referenceImageUrl` while restyling the
+// surroundings to match `scenePrompt`. Pass a Wikimedia Commons editorial photo
+// of the athlete + a scene description, get back a JPEG with the athlete's
+// actual likeness in the new scene.
+async function generateAIScene({ scenePrompt, referenceImageUrl, outPath, width = 1080, height = 1080 }) {
+  if (!process.env.REPLICATE_API_TOKEN) throw new Error('REPLICATE_API_TOKEN not set');
+  if (!scenePrompt || String(scenePrompt).trim().length < 10) {
+    throw new Error('scenePrompt required (min 10 chars)');
+  }
+  if (!referenceImageUrl) throw new Error('referenceImageUrl required (face for InstantID)');
+  // Lazy require so the SDK + transitive deps don't load on every server boot —
+  // only when the operator actually triggers a generation.
+  const Replicate = require('replicate');
+  const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
+  const model = process.env.BCBAY_REPLICATE_MODEL || 'zsxkib/instant-id';
+
+  const output = await replicate.run(model, {
+    input: {
+      image: referenceImageUrl,
+      prompt: scenePrompt,
+      negative_prompt: 'blurry, low quality, distorted face, watermark, text, logo, deformed, ugly',
+      width, height,
+      num_inference_steps: 30,
+      guidance_scale: 5,
+    },
+  });
+  const generatedUrl = Array.isArray(output) ? output[0] : output;
+  if (!generatedUrl) throw new Error(`Replicate returned no image (model=${model})`);
+
+  // Download + re-encode to JPEG so the asset matches the rest of the pipeline
+  // (uniform format, predictable size, served by express.static).
+  const res = await fetch(String(generatedUrl), { signal: TIMEOUT(30000) });
+  if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  await ensureDir(path.dirname(outPath));
+  await sharp(buf).resize(width, height, { fit: 'cover' }).jpeg({ quality: 88 }).toFile(outPath);
+  return {
+    url: pathToPublicUrl(outPath),
+    source: 'replicate',
+    model,
+    attribution: 'AI-generated (Replicate InstantID, reference photo)',
+  };
+}
+
 // ── DRAFT-LEVEL PIPELINE ──
 async function saveDraftImages(draft, { dateDir, draftId } = {}) {
   // Returns the patches needed on the draft doc.
@@ -452,11 +598,32 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
 
   if (draft.platform === 'instagram_carousel') {
     const slides = draft.slides || [];
-    const hits = await findCarouselImages(slides);
     const newSlides = [];
     for (let i = 0; i < slides.length; i++) {
       const s = slides[i];
-      const hit = hits[i];
+      // BB-subject slides → branded composite, skip the real-photo cascade.
+      if (isBBSubject(s.image_subject)) {
+        try {
+          const outPath = path.join(dir, id, `slide-${i}.jpg`);
+          const composite = await composeBrandedCard({
+            headline: s.headline || draft.topic || 'Bitcoin Bay',
+            subhead: s.body_text || '',
+            kind: inferBrandedKind({ ...draft, image_subject: s.image_subject }),
+            outPath,
+          });
+          newSlides.push({
+            ...s,
+            image_url: composite.url,
+            image_attribution: composite.attribution,
+            composite_url: composite.url,
+          });
+          continue;
+        } catch (e) {
+          console.warn(`[imageRenderer] slide ${i} branded composite failed: ${e.message}`);
+        }
+      }
+      // Real-photo path — intent auto-inferred from slide subject
+      const hit = await findHeroImage(s.image_subject);
       let composite = null;
       if (hit?.url) {
         try {
@@ -485,13 +652,14 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
     };
   }
 
-  // Single-image (Twitter or IG single)
-  if (draft.format_hint === 'branded_promo') {
+  // Single-image (Twitter or IG single).
+  // Branded composite path: explicit format_hint OR a BB-named subject.
+  if (draft.format_hint === 'branded_promo' || isBBSubject(draft.image_subject)) {
     const outPath = path.join(dir, id, 'main.jpg');
     const composite = await composeBrandedCard({
       headline: draft.image_overlay_text || draft.topic || 'Bitcoin Bay',
       subhead: draft.angle || '',
-      kind: 'promo',
+      kind: inferBrandedKind(draft),
       outPath,
     });
     return {
@@ -503,7 +671,8 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
 
   const subject = draft.image_subject;
   if (!subject) return { image_status: 'failed' };
-  const hit = await findHeroImage(subject, { intent: 'sport_action' });
+  // Intent auto-inferred from subject text (athletes → Wikimedia first, etc.)
+  const hit = await findHeroImage(subject);
   if (!hit?.url) return { image_status: 'failed' };
 
   // For IG single, compose with overlay; for X, leave the raw real photo
@@ -541,6 +710,12 @@ module.exports = {
   composeBrandedCard,
   composeOverlayCard,
   saveDraftImages,
+  generateAIScene,
+  // subject inference / routing (Phase 4.1):
+  inferIntent,
+  isBBSubject,
+  inferBrandedKind,
+  pexelsOffTopic,
   // exposed for tests / debugging:
   wikimediaSearch,
   scoreWikimediaResult,

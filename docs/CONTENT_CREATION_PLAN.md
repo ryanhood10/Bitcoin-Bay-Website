@@ -129,6 +129,55 @@ This doc breaks the build into self-contained phases (1–8) with effort estimat
 
 **Effort:** 6h (was 3h base, +3h for multi-source cascade, branded composites with palette, carousel image lookups). **LOC:** ~600 (incl. OverlayCanvas). **Depends on:** Phase 3.
 
+**Status:** ✅ Landed in commit `697d936`.
+
+---
+
+## Phase 4.1 — asset-quality fixes (LANDED 2026-05-06)
+
+**Goal:** Fix the three asset-quality misses surfaced by the May-6 audit pass on the first batch of rendered drafts. None changed user-facing semantics; all three were in the routing/inference layer.
+
+### Misses fixed
+
+1. **`isBBSubject` auto-route to branded composite** — `image_subject` strings like "Bitcoin Bay logo", "BB sportsbook", "bitcoinbay.com" no longer fall through to the real-photo cascade (where Pexels happily returned a wood-sticker for "Bitcoin Bay logo"). They now route directly to `composeBrandedCard()` with the kind inferred from `topic + angle` (`leaderboard_cta` / `register_cta` / `bonus_cta` / generic `promo`).
+2. **Off-topic Pexels rejection** — `findPexelsImage` now accepts an `intent` arg and rejects matches whose `alt`/`url` contains off-topic vocab (party, birthday, wedding, baby, gala, christmas, holiday, etc.) when intent is sport-flavored. Iterates the top-10 results and returns the first that passes; null if all fail. Was the source of the "SGA celebration → birthday party balloons" miss.
+3. **`inferIntent` helper + auto-inference in `findHeroImage`/`saveDraftImages`** — instead of always passing `'sport_action'`, the renderer now infers intent from the subject text: capitalized 2-4-word names → `'athlete'`, stadium/arena/court tokens → `'stadium'`, team-name vocab → `'team'`, BTC/crypto vocab → `'crypto'`, market/chart vocab → `'abstract_finance'`. Stadium > team > crypto > finance > athlete > default ordering, so "Crypto.com Arena" and "Madison Square Garden" route to stadium not crypto.
+
+### Tests
+
+- `tests/image-renderer.test.js` (new, 19 tests) — `inferIntent`, `isBBSubject`, `inferBrandedKind`, `pexelsOffTopic`. Pure helper-level unit tests; no network.
+- All 97 tests green.
+
+**Effort:** 1.5h. **LOC:** ~150. **Depends on:** Phase 4.
+
+---
+
+## Phase 4.5 — AI scene generation (Replicate InstantID, operator-only) (LANDED 2026-05-06)
+
+**Goal:** When a real editorial photo doesn't fit a creative subject ("Travis Kelce reacting to a Bitcoin chart", "SGA celebrating with confetti"), let the operator generate an AI image *with the actual athlete's face*. Replicate InstantID preserves the face from a reference photo while restyling the surroundings to match a text prompt.
+
+### Decisions locked
+
+- **Real-person face preservation** via Replicate InstantID (`zsxkib/instant-id`). Reference image is a Wikimedia/Pexels editorial photo of the athlete; prompt describes the new scene.
+- **Operator-only**, never auto-fallback. The 🎨 Generate scene button on each card opens an inline panel; operator types/edits the scene prompt and submits. ~$0.05/call, audit-logged with the model + prompt + reference URL in `bcb_admin_log`.
+- **Opt-in env**: `REPLICATE_API_TOKEN` is optional. Absent → endpoint returns 503; rest of dashboard works normally. Avoids surprise spend.
+
+### Tasks (all landed)
+
+- [x] `imageRenderer.js:generateAIScene({ scenePrompt, referenceImageUrl, outPath })` — Replicate API call, downloads + re-encodes the result via sharp to `public/post-images/{date}/{draft_id}/main-ai.jpg` (or `slide-{i}-ai.jpg` for carousel slides).
+- [x] `contentDrafter.js` — added `image_scene_prompt` to all three prompt JSON schemas (twitter / instagram_single / instagram_carousel) + persisted on draft docs + per-slide carousel slide-regen path.
+- [x] `adminDashboard.js` — `POST /api/admin/dashboard/post-drafts/:id/generate-art`, FULL role only. Validates body (scene_prompt min 10 chars), checks env, falls back to a fresh Wikimedia lookup if no reference image is available, audit-logs cost.
+- [x] `views/content-drafts.html` — 🎨 button on each Twitter and IG-single card (deck-level for IG carousel is suppressed since each slide has its own image; per-slide 🎨 button in the slide editor instead). Inline panel with pre-filled scene prompt + reference URL field + Submit/Cancel.
+- [x] `package.json` — added `replicate@^1.4.0`.
+- [x] `CLAUDE.md` + `.env.example` — `REPLICATE_API_TOKEN` and `BCBAY_REPLICATE_MODEL` documented.
+- [x] `tests/admin-content.test.js` — 7 new test cases covering auth (401/403), validation (400 invalid id, 400 missing/short prompt), env (503 without token), full-role passthrough.
+
+### NO watermarks on regular posts
+
+Explicit decision: overlay composites do NOT carry a BB watermark. Watermarks hurt social-media reach and are visible signals of "branded content" that algorithms deprioritize. Only `format_hint='branded_promo'` (or BB-named subjects auto-routed to it) carry BB branding, because those posts are about Bitcoin Bay itself.
+
+**Effort:** 4h. **LOC:** ~520. **Depends on:** Phase 4 + 4.1.
+
 ---
 
 ## Phase 5 — Dashboard "Content" tab
@@ -282,6 +331,13 @@ That gets a working "review-only" surface in 8h. Operator copy-pastes into nativ
   - **Twitter scope** — Ryan confirms BB Twitter app is configured; verify `tweet.write` scope at Phase 7 (not blocking).
   - **Full build, no MVP trim** — all 8 phases.
   - Working branch: `content-creation`. Commit: TBD (this commit).
+- 2026-05-05 — Phase 3 landed (`da3f9c0`): contentDrafter.js core service.
+- 2026-05-05 — Phase 4 landed (`697d936`): imageRenderer.js with real-photo cascade + branded composites.
+- 2026-05-05 — Phase 5 landed (`44686c2`): /admin/dashboard/content review-and-approve UI.
+- 2026-05-05 — Phase 6 landed (`292a94c`): REST endpoints for the content drafter.
+- 2026-05-06 — **Phase 4.1 landed**: asset-quality fixes — `inferIntent` auto-inference, BB-subject auto-route to branded composite, off-topic Pexels rejection. (Recovers work that was lost when the previous chat session crashed mid-flight; see Phase 4.1 section above.)
+- 2026-05-06 — **Phase 4.5 landed**: Replicate InstantID AI scene generation (`generateAIScene` + `POST /generate-art` + 🎨 button on each card). Operator-only, ~$0.05/call, audit-logged. **NO watermarks on regular posts** — explicitly rejected by Ryan; only `branded_promo` posts carry BB branding.
+- 2026-05-06 — **Pi-side TODO** (Phase 1 amendment, blocked on SSH): tighten `bcbay_research.py:per_platform_topics` schema so `image_subject` is always a literal, search-friendly string — full athlete names (no abbreviations like "SGA"/"KAT"/"CMC") and no abstract verb-subjects ("celebration", "recovery", "reaction"). Brief writer should populate `image_scene_prompt` whenever a literal photo lookup is unlikely to succeed (humor-coded posts, observational angles). Land in next session with Pi access.
 
 ---
 

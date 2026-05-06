@@ -386,5 +386,116 @@ test('POST /api/admin/dashboard/run-drafter — full-role gets 202 (fire-and-for
   } finally { await stopServer(server); }
 });
 
+// ---------------------------------------------------------------------------
+// /generate-art — Phase 4.5 — Replicate InstantID AI scene generation
+// Operator-triggered, FULL role only, ~$0.05/call. Auth gates are critical
+// here — dashboard-role admins must NOT be able to burn Replicate credits.
+// ---------------------------------------------------------------------------
+test('POST /post-drafts/:id/generate-art — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/generate-art`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: { scene_prompt: 'an athlete celebrating in confetti' },
+    });
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/generate-art — 403 for dashboard role (cost-bearing)', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/generate-art`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('dashboard'), 'Content-Type': 'application/json' },
+      body: { scene_prompt: 'an athlete celebrating in confetti' },
+    });
+    assert.equal(r.status, 403);
+    assert.match(r.json.error, /Insufficient role/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/generate-art — 400 invalid ObjectId', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/post-drafts/banana/generate-art', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { scene_prompt: 'an athlete celebrating in confetti' },
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /invalid id/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/generate-art — 400 when scene_prompt is missing', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/generate-art`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: {},
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /scene_prompt required/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/generate-art — 400 when scene_prompt is too short', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/generate-art`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { scene_prompt: 'too short' },
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /scene_prompt required/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/generate-art — 503 when REPLICATE_API_TOKEN missing', async () => {
+  // Token check fires AFTER the body validation — so a valid prompt + valid id
+  // hits the token gate and returns 503 with a clear error message. This is
+  // the path operators will see if Heroku config is missing the token.
+  delete process.env.REPLICATE_API_TOKEN;
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/generate-art`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { scene_prompt: 'a basketball player celebrating after a clutch shot' },
+    });
+    assert.equal(r.status, 503);
+    assert.match(r.json.error, /REPLICATE_API_TOKEN/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/generate-art — full-role passes auth+validation, fails at Mongo when token set', async () => {
+  // With token set + valid body + valid id, the gate passes and the handler
+  // tries to load the draft from Mongo (which 500s in test). Proves auth +
+  // validation are in front of the data layer.
+  process.env.REPLICATE_API_TOKEN = 'r8_test_dummy_token_for_gate_check';
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/generate-art`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { scene_prompt: 'a basketball player celebrating after a clutch shot' },
+    });
+    assert.equal(r.status, 500);
+  } finally {
+    delete process.env.REPLICATE_API_TOKEN;
+    await stopServer(server);
+  }
+});
+
 // Restore stderr in case other suites need it
 test.after(() => { console.error = _origErr; });

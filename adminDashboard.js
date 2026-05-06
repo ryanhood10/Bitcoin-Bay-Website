@@ -35,6 +35,7 @@
 //   GET  /api/admin/dashboard/post-drafts?date=...&platform=... — list draft posts
 //   PATCH /api/admin/dashboard/post-drafts/:id                  — edit text/hashtags/manual-image-URL (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate        — re-prompt Claude (FULL)
+//   POST /api/admin/dashboard/post-drafts/:id/generate-art      — Replicate InstantID AI scene gen (FULL, ~$0.05/call)
 //   POST /api/admin/dashboard/post-drafts/:id/skip              — mark skipped (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/approve           — mark approved (Phase 7 wires publish) (FULL)
 //   POST /api/admin/dashboard/run-drafter                       — fire-and-forget drafter run (FULL)
@@ -64,18 +65,25 @@ const POST_DRAFTS    = 'bcb_post_drafts';
 
 // Lazy-load contentDrafter so server boot doesn't pay the Anthropic SDK +
 // sharp init cost up front. Only the /run-drafter and /:id/regenerate
-// handlers ever need it.
+// handlers ever need it. Same for imageRenderer (loads sharp + replicate
+// transitively when generate-art fires).
 let _contentDrafter = null;
 function getContentDrafter() {
   if (!_contentDrafter) _contentDrafter = require('./contentDrafter');
   return _contentDrafter;
+}
+let _imageRenderer = null;
+function getImageRenderer() {
+  if (!_imageRenderer) _imageRenderer = require('./imageRenderer');
+  return _imageRenderer;
 }
 
 // Allowed values for the Mongo update fields. Anything else is rejected at
 // PATCH so a malformed UI patch can't sneak arbitrary fields into a draft doc.
 const PATCH_ALLOWED = new Set([
   'text', 'caption', 'hashtags',
-  'image_subject', 'image_overlay_text', 'image_url', 'image_attribution',
+  'image_subject', 'image_overlay_text', 'image_scene_prompt',
+  'image_url', 'image_attribution',
   'slides',
   // status changes go through dedicated endpoints (skip/approve), not PATCH
 ]);
@@ -647,6 +655,129 @@ router.post('/api/admin/dashboard/post-drafts/:id/regenerate', adminAuth.require
     res.json({ success: true, ...result });
   } catch (e) {
     console.error('[admin-dashboard] /post-drafts/regenerate error:', e.message);
+    const code = /not found/i.test(e.message) ? 404 : 500;
+    res.status(code).json({ success: false, error: e.message });
+  }
+});
+
+// Generate AI scene image for a draft (Replicate InstantID). Operator-only
+// via the dashboard 🎨 button. Real-person face preservation: takes a
+// reference image (Wikimedia photo of the athlete) + a scene prompt, returns
+// a generated JPEG with the athlete's actual likeness in the new scene.
+//
+// Body:
+//   - scene_prompt        : string, required, min 10 chars
+//   - reference_image_url : string, optional — defaults to draft.image_url
+//                           (or slides[i].image_url for carousel), or a fresh
+//                           Wikimedia lookup of image_subject if neither
+//   - slide_index         : integer, required for instagram_carousel only
+//
+// Returns 503 if REPLICATE_API_TOKEN is missing. Cost ~$0.05/call,
+// audit-logged with the model + prompt.
+router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const body = req.body || {};
+    const scenePrompt = String(body.scene_prompt || '').trim();
+    if (scenePrompt.length < 10) {
+      return res.status(400).json({ success: false, error: 'scene_prompt required (min 10 chars)' });
+    }
+    if (!process.env.REPLICATE_API_TOKEN) {
+      return res.status(503).json({ success: false, error: 'REPLICATE_API_TOKEN not configured' });
+    }
+    const slideIndex = Number.isInteger(body.slide_index) ? body.slide_index : null;
+    const refOverride = typeof body.reference_image_url === 'string' && body.reference_image_url.trim()
+      ? body.reference_image_url.trim() : null;
+
+    const draft = await withDb((db) => db.collection(POST_DRAFTS).findOne({ _id: new ObjectId(id) }));
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+
+    let isCarouselSlide = false;
+    let referenceImageUrl;
+    if (draft.platform === 'instagram_carousel') {
+      if (slideIndex == null) {
+        return res.status(400).json({ success: false, error: 'slide_index required for carousel drafts' });
+      }
+      const slide = (draft.slides || [])[slideIndex];
+      if (!slide) {
+        return res.status(400).json({ success: false, error: `slide_index ${slideIndex} out of range` });
+      }
+      isCarouselSlide = true;
+      referenceImageUrl = refOverride || slide.image_url || null;
+    } else {
+      referenceImageUrl = refOverride || draft.image_url || null;
+    }
+
+    // No reference yet — fall back to a fresh Wikimedia lookup of the subject
+    // so InstantID can preserve the athlete's actual face. Without a face
+    // reference, InstantID degrades to vanilla SDXL with no likeness.
+    if (!referenceImageUrl) {
+      const subject = isCarouselSlide
+        ? draft.slides[slideIndex].image_subject
+        : draft.image_subject;
+      if (subject) {
+        const hit = await getImageRenderer().findHeroImage(subject);
+        if (hit?.url) referenceImageUrl = hit.url;
+      }
+    }
+    if (!referenceImageUrl) {
+      return res.status(400).json({ success: false,
+        error: 'no reference image available — paste one via reference_image_url or set image_subject so we can fetch one' });
+    }
+
+    const date = draft.brief_date || new Date().toISOString().slice(0, 10);
+    const outPath = isCarouselSlide
+      ? path.join(__dirname, 'public', 'post-images', date, id, `slide-${slideIndex}-ai.jpg`)
+      : path.join(__dirname, 'public', 'post-images', date, id, 'main-ai.jpg');
+
+    const generated = await getImageRenderer().generateAIScene({
+      scenePrompt, referenceImageUrl, outPath,
+    });
+
+    // Persist new URL; preserve old one as `image_url_previous` so the operator
+    // can revert from the UI without re-rendering.
+    let updateOp;
+    if (isCarouselSlide) {
+      updateOp = {
+        $set: {
+          [`slides.${slideIndex}.image_url`]: generated.url,
+          [`slides.${slideIndex}.image_url_previous`]: draft.slides[slideIndex].image_url || null,
+          [`slides.${slideIndex}.composite_url`]: null,
+          [`slides.${slideIndex}.image_attribution`]: generated.attribution,
+          [`slides.${slideIndex}.image_source`]: 'replicate',
+          updated_at: new Date(),
+        },
+      };
+    } else {
+      updateOp = {
+        $set: {
+          image_url: generated.url,
+          image_url_previous: draft.image_url || null,
+          image_attribution: generated.attribution,
+          image_source: 'replicate',
+          updated_at: new Date(),
+        },
+      };
+    }
+    await withDb((db) => db.collection(POST_DRAFTS).updateOne({ _id: new ObjectId(id) }, updateOp));
+    await logAdminAction({
+      action: 'content-drafter:generate-art',
+      admin: req.admin?.user,
+      draft_id: id,
+      slide_index: slideIndex,
+      model: generated.model,
+      cost_estimate_usd: 0.05,
+      scene_prompt: scenePrompt,
+      reference_image_url: referenceImageUrl,
+    });
+    res.json({ success: true, image_url: generated.url, source: 'replicate', model: generated.model });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/generate-art error:', e.message);
     const code = /not found/i.test(e.message) ? 404 : 500;
     res.status(code).json({ success: false, error: e.message });
   }

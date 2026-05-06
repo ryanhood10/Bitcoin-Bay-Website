@@ -248,6 +248,8 @@ If you're picking this up cold:
 - ❌ The mascot. BB doesn't have one. Don't invent one mid-build.
 - ❌ Animated/video posts. Eldrin's animation pipeline was for AI-tool demos. BB sports content lives or dies on still imagery + text.
 - ❌ Generic "scrape the internet for images" (Getty/AP/Reuters wire shots are licensed — we use Wikimedia + Unsplash + Pexels + manual paste + BB-branded composites only).
+- ❌ **Watermarks on regular posts.** A previous build added a subtle BB logo to every overlay composite — Ryan rejected this on 2026-05-06: watermarks hurt social-media reach (algorithms deprioritize visibly-branded content). Only `format_hint='branded_promo'` posts carry BB branding; regular athlete/sports posts stay clean.
+- ❌ **Auto-fallback AI image generation.** Replicate InstantID is wired in (Phase 4.5) but is operator-triggered only via the 🎨 button. Real-photo cascade always tries first; AI is the operator's deliberate choice for cases where no real photo will fit ("Travis Kelce reacting to a Bitcoin chart").
 
 ---
 
@@ -275,6 +277,15 @@ Update `docs/CONTENT_CREATION_PLAN.md` with checkmarks against the phases as you
 Update `CLAUDE.md` (root) under "What this app does" to include capability #5: "Content drafter — daily X + IG post drafts based on Pi research, operator-approved publish."
 
 Push to `main` (or a feature branch — confirm with Ryan), then `git push heroku main` only on Ryan's explicit go.
+
+---
+
+## Recent changes
+
+- **2026-05-05** — Phases 3, 4, 5, 6 shipped to `main` (commits `da3f9c0`, `697d936`, `44686c2`, `292a94c`). Drafter + image renderer + review UI + REST endpoints all working end-to-end. CLAUDE.md updated with capability #5.
+- **2026-05-06 — Phase 4.1 (asset-quality fixes):** A May-6 audit pass on the first batch of rendered drafts found three concrete misses (BB-logo subjects falling through to Pexels, off-topic Pexels matches like "SGA celebration → birthday party balloons", and `saveDraftImages` always passing `intent: 'sport_action'` regardless of athlete subjects). The previous chat session was mid-flight on these fixes when it crashed; this session recovered them. New helpers in `imageRenderer.js`: `inferIntent`, `isBBSubject`, `inferBrandedKind`, `pexelsOffTopic`. Net 19 unit tests in `tests/image-renderer.test.js`.
+- **2026-05-06 — Phase 4.5 (AI scene generation):** New capability — operator-triggered `🎨 Generate scene` button on each draft card. Calls Replicate InstantID (`zsxkib/instant-id`) with a Wikimedia/Pexels reference photo of the athlete + a scene prompt; returns a generated JPEG with the athlete's actual face in the new scene. ~$0.05/call, audit-logged in `bcb_admin_log` with the model + prompt. Reference image defaults to the current draft image; falls back to a fresh Wikimedia lookup of `image_subject` when neither is set. Endpoint returns 503 if `REPLICATE_API_TOKEN` is missing. **No watermarks on regular posts** — only `branded_promo` posts carry BB branding.
+- **2026-05-06 — Pi-side TODO (blocked):** `bcbay_research.py:per_platform_topics` should produce literal, search-friendly `image_subject` strings (full athlete names, no abstractions like "celebration"/"reaction") and populate `image_scene_prompt` for cases where a real photo is unlikely. Documented in `CONTENT_CREATION_PLAN.md` Phase 1 amendment; blocked on SSH access to the Pi.
 
 ---
 

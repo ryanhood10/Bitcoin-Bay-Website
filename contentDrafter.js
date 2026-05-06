@@ -176,8 +176,9 @@ Return STRICT JSON, exactly this shape, no markdown, no commentary:
 {
   "text": "the tweet, ≤270 chars including any URL",
   "hashtags": ["0-3 lowercase hashtags or empty array — be sparing"],
-  "suggested_image_subject": "1-3 word visual subject for hero photo lookup",
+  "suggested_image_subject": "1-3 word visual subject for hero photo lookup. ALWAYS use FULL athlete names, never abbreviations (Shai Gilgeous-Alexander, not SGA). Avoid abstract verb-subjects (use 'Stephen Curry shooting' not 'Curry celebration').",
   "image_overlay_text": null,
+  "image_scene_prompt": "string|null — set ONLY when a real photo of this exact moment is unlikely to exist (e.g. 'Shai Gilgeous-Alexander celebrating after a clutch shot, confetti falling, NBA arena background, photorealistic editorial photo'). Operator-triggered AI generation will use this. Leave null when image_subject + a real photo will work fine.",
   "source_url": ${topic.source_url ? `"${topic.source_url}"` : 'null'},
   "takeaway_one_liner": "internal note — what makes this post worth posting (1 sentence)"
 }`;
@@ -214,6 +215,7 @@ Return STRICT JSON, exactly this shape, no markdown, no commentary:
   "hashtags": ["10-15 lowercase IG hashtags, mix broad + niche, no spaces, no #"],
   "suggested_image_subject": "${topic.image_subject || 'BitcoinBay branded card'}",
   "image_overlay_text": "≤8 words for the on-image headline",
+  "image_scene_prompt": "string|null — set ONLY when a real photo of this exact moment is unlikely to exist (e.g. 'Travis Kelce reacting to a Bitcoin price chart on a phone, locker room background, photorealistic editorial photo'). Operator-triggered AI generation will use this. Leave null when image_subject + a real photo will work fine.",
   "source_url": ${topic.source_url ? `"${topic.source_url}"` : 'null'}
 }`;
 }
@@ -257,9 +259,10 @@ Return STRICT JSON, exactly this shape, no markdown, no commentary:
   "slides": [
     {
       "slide_role": "lead_photo|secondary_photo|data_card|key_quote|cta",
-      "image_subject": "exact visual subject for image lookup (string)",
+      "image_subject": "exact visual subject for image lookup (string). FULL athlete names, no abbreviations. Avoid abstract verb-subjects.",
       "headline": "≤8-word on-image overlay text",
       "body_text": "≤30 words — the alt-text/storytelling layer (not on the image, used for accessibility and dev preview)",
+      "image_scene_prompt": "string|null — set ONLY when a real photo of this slide's exact moment is unlikely. Used for operator-triggered AI scene generation per-slide. Leave null when image_subject works.",
       "source_url": "string or null"
     }
   ]
@@ -326,6 +329,7 @@ function buildTwitterDraft({ topic, briefDate, parsed, athleteCryptoPin, humorPa
     source_url: parsed.source_url || topic.source_url || null,
     image_subject: parsed.suggested_image_subject || topic.image_subject || null,
     image_overlay_text: parsed.image_overlay_text || null,
+    image_scene_prompt: parsed.image_scene_prompt || null,
     image_url: null,
     image_attribution: null,
     image_status: 'pending',
@@ -350,6 +354,7 @@ function buildInstagramSingleDraft({ topic, briefDate, parsed, humorPass }) {
     source_url: parsed.source_url || topic.source_url || null,
     image_subject: parsed.suggested_image_subject || topic.image_subject || null,
     image_overlay_text: parsed.image_overlay_text || null,
+    image_scene_prompt: parsed.image_scene_prompt || null,
     image_url: null,
     image_attribution: null,
     image_status: 'pending',
@@ -366,6 +371,7 @@ function buildInstagramCarouselDraft({ topic, briefDate, parsed, humorPass }) {
     image_subject: s.image_subject || '',
     headline: String(s.headline || '').slice(0, 80),
     body_text: String(s.body_text || '').slice(0, 250),
+    image_scene_prompt: s.image_scene_prompt || null,
     source_url: s.source_url || null,
     image_url: null,
     image_attribution: null,
@@ -510,8 +516,8 @@ async function regenerateDraft(draftId, opts = {}) {
     if (!slide) throw new Error(`slide ${slideIndex} not in brief`);
     const slidePrompt = `${BB_VOICE}\n${COMPLIANCE}\n\nRewrite ONE carousel slide for the deck topic:
 "${draft.topic}". Slide role: ${slide.slide_role}. Subject hint: ${slide.image_subject}.
-Return STRICT JSON: {"image_subject": "...", "headline": "≤8 words", "body_text": "≤30 words"}`;
-    const raw = await callClaude(slidePrompt, { maxTokens: 600 });
+Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "headline": "≤8 words", "body_text": "≤30 words", "image_scene_prompt": "string|null — set ONLY when a real photo of this moment is unlikely; used for operator-triggered AI generation"}`;
+    const raw = await callClaude(slidePrompt, { maxTokens: 700 });
     const parsed = extractJSON(raw);
     const newSlides = [...(draft.slides || [])];
     newSlides[slideIndex] = {
@@ -519,6 +525,7 @@ Return STRICT JSON: {"image_subject": "...", "headline": "≤8 words", "body_tex
       image_subject: parsed.image_subject || newSlides[slideIndex]?.image_subject || '',
       headline: String(parsed.headline || '').slice(0, 80),
       body_text: String(parsed.body_text || '').slice(0, 250),
+      image_scene_prompt: parsed.image_scene_prompt ?? newSlides[slideIndex]?.image_scene_prompt ?? null,
       image_url: null, // force re-render
       composite_url: null,
     };
