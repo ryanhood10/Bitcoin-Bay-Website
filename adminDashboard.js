@@ -30,6 +30,7 @@
 //   GET  /api/admin/dashboard/bonus-reports                     — last 20 weekly leaderboards (FULL role only)
 //   POST /api/admin/dashboard/bonus-report                      — upsert one weekly leaderboard (FULL role only)
 //
+//   GET  /admin/dashboard/content                               — content-drafts page (FULL role only)
 //   GET  /api/admin/dashboard/post-briefs/latest                — most recent brief metadata
 //   GET  /api/admin/dashboard/post-drafts?date=...&platform=... — list draft posts
 //   PATCH /api/admin/dashboard/post-drafts/:id                  — edit text/hashtags/manual-image-URL (FULL)
@@ -512,11 +513,18 @@ router.post('/api/admin/dashboard/bonus-report', adminAuth.requireAdmin(adminAut
 });
 
 // ===========================================================================
-// CONTENT DRAFTER (Phase 6)
-// All FULL-role only — these endpoints either trigger AI calls (cost) or
-// will eventually post to live X/IG accounts (Phase 7). The dashboard-role
-// admin can never touch them.
+// CONTENT DRAFTER (Phase 5+6)
+// All write/regen/approve endpoints FULL-role only — these trigger Anthropic
+// spend (regenerate, run-drafter) and will eventually publish to live X/IG
+// accounts (Phase 7). The dashboard-role admin can never touch them.
 // ===========================================================================
+
+// HTML page (Phase 5) — full-role only because every action on this page is
+// full-role anyway, no point teasing dashboard-role admins with a UI they
+// can't use.
+router.get('/admin/dashboard/content', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'content-drafts.html'));
+});
 
 // Latest brief metadata — used by the dashboard to render an "as of" chip.
 // Read-only; any admin role can see this.

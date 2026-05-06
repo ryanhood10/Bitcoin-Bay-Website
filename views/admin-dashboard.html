@@ -1019,6 +1019,28 @@ function renderAll(){
     </div>`;
   }
 
+  // ── CONTENT DRAFTS (full-role admins only) ──
+  // Daily X + IG draft posts, generated overnight from the Pi research brief.
+  // Operator reviews, edits, regenerates, and approves before posting.
+  // Hidden from `dashboard`-role admins; server-side gate on role=full.
+  if (canAccessMessages()) {
+    html += `<div class="section-block">
+      <div class="section-header">
+        <div class="section-title-row">
+          <span class="section-title">Content Drafts</span>
+          <span class="pill section-details-pill" style="opacity:1;">daily</span>
+        </div>
+        <span class="section-note">Review &amp; approve today's X + Instagram drafts</span>
+      </div>
+      <div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="font-size:13px;color:var(--sub);max-width:560px;line-height:1.5;">
+          AI-drafted from this morning's research brief — 3 tweets + 1 Instagram post (single or carousel) per day. Real photos from Wikimedia/Pexels, BB voice, hard compliance guardrails. Edit, regenerate, or approve.
+        </div>
+        <a class="draft-btn primary" href="/admin/dashboard/content" style="text-decoration:none;white-space:nowrap;">Review drafts →</a>
+      </div>
+    </div>`;
+  }
+
   // ── FOOTER ──
   const okCount  = (REPORT.meta?.success?.length  || 0);
   const skipCount = (REPORT.meta?.skipped?.length || 0);

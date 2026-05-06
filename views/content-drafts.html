@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Content Drafts · BC Bay</title>
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #181c23;
+    --surface3: #1f2530;
+    --border: #1f2530;
+    --border2: #2a3040;
+    --gold: #f0b429;
+    --gold2: #ffd166;
+    --orange: #ee8034;
+    --green: #00d68f;
+    --green-dim: #00a86e;
+    --red: #ff5c5c;
+    --blue: #4a9eff;
+    --text: #e8ecf4;
+    --muted: #5a6478;
+    --muted2: #8892a4;
+    --twitter: #1d9bf0;
+    --instagram: #e1306c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: -apple-system, "Inter", "Segoe UI", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .page { max-width: 1320px; margin: 0 auto; padding: 18px 22px 60px; }
+
+  /* HEADER */
+  .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+  .header-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--surface2); border: 1px solid var(--border); color: var(--muted2); }
+  .pill.gold { background: rgba(240,180,41,0.1); color: var(--gold); border-color: rgba(240,180,41,0.3); }
+  .pill.green { background: rgba(0,214,143,0.1); color: var(--green); border-color: rgba(0,214,143,0.3); }
+  .pill.orange { background: rgba(238,128,52,0.1); color: var(--orange); border-color: rgba(238,128,52,0.3); }
+  .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); cursor: pointer; transition: all 0.12s ease; font-family: inherit; }
+  .btn:hover:not(:disabled) { border-color: var(--muted); background: var(--surface3); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: #ff9145; }
+  .btn.success { background: var(--green-dim); border-color: var(--green-dim); color: #fff; }
+  .btn.success:hover:not(:disabled) { background: var(--green); }
+  .btn.danger { color: var(--red); border-color: rgba(255,92,92,0.3); }
+  .btn.danger:hover:not(:disabled) { background: rgba(255,92,92,0.1); }
+  .btn.small { padding: 5px 10px; font-size: 12px; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--muted2); }
+  .btn.ghost:hover:not(:disabled) { color: var(--text); background: var(--surface2); }
+
+  /* STATUS STRIP */
+  .status-strip { display: flex; gap: 16px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; font-size: 12px; }
+  .status-strip .label { color: var(--muted2); }
+  .status-strip .value { color: var(--text); font-weight: 600; }
+  .status-strip .topic { color: var(--gold); }
+
+  /* GRID */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  .col-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted2); display: flex; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .col-title .platform-icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .card.skipped { opacity: 0.5; }
+  .card.posted { border-color: var(--green-dim); }
+  .card.approved { border-color: var(--orange); }
+
+  .card-head { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+  .card-head-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .topic-line { font-size: 12px; color: var(--muted2); padding: 8px 14px 0; line-height: 1.4; }
+  .topic-line strong { color: var(--text); font-weight: 600; }
+
+  .card-body { padding: 12px 14px; }
+  .editor { width: 100%; min-height: 90px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-family: inherit; font-size: 13px; line-height: 1.5; resize: vertical; }
+  .editor:focus { outline: none; border-color: var(--orange); }
+  .char-count { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right; }
+  .char-count.over { color: var(--red); font-weight: 700; }
+
+  .image-preview { width: 100%; margin-top: 10px; border-radius: 8px; overflow: hidden; background: var(--surface2); border: 1px solid var(--border); }
+  .image-preview img { display: block; width: 100%; max-height: 360px; object-fit: cover; }
+  .image-preview .placeholder { padding: 36px 12px; text-align: center; color: var(--muted); font-size: 12px; }
+  .image-meta { padding: 6px 10px; font-size: 11px; color: var(--muted); display: flex; gap: 8px; justify-content: space-between; border-top: 1px solid var(--border); }
+  .image-meta a { color: var(--blue); }
+
+  .field-row { margin-top: 10px; }
+  .field-label { font-size: 11px; font-weight: 600; color: var(--muted2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 6px; font-family: inherit; font-size: 12px; }
+  .field-input:focus { outline: none; border-color: var(--orange); }
+
+  .source-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; font-size: 11px; color: var(--muted2); margin-top: 6px; }
+  .source-chip a { color: var(--blue); }
+
+  .card-actions { padding: 10px 14px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* CAROUSEL */
+  .slide-tabs { display: flex; gap: 4px; padding: 8px 10px 0; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .slide-tab { display: flex; flex-direction: column; align-items: center; padding: 6px 10px; border-radius: 6px 6px 0 0; cursor: pointer; min-width: 80px; border: 1px solid transparent; border-bottom: none; background: transparent; color: var(--muted2); font-size: 11px; flex-shrink: 0; }
+  .slide-tab:hover { color: var(--text); background: var(--surface3); }
+  .slide-tab.active { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .slide-tab .slide-num { font-weight: 700; font-size: 13px; }
+  .slide-tab .slide-role { font-size: 10px; color: var(--muted); }
+
+  .slide-panel { display: none; }
+  .slide-panel.active { display: block; }
+
+  /* STATUS PILLS on cards */
+  .status-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .status-pill.draft { background: var(--surface3); color: var(--muted2); }
+  .status-pill.approved { background: rgba(238,128,52,0.15); color: var(--orange); }
+  .status-pill.posted { background: rgba(0,214,143,0.15); color: var(--green); }
+  .status-pill.skipped { background: rgba(255,92,92,0.15); color: var(--red); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 22px; right: 22px; padding: 12px 18px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.4); font-size: 13px; opacity: 0; transform: translateY(8px); transition: all 0.2s ease; pointer-events: none; max-width: 360px; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.success { border-color: var(--green-dim); color: var(--green); }
+
+  /* EMPTY STATE */
+  .empty-state { padding: 60px 20px; text-align: center; color: var(--muted2); }
+  .empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+  .empty-state p { font-size: 13px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Content Drafts</h1>
+      <span id="brief-date-pill" class="pill gold">—</span>
+      <span id="brief-topic-pill" class="pill">—</span>
+    </div>
+    <div class="header-right">
+      <button id="btn-refresh" class="btn ghost small" onclick="loadDrafts()">↻ Refresh</button>
+      <button id="btn-run-drafter" class="btn primary" onclick="runDrafter()">↻ Run drafter now</button>
+      <a class="btn ghost small" href="/admin/dashboard">← Dashboard</a>
+    </div>
+  </div>
+
+  <!-- STATUS STRIP -->
+  <div id="status-strip" class="status-strip">
+    <div><span class="label">Brief:</span> <span id="status-date" class="value">loading…</span></div>
+    <div><span class="label">Today's category:</span> <span id="status-category" class="topic">—</span></div>
+    <div><span class="label">Drafts:</span> <span id="status-count" class="value">0</span></div>
+    <div id="status-runtime" style="color: var(--muted); display: none;"></div>
+  </div>
+
+  <!-- TWO-COLUMN GRID -->
+  <div class="grid">
+    <div class="col">
+      <div class="col-title">
+        <svg class="platform-icon" viewBox="0 0 24 24" fill="#1d9bf0"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        Twitter / X
+        <span id="x-count" class="pill" style="margin-left:auto;">0</span>
+      </div>
+      <div id="x-cards"></div>
+    </div>
+    <div class="col">
+      <div class="col-title">
+        <svg class="platform-icon" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#e1306c" stroke="none"/></svg>
+        Instagram
+        <span id="ig-count" class="pill" style="margin-left:auto;">0</span>
+      </div>
+      <div id="ig-cards"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// CONTENT DRAFTS — operator review/edit/approve UI for the daily X+IG drafts.
+// All endpoints under /api/admin/dashboard/post-drafts/* (Phase 6).
+// ─────────────────────────────────────────────────────────────────────────
+
+const TWITTER_LIMIT = 280;
+const IG_CAPTION_LIMIT = 2200;
+
+// State
+let DRAFTS = [];
+let BRIEF = null;
+let CURRENT_SLIDE = {}; // draftId -> active slide index for carousel cards
+
+const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+function toast(message, kind = '') {
+  const t = document.getElementById('toast');
+  t.textContent = message;
+  t.className = 'toast show ' + kind;
+  setTimeout(() => { t.className = 'toast ' + kind; }, 3500);
+}
+
+// ─── Render ─────────────────────────────────────────────────────────────
+function renderTwitterCard(d) {
+  const len = (d.text || '').length;
+  const overLimit = len > TWITTER_LIMIT;
+  const status = d.status || 'draft';
+  const sourceChip = d.source_url
+    ? `<div class="source-chip">📎 <a href="${escapeHtml(d.source_url)}" target="_blank" rel="noopener">${escapeHtml(d.source_url.replace(/^https?:\/\//, '').slice(0, 40))}…</a></div>`
+    : '';
+  const imageBlock = renderImageBlock(d);
+  const isLocked = ['posted', 'skipped'].includes(status);
+
+  return `<div class="card ${status}" data-id="${d._id}">
+    <div class="card-head">
+      <div class="card-head-left">
+        ${d.athlete_crypto_pin ? '<span class="pill orange">🚨 ATHLETE × CRYPTO</span>' : ''}
+        ${d.allow_humor ? '<span class="pill gold">😄 humor</span>' : ''}
+        <span class="status-pill ${status}">${status}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">${escapeHtml(d.format_hint || 'take')}</div>
+    </div>
+    <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
+    <div class="card-body">
+      <textarea class="editor" data-field="text" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.text || '')}</textarea>
+      <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${TWITTER_LIMIT}</div>
+      ${sourceChip}
+      ${imageBlock}
+      <div class="field-row">
+        <div class="field-label">Hashtags (comma-separated)</div>
+        <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
+      </div>
+      <div class="field-row">
+        <div class="field-label">Override image URL (manual)</div>
+        <input class="field-input" data-field="image_url" placeholder="paste a public image URL" value="${escapeHtml(d.image_url_override || '')}" ${isLocked ? 'disabled' : ''} />
+      </div>
+    </div>
+    ${renderActions(d, isLocked)}
+  </div>`;
+}
+
+function renderInstagramSingleCard(d) {
+  const len = (d.caption || '').length;
+  const overLimit = len > IG_CAPTION_LIMIT;
+  const status = d.status || 'draft';
+  const sourceChip = d.source_url
+    ? `<div class="source-chip">📎 <a href="${escapeHtml(d.source_url)}" target="_blank" rel="noopener">${escapeHtml(d.source_url.replace(/^https?:\/\//, '').slice(0, 40))}…</a></div>`
+    : '';
+  const isLocked = ['posted', 'skipped'].includes(status);
+
+  return `<div class="card ${status}" data-id="${d._id}">
+    <div class="card-head">
+      <div class="card-head-left">
+        ${d.allow_humor ? '<span class="pill gold">😄 humor</span>' : ''}
+        <span class="status-pill ${status}">${status}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);">single image</div>
+    </div>
+    <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
+    <div class="card-body">
+      <textarea class="editor" data-field="caption" ${isLocked ? 'disabled' : ''} style="min-height:140px;">${escapeHtml(d.caption || '')}</textarea>
+      <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
+      ${sourceChip}
+      ${renderImageBlock(d)}
+      <div class="field-row">
+        <div class="field-label">Image overlay text (≤8 words)</div>
+        <input class="field-input" data-field="image_overlay_text" value="${escapeHtml(d.image_overlay_text || '')}" ${isLocked ? 'disabled' : ''} />
+      </div>
+      <div class="field-row">
+        <div class="field-label">Hashtags (comma-separated)</div>
+        <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
+      </div>
+      <div class="field-row">
+        <div class="field-label">Override image URL (manual)</div>
+        <input class="field-input" data-field="image_url" placeholder="paste a public image URL" value="${escapeHtml(d.image_url || '')}" ${isLocked ? 'disabled' : ''} />
+      </div>
+    </div>
+    ${renderActions(d, isLocked)}
+  </div>`;
+}
+
+function renderInstagramCarouselCard(d) {
+  const len = (d.caption || '').length;
+  const overLimit = len > IG_CAPTION_LIMIT;
+  const status = d.status || 'draft';
+  const slides = d.slides || [];
+  const cur = CURRENT_SLIDE[d._id] ?? 0;
+  const isLocked = ['posted', 'skipped'].includes(status);
+
+  const tabs = slides.map((s, i) => `
+    <div class="slide-tab ${i === cur ? 'active' : ''}" data-slide="${i}">
+      <div class="slide-num">${i + 1}</div>
+      <div class="slide-role">${escapeHtml((s.slide_role || '').replace(/_/g, ' '))}</div>
+    </div>
+  `).join('');
+
+  const panels = slides.map((s, i) => {
+    const composite = s.composite_url || s.image_url || '';
+    const compositeBlock = composite
+      ? `<div class="image-preview"><img src="${escapeHtml(composite)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;placeholder&quot;>image not yet rendered</div>'"/>${s.image_attribution ? `<div class="image-meta"><span>${escapeHtml(s.image_attribution)}</span></div>` : ''}</div>`
+      : `<div class="image-preview"><div class="placeholder">Image pending — paste URL below or regenerate this slide.</div></div>`;
+    return `<div class="slide-panel ${i === cur ? 'active' : ''}" data-slide="${i}">
+      <div class="field-row">
+        <div class="field-label">Slide ${i + 1} headline (on-image overlay, ≤8 words)</div>
+        <input class="field-input" data-slide-field="headline" data-slide-index="${i}" value="${escapeHtml(s.headline || '')}" ${isLocked ? 'disabled' : ''} />
+      </div>
+      <div class="field-row">
+        <div class="field-label">Slide ${i + 1} body / alt text</div>
+        <textarea class="editor" data-slide-field="body_text" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="min-height:60px;">${escapeHtml(s.body_text || '')}</textarea>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Image subject (search keyword)</div>
+        <input class="field-input" data-slide-field="image_subject" data-slide-index="${i}" value="${escapeHtml(s.image_subject || '')}" ${isLocked ? 'disabled' : ''} />
+      </div>
+      <div class="field-row">
+        <div class="field-label">Override image URL (manual)</div>
+        <input class="field-input" data-slide-field="image_url" data-slide-index="${i}" placeholder="paste a public image URL" value="${escapeHtml(s.image_url || '')}" ${isLocked ? 'disabled' : ''} />
+      </div>
+      ${compositeBlock}
+      <div style="margin-top:10px; display:flex; gap:6px;">
+        <button class="btn small" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''}>🔄 Regenerate this slide</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card ${status}" data-id="${d._id}">
+    <div class="card-head">
+      <div class="card-head-left">
+        ${d.athlete_crypto_pin ? '<span class="pill orange">🚨 ATHLETE × CRYPTO</span>' : ''}
+        ${d.allow_humor ? '<span class="pill gold">😄 humor</span>' : ''}
+        <span class="status-pill ${status}">${status}</span>
+        <span class="pill" style="background:rgba(74,158,255,0.1); color: var(--blue); border-color: rgba(74,158,255,0.3);">${slides.length}-slide carousel</span>
+      </div>
+    </div>
+    <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
+    <div class="card-body">
+      <div class="field-label">Deck caption (shown under all slides)</div>
+      <textarea class="editor" data-field="caption" ${isLocked ? 'disabled' : ''} style="min-height:120px;">${escapeHtml(d.caption || '')}</textarea>
+      <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
+      <div class="field-row">
+        <div class="field-label">Hashtags (comma-separated)</div>
+        <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
+      </div>
+    </div>
+    <div class="slide-tabs">${tabs}</div>
+    <div class="card-body" style="padding-top:14px;">${panels}</div>
+    ${renderActions(d, isLocked)}
+  </div>`;
+}
+
+function renderImageBlock(d) {
+  const url = d.image_url;
+  const attr = d.image_attribution;
+  if (!url) {
+    return `<div class="image-preview"><div class="placeholder">Image rendering — refresh in 30s.</div></div>`;
+  }
+  return `<div class="image-preview">
+    <img src="${escapeHtml(url)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;placeholder&quot;>image fetch failed — try a manual URL below</div>'"/>
+    ${attr ? `<div class="image-meta"><span>${escapeHtml(attr)}</span></div>` : ''}
+  </div>`;
+}
+
+function renderActions(d, isLocked) {
+  if (isLocked) {
+    return `<div class="card-actions">
+      <span style="color:var(--muted2); font-size:12px; padding: 4px 0;">${d.status === 'posted' ? '✓ Posted' : '⛔ Skipped'} · ${formatTimestamp(d.updated_at)}</span>
+    </div>`;
+  }
+  return `<div class="card-actions">
+    <button class="btn small" data-action="save">💾 Save edits</button>
+    <button class="btn small" data-action="regen">🔄 Regenerate</button>
+    <button class="btn small" data-action="humor">😄 Funny twist</button>
+    <button class="btn small danger" data-action="skip">⛔ Skip</button>
+    <button class="btn small success" data-action="approve" style="margin-left:auto;">✓ Approve &amp; post</button>
+  </div>`;
+}
+
+function formatTimestamp(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString();
+  } catch (_) { return iso; }
+}
+
+// ─── Card actions wiring ────────────────────────────────────────────────
+function wireCardActions(cardEl) {
+  const id = cardEl.dataset.id;
+
+  // Char counters live as you type
+  cardEl.querySelectorAll('.editor[data-field=text], .editor[data-field=caption]').forEach((ed) => {
+    ed.addEventListener('input', () => {
+      const counter = cardEl.querySelector('[data-counter]');
+      if (!counter) return;
+      const len = ed.value.length;
+      const limit = ed.dataset.field === 'text' ? TWITTER_LIMIT : IG_CAPTION_LIMIT;
+      counter.querySelector('.len').textContent = len;
+      counter.classList.toggle('over', len > limit);
+    });
+  });
+
+  // Slide tab switching (carousels only)
+  cardEl.querySelectorAll('.slide-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const idx = Number(tab.dataset.slide);
+      CURRENT_SLIDE[id] = idx;
+      cardEl.querySelectorAll('.slide-tab').forEach((t) => t.classList.toggle('active', t === tab));
+      cardEl.querySelectorAll('.slide-panel').forEach((p) => p.classList.toggle('active', Number(p.dataset.slide) === idx));
+    });
+  });
+
+  // Action buttons
+  cardEl.querySelectorAll('[data-action]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const action = btn.dataset.action;
+      const slideIdx = btn.dataset.slideIndex ? Number(btn.dataset.slideIndex) : null;
+      try {
+        btn.disabled = true;
+        if (action === 'save') await actionSave(id, cardEl);
+        else if (action === 'regen') await actionRegenerate(id, { humor_pass: false });
+        else if (action === 'regen-slide') await actionRegenerate(id, { slide_index: slideIdx });
+        else if (action === 'humor') await actionRegenerate(id, { humor_pass: true });
+        else if (action === 'skip') await actionSkip(id);
+        else if (action === 'approve') await actionApprove(id, cardEl);
+      } catch (e) {
+        toast(e.message || 'Action failed', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+function gatherEdits(cardEl) {
+  const out = {};
+  cardEl.querySelectorAll('[data-field]').forEach((el) => {
+    const f = el.dataset.field;
+    if (f === 'hashtags') {
+      out.hashtags = el.value.split(',').map((x) => x.trim()).filter(Boolean);
+    } else if (f === 'image_url' && !el.value.trim()) {
+      // skip empty manual override
+    } else {
+      out[f] = el.value;
+    }
+  });
+  // Carousel slide edits
+  const slidesEdit = {};
+  cardEl.querySelectorAll('[data-slide-field]').forEach((el) => {
+    const idx = Number(el.dataset.slideIndex);
+    const field = el.dataset.slideField;
+    if (!slidesEdit[idx]) slidesEdit[idx] = {};
+    slidesEdit[idx][field] = el.value;
+  });
+  if (Object.keys(slidesEdit).length > 0) {
+    // Merge slide edits into the existing slides array
+    const draft = DRAFTS.find((d) => d._id === cardEl.dataset.id);
+    if (draft && draft.slides) {
+      const newSlides = draft.slides.map((s, i) => ({ ...s, ...(slidesEdit[i] || {}) }));
+      out.slides = newSlides;
+    }
+  }
+  return out;
+}
+
+async function actionSave(id, cardEl) {
+  const body = gatherEdits(cardEl);
+  if (Object.keys(body).length === 0) {
+    toast('Nothing to save', '');
+    return;
+  }
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || 'PATCH failed');
+  toast('Saved', 'success');
+  await loadDrafts();
+}
+
+async function actionRegenerate(id, opts) {
+  toast('Regenerating — this takes 5-10s…', '');
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/regenerate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(opts || {}),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || 'regen failed');
+  toast('Regenerated', 'success');
+  await loadDrafts();
+}
+
+async function actionSkip(id) {
+  const reason = prompt('Skip reason (optional):');
+  if (reason === null) return; // user cancelled
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/skip`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || 'skip failed');
+  toast('Skipped', '');
+  await loadDrafts();
+}
+
+async function actionApprove(id, cardEl) {
+  // First save any pending edits
+  const edits = gatherEdits(cardEl);
+  if (Object.keys(edits).length > 0) {
+    const r1 = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(edits),
+    });
+    if (!r1.ok) throw new Error('save before approve failed');
+  }
+  if (!confirm('Approve this draft? (Phase 7 will auto-publish; for now you copy/paste to native X/IG.)')) return;
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/approve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || 'approve failed');
+  toast(json.note || 'Approved', 'success');
+  await loadDrafts();
+}
+
+// ─── Run drafter ────────────────────────────────────────────────────────
+async function runDrafter() {
+  const btn = document.getElementById('btn-run-drafter');
+  btn.disabled = true;
+  btn.textContent = 'Running drafter…';
+  try {
+    const res = await fetch('/api/admin/dashboard/run-drafter', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'run-drafter failed');
+    toast(json.note || 'Drafter started — refreshing in 60s', 'success');
+    // Poll every 15s for the next 90s, then stop
+    let elapsed = 0;
+    const poller = setInterval(async () => {
+      elapsed += 15;
+      await loadDrafts();
+      if (elapsed >= 90) clearInterval(poller);
+    }, 15000);
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '↻ Run drafter now';
+    }, 90000);
+  }
+}
+
+// ─── Load + render ──────────────────────────────────────────────────────
+async function loadDrafts() {
+  try {
+    const [briefRes, draftsRes] = await Promise.all([
+      fetch('/api/admin/dashboard/post-briefs/latest').then((r) => r.json()).catch(() => null),
+      fetch('/api/admin/dashboard/post-drafts').then((r) => r.json()),
+    ]);
+
+    BRIEF = briefRes?.brief || null;
+    DRAFTS = draftsRes?.drafts || [];
+
+    // Status strip
+    const dateEl = document.getElementById('status-date');
+    const catEl = document.getElementById('status-category');
+    const countEl = document.getElementById('status-count');
+    const datePill = document.getElementById('brief-date-pill');
+    const topicPill = document.getElementById('brief-topic-pill');
+
+    if (BRIEF) {
+      datePill.textContent = BRIEF.date || '—';
+      dateEl.textContent = BRIEF.date || '—';
+      const cat = BRIEF.blog_research?.topic_category || '—';
+      catEl.textContent = cat;
+      topicPill.textContent = cat;
+      const igFmt = BRIEF.per_platform_topics?.instagram?.format_hint;
+      if (igFmt) topicPill.textContent = `${cat} · IG ${igFmt}`;
+    } else {
+      datePill.textContent = 'no brief yet';
+      dateEl.textContent = 'no brief yet';
+    }
+    countEl.textContent = String(DRAFTS.length);
+
+    // Render columns
+    const xCards = DRAFTS.filter((d) => d.platform === 'twitter');
+    const igCards = DRAFTS.filter((d) => d.platform === 'instagram_single' || d.platform === 'instagram_carousel');
+
+    document.getElementById('x-count').textContent = String(xCards.length);
+    document.getElementById('ig-count').textContent = String(igCards.length);
+
+    const xWrap = document.getElementById('x-cards');
+    const igWrap = document.getElementById('ig-cards');
+
+    if (xCards.length === 0 && igCards.length === 0) {
+      xWrap.innerHTML = '';
+      igWrap.innerHTML = `<div class="empty-state">
+        <h3>No drafts yet for today</h3>
+        <p>Click <b>Run drafter now</b> at the top to generate today's batch from the latest research brief.</p>
+      </div>`;
+    } else {
+      xWrap.innerHTML = xCards.map(renderTwitterCard).join('') ||
+        `<div class="empty-state"><p>No Twitter drafts.</p></div>`;
+      igWrap.innerHTML = igCards.map((d) => (
+        d.platform === 'instagram_carousel' ? renderInstagramCarouselCard(d) : renderInstagramSingleCard(d)
+      )).join('') || `<div class="empty-state"><p>No Instagram draft.</p></div>`;
+    }
+
+    // Wire each card
+    document.querySelectorAll('.card[data-id]').forEach(wireCardActions);
+  } catch (e) {
+    console.error('loadDrafts error:', e);
+    toast('Failed to load drafts: ' + e.message, 'error');
+  }
+}
+
+// Initial load
+loadDrafts();
+</script>
+
+</body>
+</html>
