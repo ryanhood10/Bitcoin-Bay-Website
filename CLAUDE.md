@@ -49,6 +49,11 @@ Procfile             ← web: node server.js for Heroku.
 docs/                ← Deeper references for future work:
                        - ADMIN_DASHBOARD.md (architecture + extension points)
                        - ADMIN_ROLES.md     (auth/role model + CLI usage)
+                       - CONTENT_CREATION_HANDOFF.md (planned content-drafter
+                         feature — read first if asked to add original-post
+                         drafting to /admin/dashboard)
+                       - CONTENT_CREATION_PLAN.md   (phased build plan, paired
+                         with the handoff doc)
 ```
 
 ## Agent auth — the critical piece
