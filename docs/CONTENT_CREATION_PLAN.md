@@ -377,9 +377,9 @@ text + cropped logo:
 
 | # | Phase | Effort | Notes |
 |---|---|---|---|
-| 9.1 | CTA slide redesign + branded-detection fix | 1-2h | Fixes the visible double-text bug. composeBrandedCard layout: logo top-third + bb-gold accent bar + headline (Space Grotesk 64pt) + subhead (Inter 24pt) + bitcoinbay.com footer. `isBranded = is_cta_slide \|\| image_url === composite_url` so any branded composite suppresses HTML overlay. |
+| 9.1 ✅ | CTA slide redesign + branded-detection fix | 1-2h | Fixes the visible double-text bug. composeBrandedCard layout: logo top-third + bb-gold accent bar + headline (Space Grotesk 64pt) + subhead (Inter 24pt) + bitcoinbay.com footer. `isBranded = is_cta_slide \|\| image_url === composite_url` so any branded composite suppresses HTML overlay. **Shipped in `3c6af91`.** |
 | 9.2 | Replace photo (non-AI) | 2h | New `GET /api/admin/dashboard/photo-search?subject=&intent=` returns top 3 candidates per source (Wikimedia / Pexels / Unsplash). Inline panel on the slide image with thumbs + paste-URL. PATCH the slide's `image_url`, trigger /regenerate-all-images. |
-| 9.3 | Delete slide | 1h | New `POST /api/admin/dashboard/post-drafts/:id/delete-slide` body `{ slide_index }`. Floor at 2 slides. Confirm dialog. Audit-logged. |
+| 9.3 ✅ | Delete slide | 1h | `POST /api/admin/dashboard/post-drafts/:id/delete-slide` body `{ slide_index }`. Floor at 2 slides. Confirm dialog. Audit-logged. UI: 🗑 button in slide editor's "More edits" pane, disabled when at 2-slide floor. **Shipped — 6 new tests (127/127 green).** |
 | 9.4 | Focus modal (X + IG) | 3-4h | Reusable modal component: full-screen on phones (<700px), centered ~720px on desktop. Big preview + grouped edit controls. ESC / backdrop click cancels. Replaces the inline-stacked editor for deep edits; light edits (drag headline, color swatch) stay inline. |
 | 9.5 | Branded overlay library + auto-suggest | 4-5h | Bundle ~30 logos in `public/branded-overlays/{bb,coins,exchanges}/`. JSON manifest with display name + keywords. Sticker picker UI (4-column grid). Auto-suggested logos bubble to top. Per-slide HTML overlay (draggable, resizable). Server-side `composeOverlayCard` accepts `branded_overlay: { kind, x, y, scale }` and sharp-composites the PNG at publish time. One mark per slide. |
 

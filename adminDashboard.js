@@ -39,6 +39,7 @@
 //   POST /api/admin/dashboard/post-drafts/:id/generate-art      — Replicate InstantID AI scene gen (FULL, ~$0.05/call)
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — re-run image pipeline for the whole draft (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/add-cta-slide     — append a BB-branded CTA slide to a carousel (FULL)
+//   POST /api/admin/dashboard/post-drafts/:id/delete-slide      — remove one slide from a carousel (floor: 2 slides) (FULL)
 //   GET  /api/admin/dashboard/post-drafts/:id/zip               — stream ZIP of all carousel slide images (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/skip              — mark skipped (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/approve           — mark approved (Phase 7 wires publish) (FULL)
@@ -937,6 +938,57 @@ router.post('/api/admin/dashboard/post-drafts/:id/add-cta-slide', adminAuth.requ
     res.json({ success: true, slide_index: newIdx, slides_count: newSlides.length });
   } catch (e) {
     console.error('[admin-dashboard] /post-drafts/add-cta-slide error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Remove one slide from a carousel. Body: { slide_index: <number> }.
+// Floor at 2 slides — Meta requires at least 2 images for a carousel and
+// operator confirmed minimum during Phase 9 planning.
+router.post('/api/admin/dashboard/post-drafts/:id/delete-slide', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const id = (req.params.id || '').trim();
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, error: 'invalid id' });
+    }
+    const slideIndex = Number(req.body?.slide_index);
+    if (!Number.isInteger(slideIndex) || slideIndex < 0) {
+      return res.status(400).json({ success: false, error: 'slide_index required (non-negative integer)' });
+    }
+    const draft = await withDb((db) => db.collection(POST_DRAFTS).findOne({ _id: new ObjectId(id) }));
+    if (!draft) {
+      return res.status(404).json({ success: false, error: 'draft not found' });
+    }
+    if (draft.platform !== 'instagram_carousel') {
+      return res.status(409).json({ success: false, error: 'delete-slide only valid on instagram_carousel drafts' });
+    }
+    const slides = Array.isArray(draft.slides) ? draft.slides : [];
+    if (slideIndex >= slides.length) {
+      return res.status(400).json({ success: false, error: `slide_index ${slideIndex} out of range` });
+    }
+    if (slides.length <= 2) {
+      return res.status(409).json({ success: false, error: 'carousel must have at least 2 slides' });
+    }
+
+    const removed = slides[slideIndex];
+    const newSlides = slides.filter((_, i) => i !== slideIndex);
+
+    await withDb((db) => db.collection(POST_DRAFTS).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { slides: newSlides, updated_at: new Date() } }
+    ));
+    await logAdminAction({
+      action: 'content-drafter:delete-slide',
+      admin: req.admin?.user,
+      draft_id: id,
+      slide_index: slideIndex,
+      removed_role: removed?.slide_role || null,
+      removed_subject: removed?.image_subject || null,
+      slides_count_after: newSlides.length,
+    });
+    res.json({ success: true, slide_index: slideIndex, slides_count: newSlides.length });
+  } catch (e) {
+    console.error('[admin-dashboard] /post-drafts/delete-slide error:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });

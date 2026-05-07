@@ -104,6 +104,7 @@ POST /api/admin/dashboard/post-drafts/:id/swap-variant   — role: full  → fli
 POST /api/admin/dashboard/post-drafts/:id/generate-art   — role: full  → Replicate InstantID AI scene generation (~$0.05/call, audit-logged; 503 if REPLICATE_API_TOKEN unset)
 POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — role: full  → re-runs imageRenderer.saveDraftImages on the draft; fire-and-forget (202)
 POST /api/admin/dashboard/post-drafts/:id/add-cta-slide  — role: full  → append a BB-branded CTA slide to a carousel (body: { headline?, subhead? }); cap 10 slides
+POST /api/admin/dashboard/post-drafts/:id/delete-slide   — role: full  → remove one slide from a carousel (body: { slide_index }); floor at 2 slides; audit-logged
 GET  /api/admin/dashboard/post-drafts/:id/zip            — role: full  → stream a ZIP attachment of all carousel slide JPEGs
 POST /api/admin/dashboard/post-drafts/:id/skip           — role: full  → mark skipped + reason
 POST /api/admin/dashboard/post-drafts/:id/approve        — role: full  → mark approved (Phase 7 will wire publish)

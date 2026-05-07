@@ -658,6 +658,85 @@ test('POST /post-drafts/:id/add-cta-slide — full-role passes auth, fails at Mo
 });
 
 // ---------------------------------------------------------------------------
+// /delete-slide — Phase 9.3 — removes one slide from a carousel (floor 2)
+// ---------------------------------------------------------------------------
+test('POST /post-drafts/:id/delete-slide — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/delete-slide`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: { slide_index: 0 },
+    });
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/delete-slide — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/delete-slide`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('dashboard'), 'Content-Type': 'application/json' },
+      body: { slide_index: 0 },
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/delete-slide — 400 invalid ObjectId', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/post-drafts/banana/delete-slide', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { slide_index: 0 },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/delete-slide — 400 when slide_index missing', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/delete-slide`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: {},
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/delete-slide — 400 when slide_index is negative', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/delete-slide`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { slide_index: -1 },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('POST /post-drafts/:id/delete-slide — full-role passes auth+validation, fails at Mongo', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}/delete-slide`, {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { slide_index: 0 },
+    });
+    assert.equal(r.status, 500);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
 // /zip — Phase 6.5 — streams ZIP of slide JPEGs
 // ---------------------------------------------------------------------------
 test('GET /post-drafts/:id/zip — 401 unauthenticated', async () => {

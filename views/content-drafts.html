@@ -830,6 +830,7 @@ function buildSlideEditor(d, s, i, isLocked, totalSlides) {
           <input class="field-input" data-slide-field="image_url" data-slide-index="${i}" placeholder="paste a public image URL to override the auto-found one" value="${escapeHtml(s.image_url || '')}" ${isLocked ? 'disabled' : ''} />
         </div>
         <button class="btn small danger" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="margin-top:8px;" title="Re-prompt Claude for this slide's text only (replaces headline+body)">🆕 New slide text (Claude re-prompt)</button>
+        <button class="btn small danger" data-action="delete-slide" data-slide-index="${i}" ${isLocked || totalSlides <= 2 ? 'disabled' : ''} style="margin-top:8px; margin-left:8px;" title="${totalSlides <= 2 ? 'Carousel must have at least 2 slides' : 'Permanently remove this slide from the carousel'}">🗑 Delete slide</button>
       </details>
       ${renderScenePanel(d, i)}
     </div>`;
@@ -1290,6 +1291,7 @@ function wireCardActions(cardEl) {
         else if (action === 'apply-layout') await actionApplyLayout(id, cardEl, slideIdx);
         else if (action === 'run-drafter-from-empty') await runDrafter();
         else if (action === 'add-cta-slide-confirm') await actionAddCtaSlide(id, cardEl);
+        else if (action === 'delete-slide') await actionDeleteSlide(id, slideIdx);
         else if (action === 'add-cta-slide-cancel') {
           // Switch back to the first real slide
           CURRENT_SLIDE[id] = 0;
@@ -1657,6 +1659,32 @@ async function actionAddCtaSlide(id, cardEl) {
   toast(`CTA slide added (now ${json.slides_count} slides)`, 'success');
   // Switch to the newly-added slide so operator sees it
   CURRENT_SLIDE[id] = Number.isInteger(json.slide_index) ? json.slide_index : 0;
+  await loadDrafts();
+}
+
+async function actionDeleteSlide(id, slideIndex) {
+  if (!Number.isInteger(slideIndex)) return;
+  const draft = DRAFTS.find((x) => x._id === id);
+  const total = Array.isArray(draft?.slides) ? draft.slides.length : 0;
+  if (total <= 2) {
+    toast('Carousel must have at least 2 slides — cannot delete', 'error');
+    return;
+  }
+  const ok = window.confirm(`Delete slide ${slideIndex + 1} of ${total}? This cannot be undone.`);
+  if (!ok) return;
+  toast('Deleting slide…', '');
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/delete-slide`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slide_index: slideIndex }),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    toast(json.error || 'delete failed', 'error');
+    return;
+  }
+  toast(`Slide deleted (${json.slides_count} remaining)`, 'success');
+  // Land on the previous slide (or 0 if we deleted the first)
+  CURRENT_SLIDE[id] = Math.max(0, slideIndex - 1);
   await loadDrafts();
 }
 
