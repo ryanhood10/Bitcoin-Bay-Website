@@ -565,7 +565,7 @@ function renderInstagramCarouselCard(d) {
            ${activeComposite ? `<a class="download-btn" download="slide-${cur + 1}.jpg" href="${escapeHtml(activeComposite)}" title="Download this slide">💾</a>` : ''}
          </div>
        </div>`
-    : `<div class="image-preview large"><div class="placeholder">Image rendering — refresh in 30s, or paste a URL in the editor below.</div></div>`;
+    : `<div class="image-preview large">${renderEmptyImagePlaceholder(active.image_subject, cur, d.image_status)}</div>`;
 
   // Carousel-level tools row removed in Phase 8.5: "Add BB CTA slide" became
   // the "+" tile in the dot row (clearer intent). "🔁 Regen images" + "📦 ZIP"
@@ -704,7 +704,7 @@ function renderImageBlock(d, position = 'below-text', size = '') {
   const attr = d.image_attribution;
   const cls = `image-preview ${position}${size === 'large' ? ' large' : ''}`;
   if (!url) {
-    return `<div class="${cls}"><div class="placeholder">Image rendering — refresh in 30s.</div></div>`;
+    return `<div class="${cls}">${renderEmptyImagePlaceholder(d.image_subject, null, d.image_status)}</div>`;
   }
   const fname = (d.platform || 'post') + '-' + (d._id || 'image') + '.jpg';
   // 🎨 corner button → opens scene panel below; default scene-prompt is
@@ -717,6 +717,31 @@ function renderImageBlock(d, position = 'below-text', size = '') {
     <div class="image-meta">
       <span>${escapeHtml(attr || '')}</span>
       <a class="download-btn" download="${escapeHtml(fname)}" href="${escapeHtml(url)}" title="Download">💾</a>
+    </div>
+  </div>`;
+}
+
+// Empty-image placeholder. Shows the subject we tried, the sources we
+// searched, and one-click actions: 🎨 AI scene, ↻ Run drafter again, or
+// (for carousel slides) the slide index. Replaces the old useless "Image
+// rendering — refresh in 30s" copy that lied about progress.
+function renderEmptyImagePlaceholder(subject, slideIndex, imageStatus) {
+  const subj = (subject || '').trim() || '(no subject set)';
+  const slideAttr = Number.isInteger(slideIndex) ? `data-slide-index="${slideIndex}"` : '';
+  const statusLine = imageStatus === 'pending'
+    ? 'Image search hasn\'t run yet — auto-triggering now.'
+    : imageStatus === 'failed'
+      ? 'Image search ran and found nothing.'
+      : 'No image found yet.';
+  return `<div class="placeholder image-empty" style="padding: 24px 16px; text-align: center;">
+    <div style="font-size: 28px; margin-bottom: 8px;">📸</div>
+    <div style="font-size: 12px; color: var(--text); margin-bottom: 4px;">${statusLine}</div>
+    <div style="font-size: 11px; color: var(--muted2); margin-bottom: 4px;">Subject:</div>
+    <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; word-break: break-word;">"${escapeHtml(subj)}"</div>
+    <div style="font-size: 10px; color: var(--muted); margin-bottom: 12px; line-height: 1.5;">Sources searched: <b>Wikimedia Commons</b>, <b>Unsplash</b>, <b>Pexels</b> — all free, all real editorial photos.<br/>If the subject is too abstract, no source will have a match.</div>
+    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+      <button class="btn small" data-action="generate-art" ${slideAttr} title="Generate AI scene with Replicate InstantID (~$0.05)">🎨 AI scene</button>
+      <button class="btn small" data-action="run-drafter-from-empty" title="Regenerate today's drafts with the latest prompts">↻ Run drafter</button>
     </div>
   </div>`;
 }
@@ -1124,6 +1149,7 @@ function wireCardActions(cardEl) {
         else if (action === 'regen-all-images') await actionRegenAllImages(id);
         else if (action === 'download-zip') downloadZip(id);
         else if (action === 'apply-layout') await actionApplyLayout(id, cardEl, slideIdx);
+        else if (action === 'run-drafter-from-empty') await runDrafter();
         else if (action === 'add-cta-slide-confirm') await actionAddCtaSlide(id, cardEl);
         else if (action === 'add-cta-slide-cancel') {
           // Switch back to the first real slide
@@ -1555,10 +1581,42 @@ async function loadDrafts() {
 
     // Wire each card
     document.querySelectorAll('.card[data-id]').forEach(wireCardActions);
+
+    // Auto-trigger image rendering for any draft stuck in 'pending'.
+    // The render is fire-and-forget (returns 202); we set up a single
+    // poll cycle 12s later to refresh once images land.
+    autoRenderPendingDrafts();
   } catch (e) {
     console.error('loadDrafts error:', e);
     toast('Failed to load drafts: ' + e.message, 'error');
   }
+}
+
+// Auto-trigger /regenerate-all-images for any draft whose image_status is
+// 'pending' and whose creation timestamp is more than ~30s ago — meaning
+// runDrafter's image pass has had a fair chance and never finished. Single
+// shot per dashboard load. Silent: no toast unless the operator explicitly
+// triggered it.
+let _autoRenderTriggered = new Set();
+async function autoRenderPendingDrafts() {
+  const now = Date.now();
+  const stale = DRAFTS.filter((d) => {
+    if (d.image_status === 'ready') return false;
+    if (_autoRenderTriggered.has(d._id)) return false;
+    if (!d.created_at) return false;
+    const created = new Date(d.created_at).getTime();
+    return (now - created) > 30_000;
+  });
+  if (stale.length === 0) return;
+  console.log(`[auto-render] ${stale.length} draft(s) stuck on pending — auto-triggering /regenerate-all-images`);
+  for (const d of stale) {
+    _autoRenderTriggered.add(d._id);
+    fetch(`/api/admin/dashboard/post-drafts/${d._id}/regenerate-all-images`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    }).catch((e) => console.warn('auto-render failed for', d._id, e.message));
+  }
+  // Single refresh cycle 12s later — should be enough for parallel render
+  setTimeout(() => loadDrafts().catch(() => {}), 12_000);
 }
 
 // Initial load
