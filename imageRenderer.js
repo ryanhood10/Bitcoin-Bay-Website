@@ -338,6 +338,95 @@ async function findUnsplashImage(subject) {
   }
 }
 
+// ── CANDIDATE SEARCH (Phase 9.2 — replace-photo UI) ──
+// Returns up to `limit` candidates per source as a flat array. Each candidate
+// has the same shape as the cascade results (`{source,url,attribution,...}`)
+// plus a `thumb_url` for the picker grid. Used by /api/admin/dashboard/photo-search.
+async function searchWikimediaCandidates(subject, limit = 3) {
+  if (!subject) return [];
+  const results = await wikimediaSearch(subject, { limit: Math.max(limit, 8) });
+  return results.slice(0, limit).map((r) => {
+    const credit = r.artist ? `Photo: ${r.artist}` : 'Photo: Wikimedia Commons';
+    return {
+      source: 'wikimedia',
+      url: r.url,
+      thumb_url: r.url,
+      attribution: r.license ? `${credit} / ${r.license}` : credit,
+      license: r.license,
+      descriptionurl: r.descriptionurl,
+      title: r.title,
+    };
+  });
+}
+
+async function searchPexelsCandidates(subject, intent = 'sport_action', limit = 3) {
+  if (!subject) return [];
+  const key = process.env.PEXELS_API_KEY;
+  if (!key) return [];
+  try {
+    const url = 'https://api.pexels.com/v1/search?' + new URLSearchParams({
+      query: subject, orientation: 'landscape', size: 'large', per_page: '15',
+    }).toString();
+    const res = await fetch(url, { headers: { Authorization: key }, signal: TIMEOUT(12000) });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const out = [];
+    for (const photo of (data.photos || [])) {
+      if (pexelsOffTopic(photo, intent)) continue;
+      out.push({
+        source: 'pexels',
+        url: photo.src?.large2x || photo.src?.large || photo.src?.original,
+        thumb_url: photo.src?.medium || photo.src?.small || photo.src?.tiny,
+        attribution: `Photo: ${photo.photographer} on Pexels`,
+        license: 'Pexels License',
+        descriptionurl: photo.url,
+      });
+      if (out.length >= limit) break;
+    }
+    return out;
+  } catch (e) {
+    console.warn(`[imageRenderer] pexels candidates failed for "${subject}": ${e.message}`);
+    return [];
+  }
+}
+
+async function searchUnsplashCandidates(subject, limit = 3) {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key || !subject) return [];
+  try {
+    const url = 'https://api.unsplash.com/search/photos?' + new URLSearchParams({
+      query: subject, orientation: 'landscape', per_page: String(Math.max(limit, 5)), content_filter: 'high',
+    }).toString();
+    const res = await fetch(url, {
+      headers: { Authorization: `Client-ID ${key}` }, signal: TIMEOUT(12000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).slice(0, limit).map((photo) => ({
+      source: 'unsplash',
+      url: photo.urls?.regular || photo.urls?.full,
+      thumb_url: photo.urls?.small || photo.urls?.thumb,
+      attribution: `Photo: ${photo.user?.name} on Unsplash`,
+      license: 'Unsplash License',
+      descriptionurl: photo.links?.html,
+    }));
+  } catch (e) {
+    console.warn(`[imageRenderer] unsplash candidates failed for "${subject}": ${e.message}`);
+    return [];
+  }
+}
+
+async function searchPhotoCandidates(subject, { intent, perSource = 3 } = {}) {
+  if (!subject) return { wikimedia: [], pexels: [], unsplash: [] };
+  const inferredIntent = intent || inferIntent(subject) || 'sport_action';
+  const [wikimedia, pexels, unsplash] = await Promise.all([
+    searchWikimediaCandidates(subject, perSource),
+    searchPexelsCandidates(subject, inferredIntent, perSource),
+    searchUnsplashCandidates(subject, perSource),
+  ]);
+  return { wikimedia, pexels, unsplash };
+}
+
 // ── HERO CASCADE ──
 async function findHeroImage(subject, opts = {}) {
   if (!subject) return null;
@@ -810,4 +899,9 @@ module.exports = {
   findWikimediaImage,
   findPexelsImage,
   findUnsplashImage,
+  // Phase 9.2 — replace-photo candidate search:
+  searchPhotoCandidates,
+  searchWikimediaCandidates,
+  searchPexelsCandidates,
+  searchUnsplashCandidates,
 };

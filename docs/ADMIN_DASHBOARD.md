@@ -102,6 +102,7 @@ PATCH /api/admin/dashboard/post-drafts/:id               — role: full  → edi
 POST /api/admin/dashboard/post-drafts/:id/regenerate     — role: full  → re-prompt Claude (body: { humor_pass?, slide_index?, new_angle? }); for Twitter drafts with `variants[]`, regenerates only the active variant
 POST /api/admin/dashboard/post-drafts/:id/swap-variant   — role: full  → flip Twitter draft between meme + professional variants (no Claude call; both pre-generated)
 POST /api/admin/dashboard/post-drafts/:id/generate-art   — role: full  → Replicate InstantID AI scene generation (~$0.05/call, audit-logged; 503 if REPLICATE_API_TOKEN unset)
+GET  /api/admin/dashboard/photo-search?subject=&intent= — role: full  → returns top-3 photo candidates per source (Wikimedia / Pexels / Unsplash) for the replace-photo UI
 POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — role: full  → re-runs imageRenderer.saveDraftImages on the draft; fire-and-forget (202)
 POST /api/admin/dashboard/post-drafts/:id/add-cta-slide  — role: full  → append a BB-branded CTA slide to a carousel (body: { headline?, subhead? }); cap 10 slides
 POST /api/admin/dashboard/post-drafts/:id/delete-slide   — role: full  → remove one slide from a carousel (body: { slide_index }); floor at 2 slides; audit-logged

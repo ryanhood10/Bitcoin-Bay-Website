@@ -658,6 +658,51 @@ test('POST /post-drafts/:id/add-cta-slide — full-role passes auth, fails at Mo
 });
 
 // ---------------------------------------------------------------------------
+// /photo-search — Phase 9.2 — replace-photo candidate search
+// ---------------------------------------------------------------------------
+test('GET /photo-search — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/photo-search?subject=lakers');
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('GET /photo-search — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/photo-search?subject=lakers', {
+      headers: { Cookie: cookieFor('dashboard') },
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('GET /photo-search — 400 when subject is missing', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/photo-search', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('GET /photo-search — 400 when subject is too long', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, `/api/admin/dashboard/photo-search?subject=${'x'.repeat(250)}`, {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
 // /delete-slide — Phase 9.3 — removes one slide from a carousel (floor 2)
 // ---------------------------------------------------------------------------
 test('POST /post-drafts/:id/delete-slide — 401 unauthenticated', async () => {

@@ -37,6 +37,7 @@
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate        — re-prompt Claude (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/swap-variant      — flip Twitter draft active variant (meme ↔ professional) (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/generate-art      — Replicate InstantID AI scene gen (FULL, ~$0.05/call)
+//   GET  /api/admin/dashboard/photo-search?subject=&intent= — top-3 photo candidates per source (Wikimedia/Pexels/Unsplash) for replace-photo UI (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — re-run image pipeline for the whole draft (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/add-cta-slide     — append a BB-branded CTA slide to a carousel (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/delete-slide      — remove one slide from a carousel (floor: 2 slides) (FULL)
@@ -845,6 +846,30 @@ router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requi
 
 // Re-run the image pipeline for the entire draft. Use case: operator edited
 // slide subjects / overlay coords / colors and wants fresh composites without
+// Phase 9.2 — replace-photo UI candidate search. Returns up to 3 photo
+// candidates per source (Wikimedia / Pexels / Unsplash) for a free-text
+// `subject` query. The operator clicks a thumb to pick a replacement;
+// the picked URL goes into the slide via PATCH + a /regenerate-all-images
+// pass to bake any active overlay back in.
+router.get('/api/admin/dashboard/photo-search', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const subject = (req.query.subject || '').toString().trim();
+    if (!subject) {
+      return res.status(400).json({ success: false, error: 'subject required' });
+    }
+    if (subject.length > 200) {
+      return res.status(400).json({ success: false, error: 'subject too long (max 200 chars)' });
+    }
+    const intentRaw = (req.query.intent || '').toString().trim();
+    const intent = intentRaw || null; // null → searchPhotoCandidates infers from subject
+    const candidates = await getImageRenderer().searchPhotoCandidates(subject, { intent, perSource: 3 });
+    res.json({ success: true, subject, intent, candidates });
+  } catch (e) {
+    console.error('[admin-dashboard] /photo-search error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // re-prompting Claude for the deck text. Fire-and-forget — returns 202.
 router.post('/api/admin/dashboard/post-drafts/:id/regenerate-all-images', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
   try {

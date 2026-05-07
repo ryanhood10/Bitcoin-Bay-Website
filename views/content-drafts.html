@@ -261,6 +261,24 @@
   .scene-cost { font-size: 11px; color: var(--muted); margin-left: auto; }
   .scene-hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
+  /* Photo-replace panel (Phase 9.2) — opens when operator clicks 📷 corner btn.
+     Searches Wikimedia / Pexels / Unsplash for `subject` and shows up to 3
+     thumbnails per source. Click a thumb to swap; or paste a manual URL. */
+  .photo-panel { display: none; padding: 12px 14px; background: var(--surface2); border-top: 1px dashed var(--border2); }
+  .photo-panel.open { display: block; }
+  .photo-source { margin-top: 10px; }
+  .photo-source:first-of-type { margin-top: 0; }
+  .photo-source-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photo-thumb { position: relative; cursor: pointer; border-radius: 6px; overflow: hidden; aspect-ratio: 4/3; background: var(--surface); border: 2px solid transparent; transition: border-color 0.12s ease, transform 0.12s ease; }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-thumb:hover { border-color: var(--gold); transform: scale(1.02); }
+  .photo-thumb.busy { opacity: 0.6; pointer-events: none; }
+  .photo-empty { font-size: 11px; color: var(--muted); padding: 4px 0; }
+  .photo-paste-row { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border2); display: flex; gap: 6px; align-items: center; }
+  .photo-paste-row input { flex: 1; }
+  .photo-loading { font-size: 12px; color: var(--muted); padding: 12px 0; text-align: center; }
+
   /* CAROUSEL — thumbnail strip (Phase 6.3) replaces text-only slide-tabs */
   .slide-strip { display: flex; gap: 8px; padding: 10px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; scroll-snap-type: x mandatory; }
   .slide-strip::-webkit-scrollbar { height: 6px; }
@@ -564,6 +582,7 @@ function renderTwitterCard(d) {
       ${renderAdvanced(d, isLocked)}
     </div>
     ${renderScenePanel(d)}
+    ${renderPhotoPanel(d)}
     ${renderActions(d, isLocked)}
   </div>`;
 }
@@ -619,6 +638,7 @@ function renderInstagramSingleCard(d) {
       ${sourceChip}
     </div>
     ${renderScenePanel(d)}
+    ${renderPhotoPanel(d)}
     ${renderActions(d, isLocked)}
   </div>`;
 }
@@ -689,6 +709,7 @@ function renderInstagramCarouselCard(d) {
               style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${escapeHtml(active.headline || '')}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
          ${isLocked ? '' : `<div class="image-corner-actions">
+           <button class="corner-btn" data-action="replace-photo" data-slide-index="${cur}" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
            <button class="corner-btn" data-action="generate-art" data-slide-index="${cur}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
          </div>`}
          <div class="image-meta">
@@ -833,6 +854,7 @@ function buildSlideEditor(d, s, i, isLocked, totalSlides) {
         <button class="btn small danger" data-action="delete-slide" data-slide-index="${i}" ${isLocked || totalSlides <= 2 ? 'disabled' : ''} style="margin-top:8px; margin-left:8px;" title="${totalSlides <= 2 ? 'Carousel must have at least 2 slides' : 'Permanently remove this slide from the carousel'}">🗑 Delete slide</button>
       </details>
       ${renderScenePanel(d, i)}
+      ${renderPhotoPanel(d, i)}
     </div>`;
 }
 
@@ -849,6 +871,7 @@ function renderImageBlock(d, position = 'below-text', size = '') {
   return `<div class="${cls}">
     <img src="${escapeHtml(url)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;placeholder&quot;>image fetch failed — try a manual URL in Advanced</div>'"/>
     <div class="image-corner-actions">
+      <button class="corner-btn" data-action="replace-photo" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
       <button class="corner-btn" data-action="generate-art" title="Replace with AI scene (Replicate InstantID, ~$0.05)">🎨</button>
     </div>
     <div class="image-meta">
@@ -1094,6 +1117,28 @@ function renderScenePanel(d, slideIndex) {
   </div>`;
 }
 
+// Phase 9.2 — empty shell for the photo-replace picker. Populated lazily on
+// open via /api/admin/dashboard/photo-search. `slideIndex` is null for single
+// images (Twitter/IG single) or the slide index for carousel slides.
+function renderPhotoPanel(d, slideIndex) {
+  const isSlide = Number.isInteger(slideIndex);
+  const slide = isSlide ? (d.slides || [])[slideIndex] : null;
+  const subject = isSlide ? (slide?.image_subject || '') : (d.image_subject || '');
+  const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
+  const panelKey = isSlide ? slideIndex : '';
+  return `<div class="photo-panel" data-photo-panel="${panelKey}">
+    <div class="field-label">📷 Replace photo — searching Wikimedia / Pexels / Unsplash for "${escapeHtml(subject || 'this subject')}"</div>
+    <div class="photo-results" data-photo-results="${panelKey}">
+      <div class="photo-loading">Click below to load candidates…</div>
+    </div>
+    <div class="photo-paste-row">
+      <input class="field-input" data-photo-paste-url ${sIdxAttr} placeholder="…or paste a public image URL to override" />
+      <button class="btn small primary" data-action="replace-photo-paste" ${sIdxAttr}>Use URL</button>
+      <button class="btn small ghost" data-action="replace-photo-cancel" ${sIdxAttr}>Close</button>
+    </div>
+  </div>`;
+}
+
 function renderActions(d, isLocked) {
   if (isLocked) {
     return `<div class="card-actions">
@@ -1292,6 +1337,10 @@ function wireCardActions(cardEl) {
         else if (action === 'run-drafter-from-empty') await runDrafter();
         else if (action === 'add-cta-slide-confirm') await actionAddCtaSlide(id, cardEl);
         else if (action === 'delete-slide') await actionDeleteSlide(id, slideIdx);
+        else if (action === 'replace-photo') await togglePhotoPanel(cardEl, slideIdx, id);
+        else if (action === 'replace-photo-cancel') closePhotoPanel(cardEl, slideIdx);
+        else if (action === 'replace-photo-paste') await actionReplacePhotoFromUrl(id, cardEl, slideIdx);
+        else if (action === 'replace-photo-pick') await actionReplacePhotoPick(id, cardEl, slideIdx, btn);
         else if (action === 'add-cta-slide-cancel') {
           // Switch back to the first real slide
           CURRENT_SLIDE[id] = 0;
@@ -1501,6 +1550,74 @@ function closeScenePanel(cardEl, slideIndex) {
   if (panel) panel.classList.remove('open');
 }
 
+// Phase 9.2 — photo-replace panel helpers (parallel to scene-panel).
+function findPhotoPanel(cardEl, slideIndex) {
+  const key = Number.isInteger(slideIndex) ? String(slideIndex) : '';
+  return cardEl.querySelector(`.photo-panel[data-photo-panel="${key}"]`);
+}
+
+async function togglePhotoPanel(cardEl, slideIndex, draftId) {
+  const panel = findPhotoPanel(cardEl, slideIndex);
+  if (!panel) return;
+  const wasOpen = panel.classList.contains('open');
+  panel.classList.toggle('open');
+  // Lazy-load candidates the first time we open. Re-open re-searches in case
+  // the operator edited image_subject in the meantime.
+  if (!wasOpen) await loadPhotoCandidates(cardEl, slideIndex, draftId);
+}
+
+function closePhotoPanel(cardEl, slideIndex) {
+  const panel = findPhotoPanel(cardEl, slideIndex);
+  if (panel) panel.classList.remove('open');
+}
+
+async function loadPhotoCandidates(cardEl, slideIndex, draftId) {
+  const panel = findPhotoPanel(cardEl, slideIndex);
+  if (!panel) return;
+  const resultsEl = panel.querySelector('[data-photo-results]');
+  if (!resultsEl) return;
+  const draft = DRAFTS.find((x) => x._id === draftId);
+  const subject = Number.isInteger(slideIndex)
+    ? (draft?.slides?.[slideIndex]?.image_subject || '')
+    : (draft?.image_subject || '');
+  if (!subject) {
+    resultsEl.innerHTML = '<div class="photo-empty">No image_subject set on this draft. Edit subject in Advanced and try again.</div>';
+    return;
+  }
+  resultsEl.innerHTML = '<div class="photo-loading">Searching Wikimedia, Pexels, Unsplash…</div>';
+  try {
+    const url = '/api/admin/dashboard/photo-search?' + new URLSearchParams({ subject }).toString();
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || 'photo-search failed');
+    resultsEl.innerHTML = renderPhotoCandidatesHtml(json.candidates, slideIndex);
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="photo-empty">Search failed: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderPhotoCandidatesHtml(candidates, slideIndex) {
+  const sIdxAttr = Number.isInteger(slideIndex) ? `data-slide-index="${slideIndex}"` : '';
+  const sources = [
+    { key: 'wikimedia', label: 'Wikimedia Commons' },
+    { key: 'pexels', label: 'Pexels' },
+    { key: 'unsplash', label: 'Unsplash' },
+  ];
+  const sections = sources.map((src) => {
+    const items = (candidates && candidates[src.key]) || [];
+    if (!items.length) {
+      return `<div class="photo-source"><div class="photo-source-label">${src.label}</div><div class="photo-empty">no results</div></div>`;
+    }
+    const thumbs = items.map((c, i) => `
+      <div class="photo-thumb" data-action="replace-photo-pick" data-photo-source="${src.key}" data-photo-index="${i}" ${sIdxAttr} title="${escapeHtml(c.attribution || '')}">
+        <img src="${escapeHtml(c.thumb_url || c.url)}" alt="" referrerpolicy="no-referrer" />
+      </div>`).join('');
+    return `<div class="photo-source"><div class="photo-source-label">${src.label}</div><div class="photo-grid">${thumbs}</div></div>`;
+  }).join('');
+  // Stash the raw candidates in a data attribute for the click handler.
+  return `<div data-photo-candidates='${escapeHtml(JSON.stringify(candidates || {}))}'>${sections}</div>`;
+}
+
 function gatherEdits(cardEl) {
   const out = {};
   cardEl.querySelectorAll('[data-field]').forEach((el) => {
@@ -1660,6 +1777,81 @@ async function actionAddCtaSlide(id, cardEl) {
   // Switch to the newly-added slide so operator sees it
   CURRENT_SLIDE[id] = Number.isInteger(json.slide_index) ? json.slide_index : 0;
   await loadDrafts();
+}
+
+// Phase 9.2 — replace-photo handlers. Both PATCH the draft (top-level for
+// single posts, per-slide for carousels) then trigger /regenerate-all-images
+// so any active overlay re-bakes onto the new photo.
+async function actionReplacePhotoPick(id, cardEl, slideIndex, btn) {
+  const wrap = btn.closest('[data-photo-candidates]');
+  if (!wrap) return;
+  const source = btn.dataset.photoSource;
+  const idx = Number(btn.dataset.photoIndex);
+  let candidates;
+  try {
+    candidates = JSON.parse(wrap.getAttribute('data-photo-candidates') || '{}');
+  } catch { candidates = {}; }
+  const pick = candidates?.[source]?.[idx];
+  if (!pick || !pick.url) {
+    toast('candidate not found', 'error');
+    return;
+  }
+  await applyPhotoReplacement(id, slideIndex, {
+    image_url: pick.url,
+    image_attribution: pick.attribution || '',
+    image_source: pick.source || source,
+  });
+  closePhotoPanel(cardEl, slideIndex);
+}
+
+async function actionReplacePhotoFromUrl(id, cardEl, slideIndex) {
+  const sel = Number.isInteger(slideIndex)
+    ? `[data-photo-paste-url][data-slide-index="${slideIndex}"]`
+    : '[data-photo-paste-url]:not([data-slide-index])';
+  const input = cardEl.querySelector(sel);
+  const url = (input?.value || '').trim();
+  if (!url) {
+    toast('paste a URL first', 'error');
+    return;
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    toast('URL must start with http(s)://', 'error');
+    return;
+  }
+  await applyPhotoReplacement(id, slideIndex, {
+    image_url: url,
+    image_attribution: 'Manual override',
+    image_source: 'manual',
+  });
+  closePhotoPanel(cardEl, slideIndex);
+}
+
+async function applyPhotoReplacement(id, slideIndex, fields) {
+  toast('Updating photo…', '');
+  const draft = DRAFTS.find((x) => x._id === id);
+  if (!draft) return;
+  let body;
+  if (Number.isInteger(slideIndex)) {
+    const slides = (draft.slides || []).map((s, i) => i === slideIndex ? { ...s, ...fields } : s);
+    body = { slides };
+  } else {
+    body = fields;
+  }
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    toast(json.error || 'patch failed', 'error');
+    return;
+  }
+  // Re-bake the overlay onto the new photo.
+  fetch(`/api/admin/dashboard/post-drafts/${id}/regenerate-all-images`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  }).catch(() => {});
+  toast('Photo replaced — re-rendering overlay…', 'success');
+  setTimeout(() => loadDrafts(), 4000);
 }
 
 async function actionDeleteSlide(id, slideIndex) {
