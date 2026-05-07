@@ -635,7 +635,7 @@ function wrapHeadline(text, charBudget, maxLines = 2) {
   return lines;
 }
 
-function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont }) {
+function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont, overlayFontSizePct }) {
   const badgeMap = {
     breaking:           { text: 'BREAKING',          color: BB_PALETTE.accentGreen },
     live:               { text: 'LIVE',              color: BB_PALETTE.orange },
@@ -654,6 +654,13 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   if (headlineLen <= 22)      { fontSize = Math.round(width / 12); charBudget = 22; maxLines = 1; }
   else if (headlineLen <= 50) { fontSize = Math.round(width / 17); charBudget = 28; maxLines = 2; }
   else                        { fontSize = Math.round(width / 22); charBudget = 36; maxLines = 3; }
+  // Phase 9.5.2: manual override from the corner-handle resize. Stored as
+  // % of canvas width so it scales correctly across the 1080x1080 render
+  // target regardless of the browser-preview canvas size.
+  if (Number.isFinite(overlayFontSizePct) && overlayFontSizePct > 0) {
+    fontSize = Math.round((overlayFontSizePct / 100) * width);
+    charBudget = Math.max(12, Math.round(width / fontSize * 1.5));
+  }
   const lines = wrapHeadline(ucHeadline, charBudget, maxLines);
   const lineHeight = Math.round(fontSize * 1.0);  // tighter for uppercase
 
@@ -708,7 +715,7 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   </svg>`;
 }
 
-async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor, overlayFont, brandedOverlay }) {
+async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor, overlayFont, overlayFontSizePct, brandedOverlay }) {
   if (!imageUrl) throw new Error('composeOverlayCard requires imageUrl');
   // Download the source image (can be remote)
   const srcRes = await fetch(imageUrl, { signal: TIMEOUT(20000) });
@@ -719,7 +726,7 @@ async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targ
     .resize(targetW, targetH, { fit: 'cover', position: 'center' })
     .toBuffer();
   // Compose overlay SVG on top (with optional custom position + color + font)
-  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont });
+  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont, overlayFontSizePct });
   const composites = [{ input: Buffer.from(svg), top: 0, left: 0 }];
   // Phase 9.5 — branded sticker (crypto/exchange logo) baked at saved coords.
   if (brandedOverlay && brandedOverlay.key) {
@@ -858,6 +865,7 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
             overlayY: Number.isFinite(s.overlay_y) ? s.overlay_y : undefined,
             overlayColor: typeof s.overlay_color === 'string' ? s.overlay_color : undefined,
             overlayFont: s.overlay_font === 'espn' ? 'espn' : 'brand',
+            overlayFontSizePct: Number.isFinite(s.overlay_font_size_pct) ? s.overlay_font_size_pct : undefined,
             brandedOverlay: s.branded_overlay || null,
           });
         } catch (e) {

@@ -349,11 +349,21 @@
 
   /* In-canvas sticker overlay rendered on top of the slide preview. Behaves
      like the headline overlay — draggable in non-locked mode, baked into
-     the composite by composeOverlayCard on the next /regenerate-all-images. */
+     the composite by composeOverlayCard on the next /regenerate-all-images.
+     Bottom-right corner handle resizes (Phase 9.5.2). */
   .sticker-overlay { position: absolute; cursor: grab; user-select: none; touch-action: none; z-index: 3; }
   .sticker-overlay.draggable:hover { outline: 2px dashed var(--gold); outline-offset: 4px; }
-  .sticker-overlay.dragging { cursor: grabbing; opacity: 0.85; }
+  .sticker-overlay.dragging, .sticker-overlay.resizing { cursor: grabbing; opacity: 0.85; }
   .sticker-overlay img { width: 100%; height: 100%; pointer-events: none; display: block; }
+  /* Corner resize handle. Only visible when the overlay is .draggable
+     (i.e. operator is in edit mode, post not locked). */
+  .resize-handle { position: absolute; right: -10px; bottom: -10px; width: 22px; height: 22px; border-radius: 50%; background: var(--gold); border: 2px solid white; cursor: nwse-resize; z-index: 4; box-shadow: 0 2px 6px rgba(0,0,0,0.5); display: none; }
+  .resize-handle::before { content: '↘'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--bg); font-size: 12px; font-weight: 800; }
+  .sticker-overlay.draggable .resize-handle, .overlay-headline.draggable .resize-handle { display: block; }
+  /* Mobile: bigger touch target */
+  @media (hover: none) {
+    .resize-handle { width: 28px; height: 28px; right: -14px; bottom: -14px; }
+  }
 
   /* Photo-replace panel (Phase 9.2) — opens when operator clicks 📷 corner btn.
      Searches Wikimedia / Pexels / Unsplash for `subject` and shows up to 3
@@ -824,7 +834,8 @@ function renderInstagramCarouselCard(d) {
          ${showOverlay ? `<div class="overlay-headline${overlayFontClass}${isLocked ? '' : ' draggable'}"
               data-overlay-x="${activeOverlayX}" data-overlay-y="${activeOverlayY}"
               data-overlay-font="${activeOverlayFont}"
-              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${safeText(active.headline || '')}</div>` : ''}
+              ${Number.isFinite(active.overlay_font_size_pct) ? `data-overlay-font-size-pct="${active.overlay_font_size_pct}"` : ''}
+              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${safeText(active.headline || '')}${isLocked ? '' : '<div class="resize-handle" data-resize-target="headline" title="Drag to resize"></div>'}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
          ${renderStickerOverlayHtml(active.branded_overlay, cur, isLocked)}
          ${isLocked ? '' : `<div class="image-corner-actions">
@@ -1288,6 +1299,7 @@ function renderStickerOverlayHtml(overlay, slideIndex, isLocked) {
        data-key="${escapeHtml(overlay.key)}"
        style="left:${x}%; top:${y}%; transform:translate(-50%, -50%); width:${scale}%; aspect-ratio:1/1;">
     <img src="/branded-overlays/${escapeHtml(overlay.key)}.svg" alt="" />
+    ${isLocked ? '' : '<div class="resize-handle" data-resize-target="sticker" title="Drag to resize"></div>'}
   </div>`;
 }
 
@@ -1673,12 +1685,21 @@ function wireCardActions(cardEl) {
 // shrinks to fit. Browser preview ↔ published JPEG stay visually aligned.
 function fitOverlayHeadline(overlayEl) {
   if (!overlayEl) return;
-  const text = (overlayEl.textContent || '').trim();
+  // Prefer firstChild text (skip the resize-handle div) so its empty content
+  // doesn't throw off length calc.
+  const text = String(overlayEl.firstChild?.nodeType === 3 ? overlayEl.firstChild.nodeValue : overlayEl.textContent || '').trim();
   if (!text) return;
   const canvas = overlayEl.closest('.overlay-canvas');
   if (!canvas) return;
   const w = canvas.offsetWidth;
   if (!w) return;  // not laid out yet
+  // Manual override (set via the corner resize handle drag) wins. Stored
+  // as a percentage of canvas width so it survives canvas resizes.
+  const manualPct = parseFloat(overlayEl.dataset.overlayFontSizePct);
+  if (Number.isFinite(manualPct) && manualPct > 0) {
+    overlayEl.style.fontSize = Math.max(12, (manualPct / 100) * w) + 'px';
+    return;
+  }
   const len = text.length;
   let divisor;
   if (len <= 22)      divisor = 12;
@@ -1715,13 +1736,71 @@ window.addEventListener('resize', () => {
 function initOverlayDrag(canvas) {
   // Same drag logic for both the headline overlay and the Phase 9.5
   // branded sticker overlay. Each draggable element manages its own
-  // x/y dataset and clamping range.
+  // x/y dataset and clamping range. Phase 9.5.2: resize handles on both.
   const targets = [
-    { el: canvas.querySelector('.overlay-headline.draggable'), xKey: 'overlayX', yKey: 'overlayY', xMin: 0, xMax: 95, yMin: 8, yMax: 98 },
-    { el: canvas.querySelector('.sticker-overlay.draggable'),  xKey: 'xPct',     yKey: 'yPct',     xMin: 4, xMax: 96, yMin: 4, yMax: 96 },
+    { el: canvas.querySelector('.overlay-headline.draggable'), xKey: 'overlayX', yKey: 'overlayY', xMin: 0, xMax: 95, yMin: 8, yMax: 98, kind: 'headline' },
+    { el: canvas.querySelector('.sticker-overlay.draggable'),  xKey: 'xPct',     yKey: 'yPct',     xMin: 4, xMax: 96, yMin: 4, yMax: 96, kind: 'sticker' },
   ].filter((t) => t.el);
   if (!targets.length) return;
-  for (const t of targets) attachDrag(canvas, t);
+  for (const t of targets) {
+    attachDrag(canvas, t);
+    attachResize(canvas, t);
+  }
+}
+
+// Phase 9.5.2 — corner-handle resize for sticker / headline overlays.
+// Sticker scales width%; headline scales font-size as % of canvas width.
+// stopPropagation on mousedown keeps the parent's drag handler quiet so
+// the same gesture doesn't simultaneously move + resize.
+function attachResize(canvas, t) {
+  const handle = t.el.querySelector('.resize-handle');
+  if (!handle) return;
+  let resizing = false, rect, centerX, centerY;
+  const start = (e) => {
+    resizing = true;
+    t.el.classList.add('resizing');
+    rect = canvas.getBoundingClientRect();
+    const tr = t.el.getBoundingClientRect();
+    centerX = tr.left + tr.width / 2;
+    centerY = tr.top + tr.height / 2;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const move = (e) => {
+    if (!resizing) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - centerX;
+    const dy = point.clientY - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (t.kind === 'sticker') {
+      // Diagonal distance from center to corner = w/√2 ⇒ w = dist · √2
+      const newWidthPx = dist * Math.SQRT2;
+      const pct = (newWidthPx / rect.width) * 100;
+      const clamped = Math.max(6, Math.min(60, pct));
+      t.el.style.width = clamped + '%';
+      t.el.dataset.scalePct = clamped.toFixed(1);
+    } else if (t.kind === 'headline') {
+      // Headline: font-size scales with diagonal distance. Save as % of
+      // canvas width so the manual size survives canvas resizes (mobile,
+      // focus-modal flips, etc.).
+      const newSizePx = Math.max(14, Math.min(rect.width * 0.18, dist * 1.4));
+      const pctOfCanvas = (newSizePx / rect.width) * 100;
+      t.el.style.fontSize = newSizePx + 'px';
+      t.el.dataset.overlayFontSizePct = pctOfCanvas.toFixed(2);
+    }
+    e.preventDefault();
+  };
+  const end = () => {
+    if (!resizing) return;
+    resizing = false;
+    t.el.classList.remove('resizing');
+  };
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start, { passive: false });
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, { passive: false });
+  document.addEventListener('mouseup', end);
+  document.addEventListener('touchend', end);
 }
 
 function attachDrag(canvas, t) {
@@ -1956,20 +2035,23 @@ async function actionSkip(id) {
 }
 
 async function actionApplyLayout(id, cardEl, slideIndex) {
-  const panel = cardEl.querySelector(`.slide-panel[data-slide="${slideIndex}"]`);
-  if (!panel) throw new Error('slide panel not found');
-  const headline = panel.querySelector('.overlay-headline');
-  const colorInput = panel.querySelector('input[data-overlay-color]');
+  // The headline overlay lives in the image-preview (sibling of the slide
+  // panel where the Save button sits), so query from cardEl with the
+  // overlay-canvas selector — not from inside the slide-panel.
+  const headline = cardEl.querySelector(`.overlay-canvas[data-slide-index="${slideIndex}"] .overlay-headline`);
+  const colorInput = cardEl.querySelector(`.slide-panel[data-slide="${slideIndex}"] input[data-overlay-color]`);
   if (!headline) throw new Error('headline overlay not found');
   const overlay_x = parseFloat(headline.dataset.overlayX);
   const overlay_y = parseFloat(headline.dataset.overlayY);
   const overlay_color = colorInput?.value || '#FFFFFF';
   const overlay_font = headline.dataset.overlayFont === 'espn' ? 'espn' : 'brand';
+  const sizeRaw = parseFloat(headline.dataset.overlayFontSizePct);
+  const overlay_font_size_pct = Number.isFinite(sizeRaw) && sizeRaw > 0 ? sizeRaw : null;
 
   const draft = DRAFTS.find((d) => d._id === id);
   if (!draft || !Array.isArray(draft.slides)) throw new Error('draft not found');
   const newSlides = draft.slides.map((s, i) => i === slideIndex
-    ? { ...s, overlay_x, overlay_y, overlay_color, overlay_font }
+    ? { ...s, overlay_x, overlay_y, overlay_color, overlay_font, overlay_font_size_pct }
     : s);
   const r1 = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -2180,7 +2262,9 @@ async function actionRemoveSticker(id, slideIndex) {
 }
 
 async function actionSaveStickerLayout(id, cardEl, slideIndex) {
-  // Pull current x/y/scale from the live overlay element + scale slider
+  // Pull current x/y/scale from the live overlay element. Scale comes from
+  // the element's dataset (updated by both the slider and the corner-drag
+  // resize handle); the slider just reads it back if present.
   const stickerEl = findStickerOverlay(cardEl, slideIndex);
   const scaleEl = cardEl.querySelector(
     Number.isInteger(slideIndex)
@@ -2195,11 +2279,14 @@ async function actionSaveStickerLayout(id, cardEl, slideIndex) {
     toast('No active sticker on this slide', 'error');
     return;
   }
+  // Live element wins over slider so the corner-drag resize is honored.
+  const liveScale = stickerEl ? parseFloat(stickerEl.dataset.scalePct) : NaN;
   const overlay = {
     key: current.key,
     x_pct: stickerEl ? Number(stickerEl.dataset.xPct) : (current.x_pct ?? 80),
     y_pct: stickerEl ? Number(stickerEl.dataset.yPct) : (current.y_pct ?? 14),
-    scale_pct: scaleEl ? Number(scaleEl.value) : (current.scale_pct ?? 18),
+    scale_pct: Number.isFinite(liveScale) ? liveScale
+      : (scaleEl ? Number(scaleEl.value) : (current.scale_pct ?? 18)),
   };
   toast('Saving sticker layout…', '');
   await applyBrandedOverlay(id, slideIndex, overlay);
