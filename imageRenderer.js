@@ -575,7 +575,14 @@ async function generateAIScene({ scenePrompt, referenceImageUrl, outPath, width 
   // only when the operator actually triggers a generation.
   const Replicate = require('replicate');
   const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-  const model = process.env.BCBAY_REPLICATE_MODEL || 'zsxkib/instant-id';
+  // Pin the version explicitly. The default Replicate JS SDK call for
+  // "owner/name" hits /v1/models/{owner}/{name}/predictions which 404s for
+  // community models without an "official" promoted version. The version-pinned
+  // form ("owner/name:version") routes through /v1/predictions instead.
+  // To rotate to a newer version, set BCBAY_REPLICATE_MODEL with the
+  // pinned slug. Latest as of 2026-05-06: 2e4785a4d80dadf580077b2244c8d7c05d8e3faac04a04c02d8e099dd2876789.
+  const model = process.env.BCBAY_REPLICATE_MODEL
+    || 'zsxkib/instant-id:2e4785a4d80dadf580077b2244c8d7c05d8e3faac04a04c02d8e099dd2876789';
 
   const output = await replicate.run(model, {
     input: {

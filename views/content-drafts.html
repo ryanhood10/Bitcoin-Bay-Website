@@ -104,18 +104,28 @@
 
   /* IMAGE-FIRST layout for Instagram (image at top of card body, caption below).
      Twitter keeps text-first since text is the primary content. */
-  .image-preview { width: 100%; border-radius: 6px; overflow: hidden; background: var(--surface2); border: 1px solid var(--border); }
+  .image-preview { width: 100%; border-radius: 6px; overflow: hidden; background: var(--surface2); border: 1px solid var(--border); position: relative; }
   .image-preview.below-text { margin-top: 8px; }
   .image-preview.above-text { margin-bottom: 10px; }
   .image-preview img { display: block; width: 100%; max-height: 220px; object-fit: cover; background: #000; }
-  .image-preview.large img { max-height: 320px; }
+  .image-preview.large img { max-height: 360px; }
   .image-preview .placeholder { padding: 28px 10px; text-align: center; color: var(--muted); font-size: 11px; }
   .image-meta { padding: 4px 8px; font-size: 10px; color: var(--muted); display: flex; gap: 8px; justify-content: space-between; border-top: 1px solid var(--border); align-items: center; }
   .image-meta .download-btn { color: var(--blue); text-decoration: none; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
   .image-meta .download-btn:hover { background: var(--surface3); }
+
+  /* Corner overlay buttons on the image preview itself (e.g. 🎨 Replace
+     with AI scene). Top-right corner, semi-transparent until hover. */
+  .image-corner-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 4; }
+  .corner-btn { width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.6); background: rgba(0,0,0,0.65); color: var(--gold); font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; backdrop-filter: blur(6px); transition: all 0.12s ease; }
+  .corner-btn:hover { background: var(--gold); color: var(--bg); border-color: var(--gold); transform: scale(1.08); }
+  .corner-btn.danger { color: var(--red); border-color: rgba(255,92,92,0.5); }
+  .corner-btn.danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
   @media (max-width: 800px) {
-    .image-preview img { max-height: 180px; }
-    .image-preview.large img { max-height: 240px; }
+    .image-preview img { max-height: 200px; }
+    .image-preview.large img { max-height: 280px; }
+    .corner-btn { width: 32px; height: 32px; font-size: 14px; }
   }
 
   .field-row { margin-top: 8px; }
@@ -159,16 +169,17 @@
   .scene-hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
   /* CAROUSEL — thumbnail strip (Phase 6.3) replaces text-only slide-tabs */
-  .slide-strip { display: flex; gap: 6px; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; scroll-snap-type: x mandatory; }
+  .slide-strip { display: flex; gap: 8px; padding: 10px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); overflow-x: auto; scroll-snap-type: x mandatory; }
   .slide-strip::-webkit-scrollbar { height: 6px; }
   .slide-strip::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-  .slide-thumb { position: relative; flex-shrink: 0; width: 84px; height: 84px; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--surface3); scroll-snap-align: start; transition: border-color 0.12s ease; }
-  .slide-thumb:hover { border-color: var(--muted); }
-  .slide-thumb.active { border-color: var(--instagram); box-shadow: 0 0 0 2px rgba(225,48,108,0.3); }
+  .slide-thumb { position: relative; flex-shrink: 0; width: 110px; height: 110px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: var(--surface3); scroll-snap-align: start; transition: all 0.12s ease; }
+  .slide-thumb:hover { border-color: var(--muted); transform: translateY(-2px); }
+  .slide-thumb.active { border-color: var(--instagram); box-shadow: 0 0 0 3px rgba(225,48,108,0.35); }
   .slide-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .slide-thumb .thumb-num { position: absolute; top: 2px; left: 4px; background: rgba(0,0,0,0.7); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
-  .slide-thumb .thumb-role { position: absolute; bottom: 2px; left: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 8px; font-weight: 700; text-transform: uppercase; padding: 1px 3px; border-radius: 3px; text-align: center; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .slide-thumb .thumb-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 18px; }
+  .slide-thumb .thumb-num { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.75); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px; }
+  .slide-thumb .thumb-role { position: absolute; bottom: 4px; left: 4px; right: 4px; background: rgba(0,0,0,0.75); color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase; padding: 2px 4px; border-radius: 4px; text-align: center; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slide-thumb .thumb-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 24px; }
+  .slide-strip-empty { padding: 16px 12px; text-align: center; color: var(--muted); font-size: 12px; background: var(--surface2); border-bottom: 1px solid var(--border); }
 
   .slide-panel { display: none; }
   .slide-panel.active { display: block; }
@@ -399,6 +410,9 @@ function renderInstagramCarouselCard(d) {
            <div class="overlay-headline${isLocked ? '' : ' draggable'}"
                 data-overlay-x="${overlayX}" data-overlay-y="${overlayY}"
                 style="left:${overlayX}%; top:${overlayY}%; color:${escapeHtml(overlayColor)};">${escapeHtml(s.headline || '')}</div>
+           ${isLocked ? '' : `<div class="image-corner-actions">
+             <button class="corner-btn" data-action="generate-art" data-slide-index="${i}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
+           </div>`}
            <div class="image-meta">
              <span>${escapeHtml(s.image_attribution || '')}</span>
              <a class="download-btn" download="slide-${i + 1}.jpg" href="${escapeHtml(composite)}" title="Download this slide">💾</a>
@@ -435,13 +449,10 @@ function renderInstagramCarouselCard(d) {
         <input class="field-input" data-slide-field="image_subject" data-slide-index="${i}" value="${escapeHtml(s.image_subject || '')}" ${isLocked ? 'disabled' : ''} />
       </div>
       <details class="advanced">
-        <summary>Advanced — manual image URL override</summary>
-        <input class="field-input" data-slide-field="image_url" data-slide-index="${i}" placeholder="paste a public image URL" value="${escapeHtml(s.image_url || '')}" ${isLocked ? 'disabled' : ''} />
+        <summary>Advanced — manual image URL override + Claude re-prompt</summary>
+        <input class="field-input" data-slide-field="image_url" data-slide-index="${i}" placeholder="paste a public image URL" value="${escapeHtml(s.image_url || '')}" ${isLocked ? 'disabled' : ''} style="margin-top:6px;" />
+        <button class="btn small danger" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="margin-top:8px;" title="Re-prompt Claude for this slide's text only (replaces headline+body)">🆕 New slide text</button>
       </details>
-      <div style="margin-top:8px; display:flex; gap:5px; flex-wrap:wrap;">
-        <button class="btn small" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''}>🔄 Regen slide</button>
-        <button class="btn small" data-action="generate-art" data-slide-index="${i}" ${isLocked ? 'disabled' : ''}>🎨 AI scene</button>
-      </div>
       ${renderScenePanel(d, i)}
     </div>`;
   }).join('');
@@ -464,9 +475,11 @@ function renderInstagramCarouselCard(d) {
     </div>
     <div class="collapsed-preview">${escapeHtml((d.caption || '').slice(0, 120))}…</div>
     <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
-    <div class="slide-strip">${thumbs}</div>
+    ${slides.length === 0
+      ? `<div class="slide-strip-empty">No slides yet — click <b>↻ Run drafter now</b> at the top to generate today's batch, or paste an image URL in a panel below to seed the carousel.</div>`
+      : `<div class="slide-strip">${thumbs}</div>`}
     ${tools}
-    <div class="card-body">${panels}</div>
+    <div class="card-body">${panels || '<div class="empty-state"><p>No slides yet.</p></div>'}</div>
     <div class="card-body" style="padding-top:0; border-top: 1px dashed var(--border);">
       <div class="field-row" style="margin-top:8px;">
         <div class="field-label">Deck caption (shown under all slides)</div>
@@ -487,8 +500,13 @@ function renderImageBlock(d, position = 'below-text', size = '') {
     return `<div class="${cls}"><div class="placeholder">Image rendering — refresh in 30s.</div></div>`;
   }
   const fname = (d.platform || 'post') + '-' + (d._id || 'image') + '.jpg';
+  // 🎨 corner button → opens scene panel below; default scene-prompt is
+  // pre-filled (suggestScenePrompt). Reference image defaults to this image.
   return `<div class="${cls}">
     <img src="${escapeHtml(url)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;placeholder&quot;>image fetch failed — try a manual URL in Advanced</div>'"/>
+    <div class="image-corner-actions">
+      <button class="corner-btn" data-action="generate-art" title="Replace with AI scene (Replicate InstantID, ~$0.05)">🎨</button>
+    </div>
     <div class="image-meta">
       <span>${escapeHtml(attr || '')}</span>
       <a class="download-btn" download="${escapeHtml(fname)}" href="${escapeHtml(url)}" title="Download">💾</a>
@@ -528,6 +546,20 @@ function renderVariantChip(d) {
   return `<span class="variant-chip ${kind}">${label}</span>`;
 }
 
+// Build a context-aware scene-prompt suggestion when Claude didn't produce one.
+// Operator can edit before submitting; this is just a sensible starting point.
+function suggestScenePrompt(d, slideIndex) {
+  const slide = Number.isInteger(slideIndex) ? d.slides?.[slideIndex] : null;
+  const target = slide || d;
+  if (target.image_scene_prompt) return target.image_scene_prompt;
+  const subject = (target.image_subject || 'an athlete').trim();
+  const headline = (target.headline || target.image_overlay_text || '').trim();
+  const angle = (d.angle || '').trim();
+  const ctx = headline || angle || (d.topic || '').trim();
+  const sceneClause = ctx ? `reacting to "${ctx}"` : 'in a dynamic moment';
+  return `${subject} ${sceneClause}, photorealistic editorial sports photo, dramatic stadium lighting, dynamic composition, high detail`;
+}
+
 // Scene-prompt panel for operator-triggered AI image generation.
 // `slideIndex` is null for single-image cards (Twitter, IG single), or the
 // slide index for carousel slides. The panel is hidden until the operator
@@ -535,14 +567,14 @@ function renderVariantChip(d) {
 function renderScenePanel(d, slideIndex) {
   const isSlide = Number.isInteger(slideIndex);
   const slide = isSlide ? (d.slides || [])[slideIndex] : null;
-  const prefilled = isSlide ? (slide?.image_scene_prompt || '') : (d.image_scene_prompt || '');
+  const prefilled = suggestScenePrompt(d, isSlide ? slideIndex : null);
   const refUrl = isSlide ? (slide?.image_url || '') : (d.image_url || '');
   const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
   const panelKey = isSlide ? slideIndex : '';
   return `<div class="scene-panel" data-scene-panel="${panelKey}">
     <div class="field-label">🎨 Generate AI scene with athlete's face (Replicate InstantID)</div>
-    <textarea class="scene-prompt" data-scene-field="prompt" ${sIdxAttr} placeholder="e.g. 'Shai Gilgeous-Alexander celebrating after a clutch shot, confetti falling, NBA arena background, photorealistic editorial photo'">${escapeHtml(prefilled)}</textarea>
-    <div class="scene-hint">InstantID preserves the face from the reference image while restyling the surroundings to match your prompt. Use a Wikimedia/Pexels editorial photo of the athlete as the reference.</div>
+    <textarea class="scene-prompt" data-scene-field="prompt" ${sIdxAttr} placeholder="">${escapeHtml(prefilled)}</textarea>
+    <div class="scene-hint">InstantID preserves the face from the reference image while restyling the surroundings to match your prompt. The textarea above is pre-filled with a suggested prompt — edit before submitting if you want a different scene.</div>
     <div class="field-label" style="margin-top:8px;">Reference image URL (face source — defaults to current image)</div>
     <input class="field-input" data-scene-field="reference" ${sIdxAttr} value="${escapeHtml(refUrl)}" placeholder="https://..." />
     <div class="scene-buttons">
@@ -559,20 +591,17 @@ function renderActions(d, isLocked) {
       <span style="color:var(--muted2); font-size:11px;">${d.status === 'posted' ? '✓ Posted' : '⛔ Skipped'} · ${formatTimestamp(d.updated_at)}</span>
     </div>`;
   }
-  // Carousel cards skip the deck-level 🎨 button — scene generation is
-  // per-slide there. Twitter cards get the ⇄ Variant swap button when 2
-  // variants are available.
-  const sceneBtn = d.platform === 'instagram_carousel'
-    ? ''
-    : '<button class="btn small" data-action="generate-art">🎨 AI scene</button>';
+  // 🎨 AI scene moved to a corner button on the image preview itself.
+  // Twitter cards get the ⇄ Variant swap button when 2 variants are available.
+  // 🆕 New text replaces the old "🔄 Regen" — destructive (rewrites the
+  // current draft text), so it has a confirm dialog wired in actionRegenerate.
   const variantBtn = (d.platform === 'twitter' && Array.isArray(d.variants) && d.variants.length >= 2)
     ? `<button class="btn small" data-action="swap-variant" title="Swap to alternate variant (meme ↔ news)">⇄ Variant</button>`
     : '';
   return `<div class="card-actions">
     <button class="btn small" data-action="save">💾 Save</button>
-    <button class="btn small" data-action="regen">🔄 Regen</button>
+    <button class="btn small danger" data-action="regen" title="Replace the current draft text with a new one (Claude re-prompt)">🆕 New text</button>
     ${variantBtn}
-    ${sceneBtn}
     <button class="btn small danger" data-action="skip">⛔ Skip</button>
     <button class="btn small success" data-action="approve" style="margin-left:auto;">✓ Approve</button>
   </div>`;
@@ -809,7 +838,12 @@ async function actionSave(id, cardEl) {
 }
 
 async function actionRegenerate(id, opts) {
-  toast('Regenerating — this takes 5-10s…', '');
+  // Destructive — rewrites the current draft text. Confirm before nuking
+  // anything the operator may have already edited.
+  const isSlide = Number.isInteger(opts?.slide_index);
+  const what = isSlide ? `slide ${opts.slide_index + 1} headline + body` : 'this draft\'s text';
+  if (!confirm(`Replace ${what} with a fresh Claude generation?\n\nAny edits you've made will be lost.`)) return;
+  toast('Generating new text — 5-10s…', '');
   const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/regenerate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -817,7 +851,7 @@ async function actionRegenerate(id, opts) {
   });
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.error || 'regen failed');
-  toast('Regenerated', 'success');
+  toast('New text generated', 'success');
   await loadDrafts();
 }
 
