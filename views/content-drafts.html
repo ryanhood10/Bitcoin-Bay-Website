@@ -2152,9 +2152,11 @@ async function applyPhotoReplacement(id, slideIndex, fields) {
   if (!draft) return;
   let body;
   if (Number.isInteger(slideIndex)) {
-    const slides = (draft.slides || []).map((s, i) => i === slideIndex ? { ...s, ...fields } : s);
-    body = { slides };
+    const newSlides = (draft.slides || []).map((s, i) => i === slideIndex ? { ...s, ...fields } : s);
+    draft.slides = newSlides;       // keep in-memory state in sync
+    body = { slides: newSlides };
   } else {
+    Object.assign(draft, fields);   // keep in-memory state in sync
     body = fields;
   }
   const res = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
@@ -2166,12 +2168,31 @@ async function applyPhotoReplacement(id, slideIndex, fields) {
     toast(json.error || 'patch failed', 'error');
     return;
   }
-  // Re-bake the overlay onto the new photo.
+  // Live-swap the visible <img> right away so operator sees the change
+  // before the composite re-bake catches up.
+  const cardEl = document.querySelector(`.card[data-id="${id}"]`);
+  if (cardEl && fields.image_url) refreshImageSrc(cardEl, slideIndex, fields.image_url);
+  // Re-bake the overlay onto the new photo (server-side composite).
   fetch(`/api/admin/dashboard/post-drafts/${id}/regenerate-all-images`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
   }).catch(() => {});
   toast('Photo replaced — re-rendering overlay…', 'success');
   setTimeout(() => loadDrafts(), 4000);
+}
+
+// Phase 9.2 — swap the visible <img src> in place so a photo replacement
+// shows immediately, instead of waiting for the next loadDrafts cycle.
+function refreshImageSrc(cardEl, slideIndex, newUrl) {
+  let img;
+  if (Number.isInteger(slideIndex)) {
+    const draftId = cardEl.dataset.id;
+    const cur = CURRENT_SLIDE[draftId] ?? 0;
+    if (cur !== slideIndex) return; // not the active slide right now
+    img = cardEl.querySelector('.image-preview.large.overlay-canvas img');
+  } else {
+    img = cardEl.querySelector('.image-preview img');
+  }
+  if (img) img.src = newUrl;
 }
 
 // ── Phase 9.5: branded sticker picker + per-slide overlay ────────────────

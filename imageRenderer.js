@@ -851,7 +851,14 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
       // Real-photo path — intent auto-inferred from slide subject.
       // Overlay coords + color come from the slide if the operator dragged
       // them via the Phase 6.4 layout editor; absent → default bottom-left/white.
-      const hit = await findHeroImage(s.image_subject);
+      // Phase 9.2: respect operator-picked photos. If image_source is set
+      // by the photo-replace UI ('wikimedia' / 'pexels' / 'unsplash' / 'manual')
+      // and image_url is present, use that URL directly instead of re-searching.
+      const operatorPicked = s.image_url
+        && ['wikimedia', 'pexels', 'unsplash', 'manual'].includes(String(s.image_source || ''));
+      const hit = operatorPicked
+        ? { url: s.image_url, attribution: s.image_attribution || '' }
+        : await findHeroImage(s.image_subject);
       let composite = null;
       if (hit?.url) {
         try {
@@ -905,9 +912,15 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
   }
 
   const subject = draft.image_subject;
-  if (!subject) return { image_status: 'failed' };
-  // Intent auto-inferred from subject text (athletes → Wikimedia first, etc.)
-  const hit = await findHeroImage(subject);
+  // Phase 9.2: operator-picked photos win over auto-search. Same guard as
+  // the carousel path so manually-replaced photos persist through every
+  // subsequent /regenerate-all-images.
+  const operatorPicked = draft.image_url
+    && ['wikimedia', 'pexels', 'unsplash', 'manual'].includes(String(draft.image_source || ''));
+  if (!operatorPicked && !subject) return { image_status: 'failed' };
+  const hit = operatorPicked
+    ? { url: draft.image_url, attribution: draft.image_attribution || '' }
+    : await findHeroImage(subject);
   if (!hit?.url) return { image_status: 'failed' };
 
   // For IG single, compose with overlay; for X, leave the raw real photo
