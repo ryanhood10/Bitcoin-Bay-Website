@@ -1519,13 +1519,23 @@ function wireCardActions(cardEl) {
     });
   }
 
-  // Action buttons
-  cardEl.querySelectorAll('[data-action]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
+  // Action buttons. Delegated on cardEl so dynamically-added buttons (sticker
+  // thumbs, photo-search thumbs — both injected after panel open) get wired
+  // automatically without us having to re-call wireCardActions on every panel
+  // load. Walk up from the click target to the closest [data-action] inside
+  // this card. Skip if the click hit a disabled element. Re-entry guard via
+  // `_wired` flag so we don't double-attach when wireCardActions runs again.
+  if (!cardEl._wiredClick) {
+    cardEl._wiredClick = true;
+    cardEl.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn || !cardEl.contains(btn)) return;
+      if (btn.disabled) return;
       const action = btn.dataset.action;
       const slideIdx = btn.dataset.slideIndex !== undefined && btn.dataset.slideIndex !== ''
         ? Number(btn.dataset.slideIndex) : null;
       try {
+        // disable=true only applies to <button>; div/span thumbs ignore it
         btn.disabled = true;
         if (action === 'save') await actionSave(id, cardEl);
         else if (action === 'regen') await actionRegenerate(id, { humor_pass: false });
@@ -1564,13 +1574,13 @@ function wireCardActions(cardEl) {
             wireCardActions(newCard);
           }
         }
-      } catch (e) {
-        toast(e.message || 'Action failed', 'error');
+      } catch (err) {
+        toast(err.message || 'Action failed', 'error');
       } finally {
         btn.disabled = false;
       }
     });
-  });
+  }
 
   // Live headline-input → HTML overlay text. As operator types in the
   // "Headline" field, the on-image overlay text updates instantly + the
