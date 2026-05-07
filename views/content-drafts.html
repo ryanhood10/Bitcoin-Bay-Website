@@ -2210,7 +2210,7 @@ function findStickerOverlay(cardEl, slideIndex) {
 
 async function applyBrandedOverlay(id, slideIndex, overlay) {
   const draft = DRAFTS.find((x) => x._id === id);
-  if (!draft) return;
+  if (!draft) return false;
   let body;
   if (Number.isInteger(slideIndex)) {
     const slides = (draft.slides || []).map((s, i) => i === slideIndex ? { ...s, branded_overlay: overlay } : s);
@@ -2229,10 +2229,51 @@ async function applyBrandedOverlay(id, slideIndex, overlay) {
     toast(json.error || 'patch failed', 'error');
     return false;
   }
-  // Re-render just the affected card so the overlay shows immediately. We
-  // can't full loadDrafts here because the sticker panel is open and that
-  // would close it.
+  // Live-update the visible overlay without re-rendering the whole card —
+  // the sticker modal is open and a full re-render would close it. Find
+  // the affected card's image preview and inject a fresh .sticker-overlay
+  // in place (or remove if overlay is now null/missing).
+  const cardEl = document.querySelector(`.card[data-id="${id}"]`);
+  if (cardEl) refreshStickerOverlayInImage(cardEl, slideIndex, overlay);
   return true;
+}
+
+// Phase 9.5 — keep the in-canvas sticker overlay in sync with the latest
+// branded_overlay state. Removes any existing sticker DOM and inserts a
+// fresh one (or nothing if overlay is null). Re-wires drag if applicable.
+function refreshStickerOverlayInImage(cardEl, slideIndex, overlay) {
+  let imagePreview;
+  if (Number.isInteger(slideIndex)) {
+    // Carousel: only the active slide is rendered. If a different slide is
+    // active right now there's nothing to refresh visibly — the next slide
+    // switch will render the new state.
+    const draftId = cardEl.dataset.id;
+    const cur = CURRENT_SLIDE[draftId] ?? 0;
+    if (cur !== slideIndex) return;
+    imagePreview = cardEl.querySelector('.image-preview.large.overlay-canvas');
+  } else {
+    imagePreview = cardEl.querySelector('.image-preview');
+  }
+  if (!imagePreview) return;
+  const existing = imagePreview.querySelector('.sticker-overlay');
+  if (existing) existing.remove();
+  if (!overlay || !overlay.key) return;
+  const html = renderStickerOverlayHtml(overlay, slideIndex, false);
+  if (!html) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const node = tmp.firstElementChild;
+  if (!node) return;
+  // Sit above the image but below the corner-actions buttons so 📷 / 🏷️ /
+  // 🎨 stay clickable.
+  const cornerActions = imagePreview.querySelector('.image-corner-actions');
+  if (cornerActions) imagePreview.insertBefore(node, cornerActions);
+  else imagePreview.appendChild(node);
+  // If we're inside an overlay-canvas, re-wire drag so the new overlay is
+  // movable too.
+  if (imagePreview.classList.contains('overlay-canvas')) {
+    initOverlayDrag(imagePreview);
+  }
 }
 
 async function actionDeleteSlide(id, slideIndex) {

@@ -51,25 +51,56 @@ function escapeXml(s) {
   ));
 }
 
-// Render a circular badge SVG. `size` is the square SVG width/height.
-// Auto-fits font size based on glyph length so multi-char glyphs (BNB,
-// AVAX, USDC) shrink to fit inside the circle.
+// Standard luminance (0-255). Used to pick a legible fill color for the
+// transparent overlay style — dark-bg marks (XRP, OKX, near-black) need
+// the fill flipped to white or the glyph disappears against dark photos.
+function luminance(hex) {
+  const m = String(hex || '').match(/^#([0-9a-f]{6})$/i);
+  if (!m) return 200;
+  const v = parseInt(m[1], 16);
+  return 0.299 * ((v >> 16) & 0xff) + 0.587 * ((v >> 8) & 0xff) + 0.114 * (v & 0xff);
+}
+
+// Render a transparent logo-style mark SVG. The glyph alone (no circle
+// background) in the brand color, with a white halo (stroke painted under
+// fill) + soft drop shadow for legibility on any photo. Auto-fits font
+// size based on glyph length so multi-char marks (BNB, AVAX, USDC) shrink
+// to fit. The SVG itself has no background — fully transparent so it
+// composites cleanly onto a photo.
 function generateMarkSVG(key, size = 256) {
   const mark = getMark(key);
   if (!mark) return null;
   const cx = size / 2, cy = size / 2;
-  const r = size / 2 - 2;
   const glyph = mark.glyph || mark.name.slice(0, 2).toUpperCase();
+  // Larger fonts than the circle version since we no longer have to fit
+  // inside a disc — the glyph itself is the whole mark.
   let fontSize;
-  if (glyph.length === 1) fontSize = size * 0.55;
-  else if (glyph.length === 2) fontSize = size * 0.42;
-  else if (glyph.length === 3) fontSize = size * 0.32;
-  else fontSize = size * 0.25;
+  if (glyph.length === 1) fontSize = size * 0.78;
+  else if (glyph.length === 2) fontSize = size * 0.50;
+  else if (glyph.length === 3) fontSize = size * 0.38;
+  else fontSize = size * 0.30;
+  const strokeWidth = Math.max(3, Math.round(size * 0.025));
+  const shadowOffset = Math.max(2, Math.round(size * 0.012));
+  const filterId = `sh-${key}`;
+  // Pick the more legible of {bg, fg} as fill: brand-color when bright
+  // enough to read, otherwise flip to fg (the alternate brand color, often
+  // white for dark-bg marks). Stroke is always the contrasting halo so
+  // the mark shows up on any photo.
+  const bgLum = luminance(mark.bg);
+  const fillColor = bgLum > 80 ? mark.bg : (mark.fg || '#FFFFFF');
+  const strokeColor = luminance(fillColor) > 128 ? '#000000' : '#FFFFFF';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="${mark.bg}" stroke="rgba(0,0,0,0.18)" stroke-width="2"/>
+  <defs>
+    <filter id="${filterId}" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="${shadowOffset}" stdDeviation="${shadowOffset}" flood-color="#000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
   <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central"
         font-family="'Space Grotesk', 'Inter', -apple-system, 'Helvetica Neue', sans-serif"
-        font-size="${fontSize.toFixed(0)}" font-weight="700" fill="${mark.fg}"
+        font-size="${fontSize.toFixed(0)}" font-weight="800"
+        fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}"
+        paint-order="stroke fill"
+        filter="url(#${filterId})"
         letter-spacing="-1">${escapeXml(glyph)}</text>
 </svg>`;
 }
