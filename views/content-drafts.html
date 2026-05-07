@@ -255,6 +255,49 @@
      Operator-triggered AI image generation (Replicate InstantID, ~$0.05/call). */
   .scene-panel { display: none; padding: 12px 14px; background: var(--surface2); border-top: 1px dashed var(--border2); }
   .scene-panel.open { display: block; }
+
+  /* Phase 9.6: corner-button panels become centered tool-modals when opened.
+     Shared backdrop dims the page; click → close. Mobile flips to full-screen
+     with `100dvh` + safe-area padding. The existing inline-panel layout is
+     overridden by `.open` only — closed panels still take no space inline. */
+  /* z-index above the focus modal (9999) so tool panels opened from inside
+     a focus-mode view sit on top instead of getting hidden behind it. */
+  .tool-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: none; z-index: 10000; backdrop-filter: blur(2px); }
+  .tool-modal-backdrop.open { display: block; }
+  .scene-panel.open, .photo-panel.open, .sticker-panel.open {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+    max-width: 540px;
+    width: calc(100vw - 32px);
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border2);
+    border-top: 1px solid var(--border2);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+    background: var(--bg);
+    padding: 18px 20px;
+  }
+  .tool-modal-head { display: flex; justify-content: space-between; align-items: center; margin: -18px -20px 14px; padding: 12px 18px; border-bottom: 1px solid var(--border2); background: var(--surface); border-radius: 12px 12px 0 0; }
+  .tool-modal-head .title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .tool-modal-head button { background: transparent; border: 1px solid var(--border2); color: var(--muted); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; padding: 0; font-size: 14px; }
+  .tool-modal-head button:hover { color: var(--gold); border-color: var(--gold); }
+  @media (max-width: 700px) {
+    .scene-panel.open, .photo-panel.open, .sticker-panel.open {
+      max-width: 100%;
+      width: 100%;
+      max-height: 100dvh;
+      height: 100dvh;
+      top: 0; left: 0;
+      transform: none;
+      border-radius: 0;
+      padding: 14px 16px;
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    }
+    .tool-modal-head { margin: -14px -16px 12px; border-radius: 0; padding: 12px 14px; position: sticky; top: 0; z-index: 1; }
+  }
   .scene-prompt { width: 100%; min-height: 80px; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-family: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
   .scene-prompt:focus { outline: none; border-color: var(--orange); }
   .scene-buttons { display: flex; gap: 6px; margin-top: 10px; align-items: center; }
@@ -569,6 +612,10 @@
 </div>
 
 <div id="toast" class="toast"></div>
+<!-- Shared backdrop for the corner-button tool modals (Phase 9.6). Single
+     element used by photo-panel / sticker-panel / scene-panel; click to
+     close any open one. ESC also closes via the global key handler. -->
+<div id="tool-modal-backdrop" class="tool-modal-backdrop"></div>
 <!-- Focus modal (Phase 9.4) — operator clicks ⛶ on any card to expand it
      into this overlay for deep editing. The card DOM gets transplanted in
      and back out so handlers stay live. -->
@@ -1209,6 +1256,7 @@ function renderScenePanel(d, slideIndex) {
   const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
   const panelKey = isSlide ? slideIndex : '';
   return `<div class="scene-panel" data-scene-panel="${panelKey}">
+    <div class="tool-modal-head"><span class="title">🎨 Generate AI scene</span><button data-action="generate-art-cancel" ${sIdxAttr} aria-label="Close">✕</button></div>
     <div class="field-label">🎨 Generate AI scene with athlete's face (Replicate InstantID)</div>
     <textarea class="scene-prompt" data-scene-field="prompt" ${sIdxAttr} placeholder="">${safeText(prefilled)}</textarea>
     <div class="scene-hint">InstantID preserves the face from the reference image while restyling the surroundings to match your prompt. The textarea above is pre-filled with a suggested prompt — edit before submitting if you want a different scene.</div>
@@ -1261,7 +1309,8 @@ function renderStickerPanel(d, slideIndex) {
       <button class="btn small primary" data-action="save-sticker-layout" ${sIdxAttr} title="Bake sticker into composite">💾 Save</button>
     </div>` : '';
   return `<div class="sticker-panel" data-sticker-panel="${panelKey}">
-    <div class="field-label">🏷️ Add a branded sticker — auto-suggested logos appear at top with a gold ring</div>
+    <div class="tool-modal-head"><span class="title">🏷️ Branded sticker</span><button data-action="add-sticker-cancel" ${sIdxAttr} aria-label="Close">✕</button></div>
+    <div class="field-label">Auto-suggested logos appear at top with a gold ring</div>
     ${activeRow}
     <div class="sticker-results" data-sticker-results="${panelKey}">
       <div class="photo-loading">Loading manifest…</div>
@@ -1282,7 +1331,8 @@ function renderPhotoPanel(d, slideIndex) {
   const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
   const panelKey = isSlide ? slideIndex : '';
   return `<div class="photo-panel" data-photo-panel="${panelKey}">
-    <div class="field-label">📷 Replace photo — searching Wikimedia / Pexels / Unsplash for "${safeText(subject || 'this subject')}"</div>
+    <div class="tool-modal-head"><span class="title">📷 Replace photo</span><button data-action="replace-photo-cancel" ${sIdxAttr} aria-label="Close">✕</button></div>
+    <div class="field-label">Searching Wikimedia / Pexels / Unsplash for "${safeText(subject || 'this subject')}"</div>
     <div class="photo-results" data-photo-results="${panelKey}">
       <div class="photo-loading">Click below to load candidates…</div>
     </div>
@@ -1711,13 +1761,16 @@ function findScenePanel(cardEl, slideIndex) {
 }
 
 function toggleScenePanel(cardEl, slideIndex) {
+  closeAllToolModals();
   const panel = findScenePanel(cardEl, slideIndex);
-  if (panel) panel.classList.toggle('open');
+  if (panel) panel.classList.add('open');
+  syncToolModalBackdrop();
 }
 
 function closeScenePanel(cardEl, slideIndex) {
   const panel = findScenePanel(cardEl, slideIndex);
   if (panel) panel.classList.remove('open');
+  syncToolModalBackdrop();
 }
 
 // Phase 9.2 — photo-replace panel helpers (parallel to scene-panel).
@@ -1730,15 +1783,20 @@ async function togglePhotoPanel(cardEl, slideIndex, draftId) {
   const panel = findPhotoPanel(cardEl, slideIndex);
   if (!panel) return;
   const wasOpen = panel.classList.contains('open');
-  panel.classList.toggle('open');
-  // Lazy-load candidates the first time we open. Re-open re-searches in case
-  // the operator edited image_subject in the meantime.
-  if (!wasOpen) await loadPhotoCandidates(cardEl, slideIndex, draftId);
+  closeAllToolModals();
+  if (!wasOpen) {
+    panel.classList.add('open');
+    syncToolModalBackdrop();
+    // Lazy-load candidates the first time we open. Re-open re-searches in case
+    // the operator edited image_subject in the meantime.
+    await loadPhotoCandidates(cardEl, slideIndex, draftId);
+  }
 }
 
 function closePhotoPanel(cardEl, slideIndex) {
   const panel = findPhotoPanel(cardEl, slideIndex);
   if (panel) panel.classList.remove('open');
+  syncToolModalBackdrop();
 }
 
 async function loadPhotoCandidates(cardEl, slideIndex, draftId) {
@@ -2034,13 +2092,18 @@ async function toggleStickerPanel(cardEl, slideIndex, draftId) {
   const panel = findStickerPanel(cardEl, slideIndex);
   if (!panel) return;
   const wasOpen = panel.classList.contains('open');
-  panel.classList.toggle('open');
-  if (!wasOpen) await loadStickerCandidates(cardEl, slideIndex, draftId);
+  closeAllToolModals();
+  if (!wasOpen) {
+    panel.classList.add('open');
+    syncToolModalBackdrop();
+    await loadStickerCandidates(cardEl, slideIndex, draftId);
+  }
 }
 
 function closeStickerPanel(cardEl, slideIndex) {
   const panel = findStickerPanel(cardEl, slideIndex);
   if (panel) panel.classList.remove('open');
+  syncToolModalBackdrop();
 }
 
 async function loadStickerCandidates(cardEl, slideIndex, draftId) {
@@ -2444,6 +2507,34 @@ async function autoRenderPendingDrafts() {
   setTimeout(() => loadDrafts().catch(() => {}), 12_000);
 }
 
+// ── Phase 9.6: shared tool-modal backdrop helpers ───────────────────────
+// The 🎨 / 📷 / 🏷️ panels reuse a single backdrop element. Show it whenever
+// any panel has .open; hide once they all close. Backdrop click + ESC both
+// dismiss any open tool panel.
+function syncToolModalBackdrop() {
+  const anyOpen = document.querySelector('.scene-panel.open, .photo-panel.open, .sticker-panel.open');
+  const backdrop = document.getElementById('tool-modal-backdrop');
+  if (!backdrop) return;
+  backdrop.classList.toggle('open', !!anyOpen);
+}
+function closeAllToolModals() {
+  document.querySelectorAll('.scene-panel.open, .photo-panel.open, .sticker-panel.open')
+    .forEach((p) => p.classList.remove('open'));
+  syncToolModalBackdrop();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const bd = document.getElementById('tool-modal-backdrop');
+  if (bd) bd.addEventListener('click', closeAllToolModals);
+});
+// Also wire immediately in case DOMContentLoaded already fired
+{
+  const bd = document.getElementById('tool-modal-backdrop');
+  if (bd && !bd.dataset.wired) {
+    bd.addEventListener('click', closeAllToolModals);
+    bd.dataset.wired = '1';
+  }
+}
+
 // ── Phase 9.4: focus modal (click ⛶ on a card to expand) ─────────────────
 // We *transplant* the live card DOM into the modal so all wired event
 // handlers (drag, contenteditable, hashtag pills) keep working without
@@ -2487,7 +2578,13 @@ document.getElementById('focus-modal').addEventListener('click', (e) => {
   if (e.target.id === 'focus-modal') closeFocusModal();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('focus-modal').classList.contains('open')) {
+  if (e.key !== 'Escape') return;
+  // Tool modals (corner-button panels) take priority over the focus modal —
+  // ESC should close the inner overlay first if both are stacked.
+  const anyTool = document.querySelector('.scene-panel.open, .photo-panel.open, .sticker-panel.open');
+  if (anyTool) {
+    closeAllToolModals();
+  } else if (document.getElementById('focus-modal').classList.contains('open')) {
     closeFocusModal();
   }
 });
