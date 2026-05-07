@@ -185,6 +185,24 @@
   .editor.tweet-text:hover { background: var(--surface2); }
   .editor.tweet-text:focus { background: var(--surface2); border-color: var(--twitter); outline: none; }
 
+  /* Click-to-edit display layer (Buffer pattern). Shown by default with
+     inline blue hashtags; click to swap in the textarea for editing.
+     Blur swaps back + auto-saves. */
+  .text-display { font-family: -apple-system, "Segoe UI", "Inter", BlinkMacSystemFont, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.45; border: 1px solid transparent; padding: 4px 6px; min-height: 60px; color: var(--text); border-radius: 6px; cursor: text; white-space: pre-wrap; word-wrap: break-word; }
+  .text-display:hover { background: var(--surface2); border-color: var(--border); }
+  .text-display .ht, .text-display .mt { color: var(--twitter); font-weight: 500; }
+  .text-display .placeholder { color: var(--muted); font-style: italic; }
+  .text-display.empty::before { content: 'Click to write your tweet…'; color: var(--muted); font-style: italic; }
+  .editor.tweet-text.hidden { display: none; }
+  .text-display.hidden { display: none; }
+
+  /* Same pattern for IG caption preview when click-to-edit is wired */
+  .ig-caption-preview { cursor: text; padding: 4px 6px; border-radius: 6px; transition: background 0.12s ease; }
+  .ig-caption-preview:hover { background: var(--surface2); }
+  .ig-caption-edit { display: none; padding: 6px 0 0; }
+  .ig-caption-edit.editing { display: block; }
+  .ig-caption-preview.editing { display: none; }
+
   /* Twitter mock action row — reply, retweet, like, view, share icons */
   .tweet-mock-actions { display: flex; gap: 0; padding: 6px 0 0; color: var(--muted2); font-size: 12px; align-items: center; justify-content: space-between; max-width: 100%; }
   .tweet-mock-actions .act { display: inline-flex; align-items: center; gap: 4px; flex: 1; }
@@ -392,7 +410,8 @@ function renderTwitterCard(d) {
           <span class="handle">@BitcoinBay_com · now</span>
         </div>
       </div>
-      <textarea class="editor tweet-text" data-field="text" ${isLocked ? 'disabled' : ''} placeholder="Type your tweet…">${escapeHtml(d.text || '')}</textarea>
+      <div class="text-display${(d.text || '').trim() ? '' : ' empty'}" data-display-for="text">${renderInlineText(d.text || '')}</div>
+      <textarea class="editor tweet-text hidden" data-field="text" ${isLocked ? 'disabled' : ''} placeholder="Type your tweet…">${escapeHtml(d.text || '')}</textarea>
       <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${TWITTER_LIMIT}</div>
       ${sourceChip}
       ${imageBlock}
@@ -787,6 +806,63 @@ function wireCardActions(cardEl) {
       const newCard = wrapper.firstElementChild;
       cardEl.replaceWith(newCard);
       wireCardActions(newCard);
+    });
+  });
+
+  // Click-to-edit on the styled text-display (Buffer pattern). The display
+  // shows blue inline hashtags; click swaps in the textarea for editing;
+  // blur swaps back + auto-saves.
+  cardEl.querySelectorAll('.text-display[data-display-for]').forEach((display) => {
+    display.addEventListener('click', () => {
+      const field = display.dataset.displayFor;
+      const ta = cardEl.querySelector(`textarea[data-field="${field}"]`);
+      if (!ta || ta.disabled) return;
+      display.classList.add('hidden');
+      ta.classList.remove('hidden');
+      ta.focus();
+      // Move cursor to the end
+      try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (_) {}
+    });
+  });
+  cardEl.querySelectorAll('.editor.tweet-text, .editor.ig').forEach((ta) => {
+    ta.addEventListener('blur', async () => {
+      const field = ta.dataset.field;
+      const display = cardEl.querySelector(`.text-display[data-display-for="${field}"]`)
+                   || cardEl.querySelector(`.ig-caption-preview[data-ig-caption-preview]`);
+      if (!display) return;
+      // Re-render the styled preview from current textarea value
+      if (display.classList.contains('text-display')) {
+        const text = ta.value;
+        display.innerHTML = renderInlineText(text);
+        display.classList.toggle('empty', !text.trim());
+      } else if (display.classList.contains('ig-caption-preview')) {
+        // Rebuild caption preview using current draft data + new caption
+        const draft = DRAFTS.find((x) => x._id === id);
+        if (draft) {
+          draft.caption = ta.value;
+          display.outerHTML = renderIgCaptionPreview(draft);
+        }
+      }
+      ta.classList.add('hidden');
+      display.classList.remove('hidden');
+      // Auto-save
+      try { await actionSave(id, cardEl); } catch (e) { console.warn('auto-save failed', e); }
+    });
+  });
+
+  // Click on IG caption preview → open the Advanced expander (where the
+  // caption textarea lives) for editing.
+  cardEl.querySelectorAll('.ig-caption-preview[data-ig-caption-preview]').forEach((preview) => {
+    preview.addEventListener('click', () => {
+      const advanced = cardEl.querySelector('details.advanced');
+      if (advanced && !advanced.open) {
+        advanced.open = true;
+        const ta = advanced.querySelector('textarea[data-field="caption"]');
+        if (ta) {
+          ta.focus();
+          try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (_) {}
+        }
+      }
     });
   });
 

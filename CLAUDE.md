@@ -71,6 +71,9 @@ docs/                ← Deeper references for future work:
                          drafting to /admin/dashboard)
                        - CONTENT_CREATION_PLAN.md   (phased build plan, paired
                          with the handoff doc)
+                       - CONTENT_STRATEGY.md        (the WHY: voice, competitive
+                         landscape Lane B vs Lane A, engagement multipliers BB
+                         can adopt, anti-patterns, deferred Phase 8 work)
 ```
 
 ## Agent auth — the critical piece
