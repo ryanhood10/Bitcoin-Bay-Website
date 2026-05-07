@@ -718,8 +718,78 @@ Return STRICT JSON: {"image_subject": "FULL athlete name, no abbreviations", "he
   return { ok: true, draft_id: draftId };
 }
 
+// ── PUBLIC: draftFromGameState (Phase 8) ──────────────────────────────────
+// One-shot Twitter draft seeded from a live ESPN game state. Operator
+// triggers via the dashboard's "Today's games" panel → "✍️ Draft tweet"
+// button. Generates 2 variants (meme + professional) like the normal
+// drafter, persists into bcb_post_drafts with source='live_game' so the
+// operator can spot-edit and approve.
+async function draftFromGameState({ gameState, eventId, leaguePath }) {
+  const date = new Date().toISOString().slice(0, 10);
+  // Build a topic dict that fits the existing buildTwitterPrompt contract.
+  // The "topic" + "angle" carry the game context so Claude has enough to
+  // react to without us forking the prompt builder.
+  const score = gameState.away?.score != null && gameState.home?.score != null
+    ? `${gameState.away?.abbr} ${gameState.away.score} – ${gameState.home?.abbr} ${gameState.home.score}`
+    : `${gameState.away?.abbr} @ ${gameState.home?.abbr}`;
+  const lastPlays = (gameState.plays || []).slice(-3)
+    .map((p) => `Q${p.period} ${p.clock || ''}: ${p.text}`).join(' || ');
+  const wp = gameState.win_probability;
+  const wpStr = wp ? ` win-prob ${gameState.away?.abbr} ${wp.away_pct}% / ${gameState.home?.abbr} ${wp.home_pct}%.` : '';
+  const topic = {
+    topic: `${gameState.away?.name || ''} vs ${gameState.home?.name || ''} — live (${gameState.status || ''})`,
+    angle: `Live game state: ${score}. Status: ${gameState.status || 'unknown'}.${wpStr} Last plays: ${lastPlays || '(none yet)'}`,
+    primary_keyword: gameState.away?.abbr || '',
+    format_hint: 'live_reaction',
+    source_url: `https://www.espn.com/${leaguePath}/game/_/gameId/${eventId}`,
+    image_subject: gameState.home?.name || gameState.away?.name || '',
+    allow_humor: true,  // live reactions skew funny; humor block kicks in
+  };
+  const ctx = { athleteCryptoPin: false, humorPass: false };
+
+  let memeRaw = null, profRaw = null;
+  try {
+    [memeRaw, profRaw] = await Promise.all([
+      callClaude(buildPrompt('twitter', topic, { ...ctx, voiceKind: 'meme' })),
+      callClaude(buildPrompt('twitter', topic, { ...ctx, voiceKind: 'professional' })),
+    ]);
+  } catch (e) {
+    throw new Error(`live-game drafter Claude call failed: ${e.message}`);
+  }
+  let memeParsed = null, profParsed = null;
+  try { if (memeRaw) memeParsed = extractJSON(memeRaw); } catch (_) {}
+  try { if (profRaw) profParsed = extractJSON(profRaw); } catch (_) {}
+  if (!memeParsed && !profParsed) throw new Error('both variants failed to parse');
+
+  const draft = buildTwitterDraft({
+    topic, briefDate: date,
+    parsedByKind: { meme: memeParsed, professional: profParsed },
+    athleteCryptoPin: false,
+  });
+  // Tag the draft so it's distinguishable from the morning batch
+  draft.source = 'live_game';
+  draft.live_game_event_id = eventId;
+  draft.live_game_league_path = leaguePath;
+
+  const insertedId = await withDb(async (db) => {
+    const result = await db.collection(DRAFTS_COLL).insertOne(draft);
+    await db.collection(ADMIN_LOG_COLL).insertOne({
+      action: 'content-drafter:draft-from-game',
+      brief_date: date,
+      event_id: eventId,
+      league_path: leaguePath,
+      draft_id: result.insertedId,
+      created_at: new Date(),
+    });
+    return result.insertedId;
+  });
+
+  return { draft_id: insertedId.toString(), variants_count: draft.variants.length };
+}
+
+
 module.exports = {
-  runDrafter, regenerateDraft, COMPLIANCE,
+  runDrafter, regenerateDraft, draftFromGameState, COMPLIANCE,
   BB_VOICE_BASE, BB_VOICE_TWITTER_MEME, BB_VOICE_TWITTER_PROFESSIONAL, BB_VOICE_IG,
   // Backward-compat alias (== BB_VOICE_IG)
   BB_VOICE,

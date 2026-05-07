@@ -109,6 +109,9 @@ POST /api/admin/dashboard/post-drafts/:id/skip           — role: full  → mar
 POST /api/admin/dashboard/post-drafts/:id/approve        — role: full  → mark approved (Phase 7 will wire publish)
 POST /api/admin/dashboard/run-drafter                    — role: full  → fire-and-forget contentDrafter run, returns 202
 
+GET  /api/admin/dashboard/game-state?event_id=&league_path= — any admin → ESPN live game state proxy (score + last plays + win prob, 30s in-memory cache)
+POST /api/admin/dashboard/draft-from-game                — role: full  → Claude one-shot Twitter draft seeded from a live ESPN game (~$0.04/call, 2 variants)
+
 GET  /auth/instagram/connect            — role: full  → 302 to Instagram OAuth
 GET  /auth/instagram/callback           — public (IDP redirects here); state-checked
 GET  /auth/instagram/status             — any admin, returns token state

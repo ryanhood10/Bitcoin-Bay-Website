@@ -43,6 +43,8 @@
 //   POST /api/admin/dashboard/post-drafts/:id/skip              — mark skipped (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/approve           — mark approved (Phase 7 wires publish) (FULL)
 //   POST /api/admin/dashboard/run-drafter                       — fire-and-forget drafter run (FULL)
+//   GET  /api/admin/dashboard/game-state?event_id=&league_path=  — ESPN proxy: live score + recent plays + status (any admin)
+//   POST /api/admin/dashboard/draft-from-game                    — Claude draft from current game state (FULL, ~$0.04/call)
 //
 // ---------------------------------------------------------------------------
 
@@ -1050,6 +1052,128 @@ router.post('/api/admin/dashboard/post-drafts/:id/approve', adminAuth.requireAdm
                note: 'Publish wiring lands in Phase 7 — for now, copy text/image to native X/IG manually.' });
   } catch (e) {
     console.error('[admin-dashboard] /post-drafts/approve error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ─── Phase 8 — game state on demand ───────────────────────────────────────
+// ESPN's free public scoreboard/summary API drives a "Today's games" panel.
+// The Pi nightly populates `bcb_post_briefs.todays_games` with the day's
+// most popular games. Operator clicks "Live state" → /game-state proxies
+// to ESPN summary. Operator clicks "Draft tweet" → /draft-from-game pulls
+// state + drafts via Claude. ESPN is free; only Claude costs money and
+// only when operator clicks Draft (~$0.04/call, 2 variants like normal X).
+
+// Whitelist the 7 league paths the Pi populates. Prevents SSRF (operator
+// could otherwise paste any league_path; defense-in-depth even though
+// /game-state is GET-only and the host is hardcoded ESPN below).
+const ESPN_ALLOWED_LEAGUES = new Set([
+  'basketball/nba',
+  'football/nfl',
+  'baseball/mlb',
+  'hockey/nhl',
+  'mma/ufc',
+  'football/college-football',
+  'soccer/usa.1',
+]);
+
+// Tiny in-memory cache so back-to-back operator clicks don't hammer ESPN.
+// 30s TTL is enough — game state moves slower than that anyway.
+const _gameStateCache = new Map();
+function _cacheKey(eventId, leaguePath) { return `${leaguePath}|${eventId}`; }
+
+async function fetchEspnGameState(eventId, leaguePath) {
+  const cacheKey = _cacheKey(eventId, leaguePath);
+  const cached = _gameStateCache.get(cacheKey);
+  if (cached && (Date.now() - cached.t) < 30_000) return cached.data;
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${leaguePath}/summary?event=${encodeURIComponent(eventId)}`;
+  const r = await fetch(url, {
+    headers: { 'User-Agent': 'BitcoinBay-Dashboard/1.0' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) throw new Error(`ESPN HTTP ${r.status}`);
+  const raw = await r.json();
+  // Trim to just what the dashboard / drafter needs
+  const header = raw.header || {};
+  const comp = (header.competitions || [{}])[0];
+  const comps = comp.competitors || [];
+  const away = comps.find((c) => c.homeAway === 'away') || {};
+  const home = comps.find((c) => c.homeAway === 'home') || {};
+  const plays = (raw.plays || []).slice(-5).map((p) => ({
+    period: (p.period || {}).number,
+    clock: (p.clock || {}).displayValue,
+    text: (p.text || '').slice(0, 200),
+    score_value: p.scoreValue,
+  }));
+  const winProb = raw.winprobability;
+  const last_winprob = Array.isArray(winProb) && winProb.length
+    ? winProb[winProb.length - 1] : null;
+  const trimmed = {
+    away: { name: (away.team || {}).displayName, abbr: (away.team || {}).abbreviation, score: away.score },
+    home: { name: (home.team || {}).displayName, abbr: (home.team || {}).abbreviation, score: home.score },
+    status: (comp.status || {}).type ? (comp.status.type.shortDetail || '') : '',
+    state: (comp.status || {}).type ? (comp.status.type.state || '') : '',  // pre|in|post
+    plays,
+    win_probability: last_winprob ? {
+      away_pct: Math.round((last_winprob.awayWinPercentage || 0) * 100),
+      home_pct: Math.round((last_winprob.homeWinPercentage || 0) * 100),
+    } : null,
+    broadcast: ((comp.broadcasts || []).flatMap((b) => b.names || []).join(', ')) || null,
+  };
+  _gameStateCache.set(cacheKey, { t: Date.now(), data: trimmed });
+  return trimmed;
+}
+
+// GET /game-state?event_id=X&league_path=basketball/nba
+router.get('/api/admin/dashboard/game-state', adminAuth.requireAdmin(), async (req, res) => {
+  try {
+    const eventId = String(req.query.event_id || '').trim();
+    const leaguePath = String(req.query.league_path || '').trim();
+    if (!eventId || !/^\d+$/.test(eventId)) {
+      return res.status(400).json({ success: false, error: 'event_id (numeric) required' });
+    }
+    if (!ESPN_ALLOWED_LEAGUES.has(leaguePath)) {
+      return res.status(400).json({ success: false, error: `league_path must be one of: ${[...ESPN_ALLOWED_LEAGUES].join(', ')}` });
+    }
+    const state = await fetchEspnGameState(eventId, leaguePath);
+    res.json({ success: true, ...state });
+  } catch (e) {
+    console.error('[admin-dashboard] /game-state error:', e.message);
+    res.status(502).json({ success: false, error: `ESPN fetch failed: ${e.message}` });
+  }
+});
+
+// POST /draft-from-game  body: { event_id, league_path }
+// Pulls ESPN game state, calls contentDrafter.draftFromGameState() to build
+// a one-shot Twitter draft (2 variants), inserts into bcb_post_drafts, and
+// returns the new draft id. Audit-logged with the cost estimate.
+router.post('/api/admin/dashboard/draft-from-game', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const eventId = String(req.body?.event_id || '').trim();
+    const leaguePath = String(req.body?.league_path || '').trim();
+    if (!eventId || !/^\d+$/.test(eventId)) {
+      return res.status(400).json({ success: false, error: 'event_id (numeric) required' });
+    }
+    if (!ESPN_ALLOWED_LEAGUES.has(leaguePath)) {
+      return res.status(400).json({ success: false, error: 'league_path not in allowed list' });
+    }
+    const state = await fetchEspnGameState(eventId, leaguePath);
+    const result = await getContentDrafter().draftFromGameState({
+      gameState: state,
+      eventId,
+      leaguePath,
+    });
+    await logAdminAction({
+      action: 'content-drafter:draft-from-game',
+      admin: req.admin?.user,
+      event_id: eventId,
+      league_path: leaguePath,
+      cost_estimate_usd: 0.04,
+      draft_id: result.draft_id,
+    });
+    res.json({ success: true, ...result });
+  } catch (e) {
+    console.error('[admin-dashboard] /draft-from-game error:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });

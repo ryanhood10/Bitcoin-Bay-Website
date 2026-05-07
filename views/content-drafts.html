@@ -304,6 +304,34 @@
   .empty-state { padding: 60px 20px; text-align: center; color: var(--muted2); }
   .empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
   .empty-state p { font-size: 13px; margin-bottom: 20px; }
+
+  /* ─── TODAY'S GAMES panel (Phase 8 — operator-pull only) ─── */
+  .games-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+  .games-panel-head { padding: 8px 14px; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .games-panel-head .games-sub { color: var(--muted2); font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .games-panel-head .games-count { margin-left: auto; padding: 2px 8px; background: rgba(240,180,41,0.15); color: var(--gold); border-radius: 999px; font-size: 11px; }
+  .games-strip { display: flex; gap: 8px; padding: 10px 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .games-strip::-webkit-scrollbar { height: 6px; }
+  .games-strip::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .game-card { flex-shrink: 0; min-width: 240px; max-width: 280px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; transition: border-color 0.12s ease; }
+  .game-card.live { border-color: var(--green-dim); box-shadow: 0 0 0 1px rgba(0,168,110,0.25); }
+  .game-card.pre { border-color: var(--border2); }
+  .game-card.post { opacity: 0.55; }
+  .game-card .game-league { display: inline-block; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 3px; background: var(--surface3); color: var(--muted2); letter-spacing: 0.04em; align-self: flex-start; }
+  .game-card .game-teams { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+  .game-card .game-teams .score { color: var(--gold); font-variant-numeric: tabular-nums; }
+  .game-card .game-status { font-size: 11px; color: var(--muted2); }
+  .game-card .game-status .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 4px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .game-card .game-broadcast { font-size: 10px; color: var(--muted); font-style: italic; }
+  .game-card .game-actions { display: flex; gap: 4px; margin-top: 4px; }
+  .game-card .game-actions .btn { padding: 3px 8px; font-size: 11px; }
+  .game-state-expand { display: none; margin-top: 6px; padding: 8px 10px; background: var(--surface3); border-radius: 6px; font-size: 11px; line-height: 1.4; }
+  .game-state-expand.show { display: block; }
+  .game-state-expand .play { padding: 2px 0; color: var(--text); border-bottom: 1px dashed var(--border2); }
+  .game-state-expand .play:last-child { border-bottom: none; }
+  .game-state-expand .winprob { display: flex; gap: 12px; padding: 4px 0 6px; font-size: 11px; color: var(--muted2); }
+  .game-state-expand .winprob b { color: var(--gold); }
 </style>
 </head>
 <body>
@@ -329,6 +357,16 @@
     <div><span class="label">Today's category:</span> <span id="status-category" class="topic">—</span></div>
     <div><span class="label">Drafts:</span> <span id="status-count" class="value">0</span></div>
     <div id="status-runtime" style="color: var(--muted); display: none;"></div>
+  </div>
+
+  <!-- TODAY'S GAMES (Phase 8 — operator-pull) -->
+  <div id="games-panel" class="games-panel" style="display:none;">
+    <div class="games-panel-head">
+      🏀 Today's games
+      <span class="games-sub">operator-pull · ESPN free API · ~$0.04 per draft</span>
+      <span class="games-count" id="games-count">0</span>
+    </div>
+    <div class="games-strip" id="games-strip"></div>
   </div>
 
   <!-- TWO-COLUMN GRID -->
@@ -684,6 +722,109 @@ function renderVariantChip(d) {
   const label = kind === 'professional' ? 'NEWS' : 'MEME';
   return `<span class="variant-chip ${kind}">${label}</span>`;
 }
+
+// ─── Today's games panel (Phase 8) ─────────────────────────────────────
+// BRIEF.todays_games is populated by Pi nightly. Render as a horizontal
+// strip; each card has Live state + Draft tweet buttons. Operator-pull
+// only, no auto-polling. ESPN is free; Claude only fires on Draft click.
+function renderGamesPanel() {
+  const games = (BRIEF && BRIEF.todays_games) || [];
+  const panel = document.getElementById('games-panel');
+  const strip = document.getElementById('games-strip');
+  const countEl = document.getElementById('games-count');
+  if (!panel || !strip || !countEl) return;
+  if (games.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+  countEl.textContent = String(games.length);
+  strip.innerHTML = games.map((g, i) => renderGameCard(g, i)).join('');
+  strip.querySelectorAll('.game-card [data-action]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const card = btn.closest('.game-card');
+      const eventId = card.dataset.eventId;
+      const leaguePath = card.dataset.leaguePath;
+      const action = btn.dataset.action;
+      try {
+        btn.disabled = true;
+        if (action === 'game-state') await actionGameState(card, eventId, leaguePath);
+        else if (action === 'game-draft') await actionDraftFromGame(eventId, leaguePath);
+      } catch (err) {
+        toast(err.message || 'Game action failed', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+function renderGameCard(g, i) {
+  const state = g.state || 'pre';  // pre | in | post
+  const score = (g.away_score != null && g.home_score != null)
+    ? `<span class="score">${g.away_abbr} ${g.away_score} · ${g.home_abbr} ${g.home_score}</span>`
+    : `${g.away_abbr} @ ${g.home_abbr}`;
+  const liveDot = state === 'in' ? '<span class="live-dot"></span>' : '';
+  const broadcast = g.broadcast ? `<div class="game-broadcast">${escapeHtml(g.broadcast)}</div>` : '';
+  return `<div class="game-card ${state}" data-event-id="${escapeHtml(String(g.espn_event_id || ''))}" data-league-path="${escapeHtml(g.league_path || '')}">
+    <div class="game-league">${escapeHtml(g.league || '')}</div>
+    <div class="game-teams">${score}</div>
+    <div class="game-status">${liveDot}${escapeHtml(g.status_short || '')}</div>
+    ${broadcast}
+    <div class="game-actions">
+      <button class="btn small" data-action="game-state" title="Pull live ESPN state (score + recent plays)">📡 Live state</button>
+      <button class="btn small primary" data-action="game-draft" title="Draft a tweet from this game state (~$0.04, 2 variants)">✍️ Draft</button>
+    </div>
+    <div class="game-state-expand" data-game-expand></div>
+  </div>`;
+}
+
+async function actionGameState(card, eventId, leaguePath) {
+  const expand = card.querySelector('[data-game-expand]');
+  if (!expand) return;
+  if (expand.classList.contains('show')) {
+    expand.classList.remove('show');
+    expand.innerHTML = '';
+    return;
+  }
+  expand.innerHTML = '<div style="padding:6px;">Fetching ESPN…</div>';
+  expand.classList.add('show');
+  const res = await fetch(`/api/admin/dashboard/game-state?event_id=${encodeURIComponent(eventId)}&league_path=${encodeURIComponent(leaguePath)}`);
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    expand.innerHTML = `<div style="color:var(--red);">${escapeHtml(json.error || 'failed')}</div>`;
+    return;
+  }
+  const wp = json.win_probability;
+  const wpHtml = wp
+    ? `<div class="winprob"><span><b>${json.away.abbr}</b> ${wp.away_pct}%</span> · <span><b>${json.home.abbr}</b> ${wp.home_pct}%</span></div>`
+    : '';
+  const playsHtml = (json.plays || []).slice(-5).reverse().map((p) =>
+    `<div class="play">Q${p.period || '?'} ${escapeHtml(p.clock || '')} — ${escapeHtml(p.text || '')}</div>`
+  ).join('');
+  expand.innerHTML = `
+    <div style="margin-bottom:4px;"><b>${escapeHtml(json.status || '')}</b></div>
+    ${wpHtml}
+    <div style="margin-top:4px; font-weight:600; color:var(--muted2); font-size:10px; text-transform:uppercase;">Last plays</div>
+    ${playsHtml || '<div class="play" style="color:var(--muted);">no plays yet</div>'}
+  `;
+}
+
+async function actionDraftFromGame(eventId, leaguePath) {
+  if (!confirm('Draft a tweet about this game right now? (~$0.04 — generates meme + professional variants from the live state)')) return;
+  toast('Drafting from live game — 5-10s…', '');
+  const res = await fetch('/api/admin/dashboard/draft-from-game', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event_id: eventId, league_path: leaguePath }),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) throw new Error(json.error || 'draft-from-game failed');
+  toast(`Live-game draft created (${json.variants_count} variants)`, 'success');
+  await loadDrafts();
+}
+
 
 // Render plain text with inline-blue hashtags and @mentions, line breaks
 // preserved. The single biggest "feels native" lever per UI research.
@@ -1279,6 +1420,9 @@ async function loadDrafts() {
       dateEl.textContent = 'no brief yet';
     }
     countEl.textContent = String(DRAFTS.length);
+
+    // Phase 8 — Today's games panel (operator-pull). Hidden if brief has none.
+    renderGamesPanel();
 
     // Render columns
     const xCards = DRAFTS.filter((d) => d.platform === 'twitter');

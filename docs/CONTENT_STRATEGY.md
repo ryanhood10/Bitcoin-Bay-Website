@@ -180,7 +180,7 @@ Patterns deferred to a future v2:
 
 Big-leverage items that need separate sessions:
 
-1. **Pi-side live game-state polling** (`bcbay_game_state.py`). New script, runs every 15 min during prime US sports windows (7-11pm ET on game days). Polls a sports score API or scrapes ESPN for "moments" — buzzer-beaters, ejections, blowouts, controversial calls, walk-off home runs. Writes to `bcb_live_moments` collection with `freshness_ttl_minutes = 30`. The drafter, on each run, checks this collection and surfaces fresh moments as priority topics. Without this, BB misses the 60-80% engagement window competitors hit. **Highest-leverage single Pi change available.**
+1. ~~**Pi-side live game-state polling**~~ **LANDED 2026-05-06 as operator-pull (not auto-polling).** Re-scoped after operator feedback ("admin only logs in 1× a day; rare use, don't make it expensive"). Now: Pi nightly populates `bcb_post_briefs.todays_games` with the day's most popular games (NBA/NFL/MLB/NHL/UFC/CFB/MLS, ~10 games filtered by big-market team + national broadcast). The dashboard's "Today's games" panel shows them. Operator clicks **📡 Live state** → ESPN proxy returns score + last 5 plays + win prob. Operator clicks **✍️ Draft tweet** → Claude generates 2 variants (meme + professional) seeded from the live state, costs ~$0.04. Default state: $0/day if operator doesn't touch it. ESPN free API; no key required.
 
 2. **Receipts pattern** ("called it ✍️" callbacks). Requires Mongo log of past posts (`bcb_published_posts` collection). When today's news matches an angle BB posted on within the last 14 days, the brief's `receipts_candidate` field surfaces the original post ID + outcome. Drafter can craft a callback. Maybe 4 hours of work.
 

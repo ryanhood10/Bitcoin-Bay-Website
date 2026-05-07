@@ -702,5 +702,104 @@ test('GET /post-drafts/:id/zip — full-role passes auth, fails at Mongo', async
   } finally { await stopServer(server); }
 });
 
+// ---------------------------------------------------------------------------
+// /game-state + /draft-from-game — Phase 8 — ESPN-driven live game tools
+// ---------------------------------------------------------------------------
+test('GET /game-state — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/game-state?event_id=123&league_path=basketball/nba');
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('GET /game-state — 400 missing event_id', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/game-state', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /event_id/);
+  } finally { await stopServer(server); }
+});
+
+test('GET /game-state — 400 invalid event_id (non-numeric)', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/game-state?event_id=abc&league_path=basketball/nba', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /event_id/);
+  } finally { await stopServer(server); }
+});
+
+test('GET /game-state — 400 league_path not in allowed list (SSRF guard)', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/game-state?event_id=123&league_path=evil/path', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 400);
+    assert.match(r.json.error, /league_path/);
+  } finally { await stopServer(server); }
+});
+
+test('POST /draft-from-game — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/draft-from-game', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: { event_id: '123', league_path: 'basketball/nba' },
+    });
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('POST /draft-from-game — 403 for dashboard role (cost-bearing)', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/draft-from-game', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('dashboard'), 'Content-Type': 'application/json' },
+      body: { event_id: '123', league_path: 'basketball/nba' },
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('POST /draft-from-game — 400 invalid event_id', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/draft-from-game', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { event_id: 'banana', league_path: 'basketball/nba' },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+test('POST /draft-from-game — 400 league_path not in allowed list', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/draft-from-game', {
+      method: 'POST',
+      headers: { Cookie: cookieFor('full'), 'Content-Type': 'application/json' },
+      body: { event_id: '123', league_path: 'evil/path' },
+    });
+    assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
 // Restore stderr in case other suites need it
 test.after(() => { console.error = _origErr; });
