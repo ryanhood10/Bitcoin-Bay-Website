@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex,nofollow" />
 <title>Content Drafts · BC Bay</title>
 <!-- BB brand fonts (matches index.html): Space Grotesk for display headlines,
@@ -135,10 +135,11 @@
   .corner-btn.danger { color: var(--red); border-color: rgba(255,92,92,0.5); }
   .corner-btn.danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
 
+  /* Mid-breakpoint image sizing — corner-btn STAYS 36px on touch (was
+     shrinking to 32px which is below the 44px guideline). */
   @media (max-width: 800px) {
-    .image-preview img { max-height: 200px; }
-    .image-preview.large img { max-height: 280px; }
-    .corner-btn { width: 32px; height: 32px; font-size: 14px; }
+    .image-preview img { max-height: 220px; }
+    .image-preview.large img { max-height: 320px; }
   }
 
   .field-row { margin-top: 8px; }
@@ -359,6 +360,59 @@
   .empty-state { padding: 60px 20px; text-align: center; color: var(--muted2); }
   .empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
   .empty-state p { font-size: 13px; margin-bottom: 20px; }
+
+  /* ─── Phase 9.1 — Mobile-first overrides (per mobile audit) ─── */
+  /* Touch devices: card-actions stay full-opacity (no hover available) */
+  @media (hover: none) {
+    .card-actions { opacity: 1; }
+  }
+
+  /* Color swatches need 44px touch target. Visual stays 24px; ::before
+     extends the hit area outward without bloating the rendered circle. */
+  .color-swatch { position: relative; }
+  @media (max-width: 800px) {
+    .color-swatch { width: 28px; height: 28px; border-width: 2px; }
+    .color-swatch::before { content:''; position:absolute; inset:-10px; }
+    .color-row { gap: 10px; }
+    .font-toggle button { padding: 8px 14px; font-size: 11px; }
+    /* Carousel dots get padded hit area */
+    .ig-dots { padding: 12px 0 10px; gap: 16px; }
+    .ig-dots .dot { position: relative; }
+    .ig-dots .dot::after { content:''; position:absolute; inset:-14px; }
+  }
+
+  /* Phone-specific (<600px) — color-row stacks Save button full-width,
+     header actions get prominence, page padding tightens, image goes
+     edge-to-edge, inputs scale to 16px to prevent iOS auto-zoom. */
+  @media (max-width: 600px) {
+    .page { padding: 14px 10px 40px; }
+    .header { gap: 8px; }
+    .header-right { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+    #btn-run-drafter { flex: 1; justify-content: center; }
+    .field-input, .editor, .scene-prompt, .hashtag-edit-input { font-size: 16px; }
+    .image-preview img { max-height: 100vw; }
+    .image-preview.large img { max-height: 100vw; }
+    /* color-row Save button full-width on phones (was margin-left:auto inline) */
+    .color-row [data-action="apply-layout"] {
+      margin-left: 0 !important;
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+    }
+    .color-row { row-gap: 8px; }
+    /* Twitter mock action row — hide tiny labels on cramped phones */
+    .tweet-mock-actions .act span { display: none; }
+    .tweet-mock-actions { gap: 12px; justify-content: space-around; }
+    /* Toast goes full-width at bottom on phones */
+    .toast { left: 10px; right: 10px; max-width: none; bottom: 10px; }
+    /* Image meta — long attribution shouldn't push the download button off */
+    .image-meta span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .image-meta .download-btn { flex-shrink: 0; }
+  }
+
+  @media (max-width: 380px) {
+    .page { padding: 12px 6px 32px; }
+  }
 
   /* ─── TODAY'S GAMES panel (Phase 8 — operator-pull only) ─── */
   .games-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
@@ -605,8 +659,17 @@ function renderInstagramCarouselCard(d) {
   // Bonus: raw URLs aren't stored on the Heroku ephemeral filesystem, so they
   // don't disappear on dyno restart.
   const active = slides[cur] || {};
-  const isCta = !!active.is_cta_slide;
-  const baseImage = isCta
+  // Phase 9.1: detect ANY branded composite slide, not just is_cta_slide.
+  // BB-named subjects auto-route through composeBrandedCard (isBBSubject)
+  // and store image_url === composite_url (both pointing to the same local
+  // /post-images/.../slide-N.jpg). For those slides the composite IS the
+  // slide content (logo + headline + subhead + footer baked in) — the HTML
+  // overlay headline must NOT render on top, otherwise it duplicates the
+  // baked text.
+  const isBranded = !!(active.is_cta_slide
+    || active.image_source === 'branded'
+    || (active.image_url && active.composite_url && active.image_url === active.composite_url));
+  const baseImage = isBranded
     ? (active.composite_url || active.image_url || '')
     : (active.image_url || active.composite_url || '');
   const downloadUrl = active.composite_url || active.image_url || baseImage;

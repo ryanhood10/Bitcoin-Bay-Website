@@ -388,21 +388,56 @@ function escapeXml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
+// brandedSVG — Phase 9.1 redesign. Clean poster layout. The previous version
+// stacked text starting at 40% from top with the BB logo at top-left, which
+// caused logo+text overlap on long headlines. New layout has dedicated zones
+// stacked vertically with no collision possible:
+//
+//   ┌─────────────── 6px gold-orange gradient bar ──────────┐
+//   │                                                       │
+//   │              ⬛ BB LOGO (centered, 32% w)              │  <- top zone (12-38%)
+//   │                                                       │
+//   │       ━━━━━━━━━━ accent line ━━━━━━━━━━              │  <- 42%
+//   │                                                       │
+//   │           HEADLINE (Space Grotesk 700)                │  <- mid zone (45-65%)
+//   │           multi-line, centered                         │
+//   │                                                       │
+//   │       Subhead in Inter 400, lighter color             │  <- 70%
+//   │                                                       │
+//   │                                                       │
+//   │              bitcoinbay.com  (gold)                   │  <- bottom (88%)
+//   ├──────────── 6px gold-orange gradient bar ─────────────┤
+//
+// All text centered. No overlap with logo. Logo is composited on top of this
+// SVG separately (in composeBrandedCard) so the logo zone above is reserved.
 function brandedSVG({ width, height, headline, subhead = '', accent = BB_PALETTE.gold }) {
+  // Adaptive font size for headline. Bigger budgets than before since the
+  // layout has more vertical room without the top-left logo competing.
   const headlineLen = String(headline || '').length;
   let fontSize, charBudget;
-  if (headlineLen <= 18)      { fontSize = Math.round(width / 12); charBudget = 18; }
-  else if (headlineLen <= 40) { fontSize = Math.round(width / 18); charBudget = 26; }
-  else                        { fontSize = Math.round(width / 24); charBudget = 32; }
+  if (headlineLen <= 18)      { fontSize = Math.round(width / 11); charBudget = 18; }
+  else if (headlineLen <= 40) { fontSize = Math.round(width / 16); charBudget = 24; }
+  else                        { fontSize = Math.round(width / 22); charBudget = 30; }
   const lines = wrapHeadline(headline, charBudget, 3);
-  const lineHeight = Math.round(fontSize * 1.05);
-  // Center the headline block vertically around 45% from top
-  const blockTop = Math.round(height * 0.40);
-  const tspans = lines.map((ln, i) =>
-    `<text x="60" y="${blockTop + (i + 1) * lineHeight}" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="${BB_PALETTE.textPrimary}">${escapeXml(ln)}</text>`
-  ).join('\n    ');
-  const subY = blockTop + (lines.length + 1) * lineHeight + 12;
-  const sub = escapeXml(subhead);
+  const lineHeight = Math.round(fontSize * 1.1);
+
+  // Vertical zones (% of height)
+  const headlineCenterY = Math.round(height * 0.55);
+  const subY = headlineCenterY + Math.ceil(lines.length / 2) * lineHeight + Math.round(fontSize * 0.4) + 24;
+  const accentBarY = Math.round(height * 0.40);
+  const accentBarW = Math.round(width * 0.30);
+  const accentBarX = Math.round((width - accentBarW) / 2);
+
+  const subhFontSize = Math.round(width / 32);
+  const footerFontSize = Math.round(width / 44);
+
+  // Multi-line headline, vertically centered around headlineCenterY
+  const totalLineHeight = lines.length * lineHeight;
+  const firstLineY = headlineCenterY - Math.round(totalLineHeight / 2) + lineHeight;
+  const tspans = lines.map((ln, i) => {
+    const y = firstLineY + i * lineHeight;
+    return `<text x="${width / 2}" y="${y}" text-anchor="middle" font-family="'Space Grotesk', 'Inter', 'DejaVu Sans', sans-serif" font-size="${fontSize}" font-weight="700" fill="${BB_PALETTE.textPrimary}" letter-spacing="-1">${escapeXml(ln)}</text>`;
+  }).join('\n    ');
 
   return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -419,11 +454,12 @@ function brandedSVG({ width, height, headline, subhead = '', accent = BB_PALETTE
     <rect width="100%" height="100%" fill="url(#bg)"/>
     <rect x="0" y="0" width="100%" height="6" fill="url(#accent)"/>
     <rect x="0" y="${height - 6}" width="100%" height="6" fill="url(#accent)"/>
+    <rect x="${accentBarX}" y="${accentBarY}" width="${accentBarW}" height="4" fill="${accent}"/>
     ${tspans}
-    ${sub ? `<text x="60" y="${subY}" font-family="Inter,Helvetica,Arial,sans-serif"
-          font-size="${Math.round(width / 36)}" font-weight="400" fill="${BB_PALETTE.textSecondary}">${sub}</text>` : ''}
-    <text x="60" y="${height - 60}" font-family="Inter,Helvetica,Arial,sans-serif"
-          font-size="${Math.round(width / 50)}" font-weight="600" fill="${accent}">bitcoinbay.com</text>
+    ${subhead ? `<text x="${width / 2}" y="${subY}" text-anchor="middle" font-family="'Inter', 'DejaVu Sans', 'Helvetica Neue', sans-serif"
+          font-size="${subhFontSize}" font-weight="400" fill="${BB_PALETTE.textSecondary}">${escapeXml(subhead)}</text>` : ''}
+    <text x="${width / 2}" y="${Math.round(height * 0.91)}" text-anchor="middle" font-family="'Space Grotesk', 'Inter', sans-serif"
+          font-size="${footerFontSize}" font-weight="700" fill="${accent}" letter-spacing="2">BITCOINBAY.COM</text>
   </svg>`;
 }
 
@@ -438,10 +474,16 @@ async function composeBrandedCard({ headline, subhead, kind = 'promo', outPath }
   const { w, h } = dimensions[kind] || dimensions.promo;
   const svg = brandedSVG({ width: w, height: h, headline, subhead });
   let pipeline = sharp(Buffer.from(svg));
-  // Composite the BB logo in top-left if available
+  // Phase 9.1: composite BB logo CENTERED in the upper-third zone reserved
+  // by the SVG layout. Logo is square (1024×1024) so we resize to ~28% of
+  // canvas width and center horizontally; vertical anchor is around 22% from
+  // top (~140px on 1080) which leaves clean space above the accent bar at 40%.
   if (fs.existsSync(LOGO_PATH)) {
-    const logoBuf = await sharp(LOGO_PATH).resize({ width: Math.round(w * 0.18) }).toBuffer();
-    pipeline = pipeline.composite([{ input: logoBuf, top: 60, left: 60 }]);
+    const logoW = Math.round(w * 0.28);
+    const logoBuf = await sharp(LOGO_PATH).resize({ width: logoW }).toBuffer();
+    const logoLeft = Math.round((w - logoW) / 2);
+    const logoTop = Math.round(h * 0.13);
+    pipeline = pipeline.composite([{ input: logoBuf, top: logoTop, left: logoLeft }]);
   }
   await ensureDir(path.dirname(outPath));
   await pipeline.jpeg({ quality: 88 }).toFile(outPath);

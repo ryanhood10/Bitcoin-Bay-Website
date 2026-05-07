@@ -318,6 +318,97 @@ That gets a working "review-only" surface in 8h. Operator copy-pastes into nativ
 
 ---
 
+---
+
+## Phase 9 — CTA cleanup + carousel UX modal + branded overlay library
+
+**Status:** PLANNED 2026-05-07 — operator-confirmed scope. Implementation in progress.
+
+### Context
+
+After Phase 8.x shipped, operator surfaced a batch of UX issues + feature
+requests with one screenshot showing a CTA slide with double headline
+text + cropped logo:
+
+1. **CTA slide is broken.** Slide 4 shows a baked-in headline (from
+   composeBrandedCard) AND an HTML overlay rendered on top → double
+   text. The `is_cta_slide` check from Phase 8.10 misses this slide
+   because it was added via the BB-named-subject auto-routing
+   (`isBBSubject`), not via the explicit CTA endpoint.
+2. **No quick way to replace a slide's photo** without going through
+   either Replicate AI ($) or the Advanced expander's manual URL field.
+3. **No quick way to delete a slide.** Operator currently has to
+   manually edit the slides array via PATCH or just live with extra
+   slides.
+4. **Edit surfaces are scattered.** Drag-position + color picker + font
+   toggle + headline + body + image subject + manual URL + scene panel
+   stack vertically per slide — fine for a focused edit pass but
+   overwhelming when scanning.
+5. **No way to add a small branded mark / sticker** to a slide. Some
+   posts could benefit from a small BB watermark or a relevant crypto-
+   logo overlay (e.g. BTC logo on a Bitcoin-news slide).
+
+### Locked-in answers (operator confirmed 2026-05-07)
+
+- **CTA slide layout**: redesign composeBrandedCard so headline + subhead
+  text DOES bake into the image, but in a clean dedicated text zone
+  below the centered logo (not overlapping it). Operator's stored
+  headline + subtitle on the slide doc render into the composite at
+  publish time. **No double-rendering** — only the composite image
+  shows in the dashboard preview, no HTML overlay on top of branded
+  slides.
+- **Modal pattern**: applies to BOTH Twitter posts AND IG carousel
+  slides. Click a "⛶ Edit fullscreen" affordance → modal opens with
+  large preview + all edit controls in one focused panel. ESC / backdrop
+  click cancels.
+- **Branded overlay library**: ~30 logos bundled in `public/branded-overlays/`:
+  - BB brand: 4 BB-logo variants (circle, bar, watermark, stamp)
+  - Top crypto coins: BTC, ETH, USDT, USDC, BNB, SOL, XRP, ADA, DOGE, AVAX, MATIC, LINK, LTC, TRX (~15)
+  - Major exchanges: Coinbase, Binance, Kraken, Bitstamp, Gemini, Robinhood, Cash App, OKX, Bybit, Crypto.com (~10)
+  - **Auto-suggestion**: when operator opens the sticker library, logos with keyword match against `image_subject` / `topic` / `angle` float to the top with a "✨ Recommended" badge. E.g. a topic about Bitcoin halving → BTC logo recommended; a topic about Coinbase listing → Coinbase logo recommended.
+- **Min slide count**: 2 (Meta IG carousel minimum). Delete endpoint
+  refuses if slides[].length would drop below 2.
+- **Mobile-first**: every Phase 9 component lands mobile-friendly the
+  first time. Modal goes full-screen on phones, centered on desktop.
+  Touch targets ≥44×44. No hover-only interactions. Mobile audit agent
+  (running in parallel) feeds into the Phase 9.4 modal CSS.
+
+### Phase ladder
+
+| # | Phase | Effort | Notes |
+|---|---|---|---|
+| 9.1 | CTA slide redesign + branded-detection fix | 1-2h | Fixes the visible double-text bug. composeBrandedCard layout: logo top-third + bb-gold accent bar + headline (Space Grotesk 64pt) + subhead (Inter 24pt) + bitcoinbay.com footer. `isBranded = is_cta_slide \|\| image_url === composite_url` so any branded composite suppresses HTML overlay. |
+| 9.2 | Replace photo (non-AI) | 2h | New `GET /api/admin/dashboard/photo-search?subject=&intent=` returns top 3 candidates per source (Wikimedia / Pexels / Unsplash). Inline panel on the slide image with thumbs + paste-URL. PATCH the slide's `image_url`, trigger /regenerate-all-images. |
+| 9.3 | Delete slide | 1h | New `POST /api/admin/dashboard/post-drafts/:id/delete-slide` body `{ slide_index }`. Floor at 2 slides. Confirm dialog. Audit-logged. |
+| 9.4 | Focus modal (X + IG) | 3-4h | Reusable modal component: full-screen on phones (<700px), centered ~720px on desktop. Big preview + grouped edit controls. ESC / backdrop click cancels. Replaces the inline-stacked editor for deep edits; light edits (drag headline, color swatch) stay inline. |
+| 9.5 | Branded overlay library + auto-suggest | 4-5h | Bundle ~30 logos in `public/branded-overlays/{bb,coins,exchanges}/`. JSON manifest with display name + keywords. Sticker picker UI (4-column grid). Auto-suggested logos bubble to top. Per-slide HTML overlay (draggable, resizable). Server-side `composeOverlayCard` accepts `branded_overlay: { kind, x, y, scale }` and sharp-composites the PNG at publish time. One mark per slide. |
+
+**Total: ~11-14h. Ships in pieces (9.1 → 9.3 → 9.2 → 9.4 → 9.5) with
+intermediate deploys + commits.**
+
+### Files touched (estimate)
+
+- `imageRenderer.js` — `composeBrandedCard` redesign (9.1), `composeOverlayCard` accepts `brandedOverlay` (9.5)
+- `adminDashboard.js` — `/photo-search` (9.2), `/delete-slide` (9.3), endpoint map updates
+- `views/content-drafts.html` — branded-detection (9.1), 📷 Replace + 🗑 Delete corner buttons (9.2/9.3), focus modal (9.4), sticker library (9.5), mobile-first CSS overhaul threaded through
+- `public/branded-overlays/*` — new asset directory (9.5) with bundled PNGs
+- `public/branded-overlays/manifest.json` — keyword → logo mapping (9.5)
+- `tests/admin-content.test.js` — auth/validation tests for new endpoints
+- All four content-creation docs + CLAUDE.md updated as phases land
+
+### Open questions (none — all locked above)
+
+### Order of operations
+
+1. (Now) Mobile audit agent runs in parallel — informs 9.4 modal CSS
+2. Ship 9.1 first (visible bug, 1-2h) — operator gets clean CTA slide today
+3. Ship 9.3 next (small, low-risk) — delete button + confirm
+4. Ship 9.2 (replace photo) — adds the non-AI photo swap path
+5. Ship 9.4 (modal) — biggest UX shift, bake mobile audit findings in
+6. Ship 9.5 (branded overlay library) — needs the ~30 PNG assets curated; can fetch via CoinGecko + SimpleIcons + manual
+
+---
+
 ## Recent changes
 
 *(To be filled in as phases land. Each entry: date, phase #, commit SHA, one-liner.)*
