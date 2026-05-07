@@ -1589,9 +1589,55 @@ async function loadDrafts() {
     // The render is fire-and-forget (returns 202); we set up a single
     // poll cycle 12s later to refresh once images land.
     autoRenderPendingDrafts();
+    // Once-per-session: HEAD probe the first composite image. If it 404s
+    // (Heroku ephemeral filesystem was wiped on a recent deploy), fire
+    // /regenerate-all-images for every draft to rebuild the local files.
+    checkFilesystemOnFirstLoad();
   } catch (e) {
     console.error('loadDrafts error:', e);
     toast('Failed to load drafts: ' + e.message, 'error');
+  }
+}
+
+// Once-per-session HEAD probe of the first composite image URL. Heroku's
+// dyno filesystem is ephemeral — every deploy wipes /public/post-images/
+// so previously-rendered files vanish even though Mongo still says
+// image_status='ready' with a /post-images/... URL. Operator's browser
+// then 404s on every <img>. This catches that condition and triggers
+// /regenerate-all-images for every draft so files come back.
+let _autoRenderTriggered = new Set();
+async function checkFilesystemOnFirstLoad() {
+  if (sessionStorage.getItem('bcb_fs_checked') === '1') return;
+  if (!DRAFTS.length) return;
+  // Find the first composite_url across drafts/slides
+  let probeUrl = null;
+  for (const d of DRAFTS) {
+    if (d.composite_url) { probeUrl = d.composite_url; break; }
+    const slide = (d.slides || []).find((s) => s.composite_url);
+    if (slide) { probeUrl = slide.composite_url; break; }
+  }
+  if (!probeUrl) {
+    sessionStorage.setItem('bcb_fs_checked', '1');
+    return;
+  }
+  try {
+    const r = await fetch(probeUrl, { method: 'HEAD', cache: 'no-cache' });
+    sessionStorage.setItem('bcb_fs_checked', '1');
+    if (r.status === 404) {
+      console.log('[fs-check] composite URLs are 404 — Heroku filesystem was wiped. Auto-rendering all drafts.');
+      toast('Heroku restart wiped images — re-rendering (~15s)…', '');
+      for (const d of DRAFTS) {
+        if (_autoRenderTriggered.has(d._id)) continue;
+        _autoRenderTriggered.add(d._id);
+        fetch(`/api/admin/dashboard/post-drafts/${d._id}/regenerate-all-images`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+        }).catch(() => {});
+      }
+      setTimeout(() => loadDrafts().catch(() => {}), 15_000);
+    }
+  } catch (e) {
+    sessionStorage.setItem('bcb_fs_checked', '1');
+    console.warn('[fs-check] HEAD probe failed (non-fatal):', e.message);
   }
 }
 
@@ -1600,7 +1646,6 @@ async function loadDrafts() {
 // runDrafter's image pass has had a fair chance and never finished. Single
 // shot per dashboard load. Silent: no toast unless the operator explicitly
 // triggered it.
-let _autoRenderTriggered = new Set();
 async function autoRenderPendingDrafts() {
   const now = Date.now();
   const stale = DRAFTS.filter((d) => {
