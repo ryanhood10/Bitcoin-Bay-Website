@@ -483,14 +483,19 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   };
   const badge = badgeMap[badgeKind];
 
-  // Adaptive font sizing: shrink on long headlines so they don't clip the edge.
-  const headlineLen = String(headline || '').length;
+  // ESPN/SportsCenter-style headline: uppercase, condensed bold sans-serif,
+  // wide impact. Anton is the closest free font (used in browser preview);
+  // the SVG renderer falls back to Impact / "Arial Narrow Bold" / Liberation
+  // Sans Condensed depending on what's installed. The look is similar enough.
+  const ucHeadline = String(headline || '').toUpperCase();
+  const headlineLen = ucHeadline.length;
+  // Bigger font sizes than before — uppercase + condensed lets us go heavier.
   let fontSize, charBudget, maxLines;
-  if (headlineLen <= 22)      { fontSize = Math.round(width / 16); charBudget = 22; maxLines = 1; }
-  else if (headlineLen <= 50) { fontSize = Math.round(width / 22); charBudget = 28; maxLines = 2; }
-  else                        { fontSize = Math.round(width / 28); charBudget = 36; maxLines = 3; }
-  const lines = wrapHeadline(headline, charBudget, maxLines);
-  const lineHeight = Math.round(fontSize * 1.1);
+  if (headlineLen <= 22)      { fontSize = Math.round(width / 12); charBudget = 22; maxLines = 1; }
+  else if (headlineLen <= 50) { fontSize = Math.round(width / 17); charBudget = 28; maxLines = 2; }
+  else                        { fontSize = Math.round(width / 22); charBudget = 36; maxLines = 3; }
+  const lines = wrapHeadline(ucHeadline, charBudget, maxLines);
+  const lineHeight = Math.round(fontSize * 1.0);  // tighter for uppercase
 
   // Custom position via Phase 6.4 drag editor: overlayX, overlayY are 0-100
   // percentages relative to width/height. Default is anchored bottom-left.
@@ -501,15 +506,14 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   const fillColor = (typeof overlayColor === 'string' && /^#[0-9a-f]{3,8}$/i.test(overlayColor))
     ? overlayColor : BB_PALETTE.textPrimary;
 
-  // Custom positions get a stroke shadow (paint-order="stroke") so text stays
-  // readable against any background. Default position relies on the gradient.
-  const strokeAttrs = useCustomPos
-    ? `stroke="${BB_PALETTE.bgDark}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round"`
-    : '';
+  // BB-navy stroke ("paint-order=stroke" puts it BEHIND the fill). Heavy
+  // outline lets white text stay legible on bright photos AND lets BB-gold
+  // text pop on darker photos. Mirrors the browser CSS multi-layer shadow.
+  const strokeAttrs = `stroke="${BB_PALETTE.bgDark}" stroke-width="${Math.round(fontSize * 0.12)}" paint-order="stroke" stroke-linejoin="round"`;
 
   const tspans = lines.map((ln, i) => {
     const y = headlineY - (lines.length - 1 - i) * lineHeight;
-    return `<text x="${headlineX}" y="${y}" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fontSize}" font-weight="800" fill="${fillColor}" ${strokeAttrs}>${escapeXml(ln)}</text>`;
+    return `<text x="${headlineX}" y="${y}" font-family="Anton, Impact, 'Arial Narrow Bold', 'Liberation Sans Condensed', 'Helvetica Neue Condensed Black', sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="1" fill="${fillColor}" ${strokeAttrs}>${escapeXml(ln)}</text>`;
   }).join('\n    ');
 
   // Gradient only renders for default (bottom-anchored) overlays. Custom-

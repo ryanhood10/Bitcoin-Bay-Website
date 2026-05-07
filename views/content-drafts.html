@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta name="robots" content="noindex,nofollow" />
 <title>Content Drafts · BC Bay</title>
+<!-- Anton + Bebas Neue: closest free Google Fonts to the ESPN/SportsCenter
+     IG headline style. Heavy condensed sans-serif, designed for impact
+     headlines on photos. Used for the carousel slide overlay headline. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c0f;
@@ -279,9 +285,36 @@
   /* Phase 6.4 — drag overlay editor + color picker */
   .overlay-canvas { position: relative; user-select: none; touch-action: none; }
   .overlay-canvas img { pointer-events: none; }
-  .overlay-headline { position: absolute; transform: translate(0, -100%); cursor: move; padding: 4px 8px; background: rgba(0,0,0,0.0); border: 2px dashed rgba(255,255,255,0.6); border-radius: 4px; font-weight: 800; font-size: 18px; line-height: 1.1; max-width: 75%; text-shadow: 0 2px 6px rgba(0,0,0,0.85); white-space: pre-wrap; word-break: break-word; }
-  .overlay-headline:hover { border-color: var(--orange); background: rgba(0,0,0,0.18); }
-  .overlay-headline.dragging { border-color: var(--orange); background: rgba(0,0,0,0.25); }
+  /* ESPN/SportsCenter-style overlay: heavy condensed Anton, UPPERCASE,
+     wide letterspacing, multi-layered BB-navy text-shadow for high
+     legibility on any photo. Operator can still recolor via the picker. */
+  .overlay-headline {
+    position: absolute;
+    transform: translate(0, -100%);
+    cursor: move;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.0);
+    border: 2px dashed rgba(255,255,255,0.55);
+    border-radius: 4px;
+    font-family: 'Anton', 'Impact', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+    font-weight: 400;            /* Anton has only a single 400-weight; visually it's already black */
+    font-size: 26px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    max-width: 80%;
+    /* Layered shadow → BB navy halo so the headline pops on any background */
+    text-shadow:
+      -2px 0 0 #0A1628,
+       2px 0 0 #0A1628,
+       0 -2px 0 #0A1628,
+       0  2px 0 #0A1628,
+       0 4px 8px rgba(10,22,40,0.6);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .overlay-headline:hover { border-color: var(--gold); background: rgba(0,0,0,0.18); }
+  .overlay-headline.dragging { border-color: var(--gold); background: rgba(0,0,0,0.25); }
 
   .color-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; padding: 6px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; }
   .color-row .field-label { margin-bottom: 0; }
