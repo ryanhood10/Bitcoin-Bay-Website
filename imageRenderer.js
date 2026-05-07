@@ -475,7 +475,7 @@ function wrapHeadline(text, charBudget, maxLines = 2) {
   return lines;
 }
 
-function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, overlayColor }) {
+function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont }) {
   const badgeMap = {
     breaking:           { text: 'BREAKING',          color: BB_PALETTE.accentGreen },
     live:               { text: 'LIVE',              color: BB_PALETTE.orange },
@@ -511,9 +511,21 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   // text pop on darker photos. Mirrors the browser CSS multi-layer shadow.
   const strokeAttrs = `stroke="${BB_PALETTE.bgDark}" stroke-width="${Math.round(fontSize * 0.12)}" paint-order="stroke" stroke-linejoin="round"`;
 
+  // Pick font family + weight + tracking based on per-slide overlayFont
+  // setting. 'brand' = BB's display font (Space Grotesk; matches the
+  // marketing site at index.html). 'espn' = condensed Anton (matches the
+  // ESPN/SportsCenter IG carousel reference). Both fall through to
+  // sensible system fonts on Heroku-22.
+  const useEspn = overlayFont === 'espn';
+  const fontFamily = useEspn
+    ? "Anton, Impact, 'Arial Narrow Bold', 'Liberation Sans Condensed', 'Helvetica Neue Condensed Black', sans-serif"
+    : "'Space Grotesk', 'Inter', 'DejaVu Sans', 'Helvetica Neue', sans-serif";
+  const fontWeight = useEspn ? 400 : 700;
+  const letterSpacing = useEspn ? 1 : -0.5;
+
   const tspans = lines.map((ln, i) => {
     const y = headlineY - (lines.length - 1 - i) * lineHeight;
-    return `<text x="${headlineX}" y="${y}" font-family="Anton, Impact, 'Arial Narrow Bold', 'Liberation Sans Condensed', 'Helvetica Neue Condensed Black', sans-serif" font-size="${fontSize}" font-weight="900" letter-spacing="1" fill="${fillColor}" ${strokeAttrs}>${escapeXml(ln)}</text>`;
+    return `<text x="${headlineX}" y="${y}" font-family="${fontFamily}" font-size="${fontSize}" font-weight="${fontWeight}" letter-spacing="${letterSpacing}" fill="${fillColor}" ${strokeAttrs}>${escapeXml(ln)}</text>`;
   }).join('\n    ');
 
   // Gradient only renders for default (bottom-anchored) overlays. Custom-
@@ -536,7 +548,7 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   </svg>`;
 }
 
-async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor }) {
+async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor, overlayFont }) {
   if (!imageUrl) throw new Error('composeOverlayCard requires imageUrl');
   // Download the source image (can be remote)
   const srcRes = await fetch(imageUrl, { signal: TIMEOUT(20000) });
@@ -546,8 +558,8 @@ async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targ
   const baseBuf = await sharp(srcBuf)
     .resize(targetW, targetH, { fit: 'cover', position: 'center' })
     .toBuffer();
-  // Compose overlay SVG on top (with optional custom position + color)
-  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind, overlayX, overlayY, overlayColor });
+  // Compose overlay SVG on top (with optional custom position + color + font)
+  const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont });
   const composed = sharp(baseBuf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]);
   await ensureDir(path.dirname(outPath));
   await composed.jpeg({ quality: 88 }).toFile(outPath);
@@ -665,6 +677,7 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
             overlayX: Number.isFinite(s.overlay_x) ? s.overlay_x : undefined,
             overlayY: Number.isFinite(s.overlay_y) ? s.overlay_y : undefined,
             overlayColor: typeof s.overlay_color === 'string' ? s.overlay_color : undefined,
+            overlayFont: s.overlay_font === 'espn' ? 'espn' : 'brand',
           });
         } catch (e) {
           console.warn(`[imageRenderer] slide ${i} composite failed: ${e.message}`);

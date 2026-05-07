@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta name="robots" content="noindex,nofollow" />
 <title>Content Drafts · BC Bay</title>
-<!-- Anton + Bebas Neue: closest free Google Fonts to the ESPN/SportsCenter
-     IG headline style. Heavy condensed sans-serif, designed for impact
-     headlines on photos. Used for the carousel slide overlay headline. -->
+<!-- BB brand fonts (matches index.html): Space Grotesk for display headlines,
+     Inter for body. Used for the carousel slide overlay headline so it's
+     consistent with the marketing site's typography. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Anton&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c0f;
@@ -287,7 +287,10 @@
   .overlay-canvas img { pointer-events: none; }
   /* ESPN/SportsCenter-style overlay: heavy condensed Anton, UPPERCASE,
      wide letterspacing, multi-layered BB-navy text-shadow for high
-     legibility on any photo. Operator can still recolor via the picker. */
+     legibility on any photo. Operator can still recolor via the picker.
+     font-size is set dynamically by JS (fitOverlayHeadline) to mirror the
+     server-side adaptive logic — short headlines get massive ESPN-style
+     type, long ones shrink to fit. CSS provides a sensible fallback. */
   .overlay-headline {
     position: absolute;
     transform: translate(0, -100%);
@@ -296,14 +299,13 @@
     background: rgba(0,0,0,0.0);
     border: 2px dashed rgba(255,255,255,0.55);
     border-radius: 4px;
-    font-family: 'Anton', 'Impact', 'Arial Narrow', 'Helvetica Neue', sans-serif;
-    font-weight: 400;            /* Anton has only a single 400-weight; visually it's already black */
-    font-size: 26px;
-    line-height: 1;
-    letter-spacing: 0.02em;
+    font-family: 'Space Grotesk', 'Inter', -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 26px;             /* fallback only — JS overrides via fitOverlayHeadline() */
+    line-height: 1.05;
+    letter-spacing: -0.01em;     /* Space Grotesk reads tighter at heavier weights */
     text-transform: uppercase;
-    max-width: 80%;
-    /* Layered shadow → BB navy halo so the headline pops on any background */
+    max-width: 88%;
     text-shadow:
       -2px 0 0 #0A1628,
        2px 0 0 #0A1628,
@@ -315,6 +317,23 @@
   }
   .overlay-headline:hover { border-color: var(--gold); background: rgba(0,0,0,0.18); }
   .overlay-headline.dragging { border-color: var(--gold); background: rgba(0,0,0,0.25); }
+  /* Per-slide font variant: 'espn' uses Anton (heavy condensed display) +
+     wider tracking. Default ('brand') keeps Space Grotesk. Toggle in the
+     color row reflects live. */
+  .overlay-headline.font-espn {
+    font-family: 'Anton', 'Impact', 'Arial Narrow Bold', 'Liberation Sans Condensed', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  /* Small two-button font toggle that lives next to the color swatches.
+     Click → flips the .overlay-headline class live and saves on Save layout. */
+  .font-toggle { display: inline-flex; gap: 0; border: 1px solid var(--border2); border-radius: 4px; padding: 0; overflow: hidden; }
+  .font-toggle button { padding: 3px 9px; font-size: 9px; border: none; background: transparent; color: var(--muted2); cursor: pointer; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.12s ease; }
+  .font-toggle button:hover { color: var(--text); background: var(--surface3); }
+  .font-toggle button.active { background: var(--gold); color: var(--bg); }
+  .font-toggle button + button { border-left: 1px solid var(--border2); }
 
   .color-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; padding: 6px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; }
   .color-row .field-label { margin-bottom: 0; }
@@ -596,11 +615,14 @@ function renderInstagramCarouselCard(d) {
   const activeOverlayColor = (typeof active.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(active.overlay_color))
     ? active.overlay_color : '#FFFFFF';
   const showOverlay = !isCta;
+  const activeOverlayFont = active.overlay_font === 'espn' ? 'espn' : 'brand';
+  const overlayFontClass = activeOverlayFont === 'espn' ? ' font-espn' : '';
   const heroImage = baseImage
     ? `<div class="image-preview large overlay-canvas" data-slide-index="${cur}">
          <img src="${escapeHtml(baseImage)}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.querySelector('.overlay-headline')?.remove()"/>
-         ${showOverlay ? `<div class="overlay-headline${isLocked ? '' : ' draggable'}"
+         ${showOverlay ? `<div class="overlay-headline${overlayFontClass}${isLocked ? '' : ' draggable'}"
               data-overlay-x="${activeOverlayX}" data-overlay-y="${activeOverlayY}"
+              data-overlay-font="${activeOverlayFont}"
               style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${escapeHtml(active.headline || '')}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
          ${isLocked ? '' : `<div class="image-corner-actions">
@@ -701,9 +723,14 @@ function renderCtaSlotForm(d) {
 function buildSlideEditor(d, s, i, isLocked, totalSlides) {
   const overlayColor = (typeof s.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(s.overlay_color))
     ? s.overlay_color : '#FFFFFF';
+  const overlayFont = s.overlay_font === 'espn' ? 'espn' : 'brand';
   const colorRow = isLocked ? '' : `
     <div class="color-row">
-      <span class="field-label">Headline color</span>
+      <span class="field-label">Headline</span>
+      <div class="font-toggle" data-slide-index="${i}" title="Switch headline font">
+        <button data-font="brand" data-slide-index="${i}" class="${overlayFont === 'brand' ? 'active' : ''}">BRAND</button>
+        <button data-font="espn" data-slide-index="${i}" class="${overlayFont === 'espn' ? 'active' : ''}">ESPN</button>
+      </div>
       <input type="color" data-overlay-color data-slide-index="${i}" value="${escapeHtml(overlayColor)}" />
       <button class="color-swatch${overlayColor.toUpperCase() === '#FFFFFF' ? ' active' : ''}" data-color="#FFFFFF" data-slide-index="${i}" style="background:#FFFFFF;" title="White"></button>
       <button class="color-swatch${overlayColor.toUpperCase() === '#000000' ? ' active' : ''}" data-color="#000000" data-slide-index="${i}" style="background:#000000;" title="Black"></button>
@@ -1222,13 +1249,38 @@ function wireCardActions(cardEl) {
   });
 
   // Live headline-input → HTML overlay text. As operator types in the
-  // "Headline" field, the on-image overlay text updates instantly. No need to
-  // hit Save layout to see the change.
+  // "Headline" field, the on-image overlay text updates instantly + the
+  // font size re-fits to whatever fits the canvas. No need to hit Save
+  // layout to see the change.
   cardEl.querySelectorAll('input[data-slide-field="headline"]').forEach((input) => {
     input.addEventListener('input', () => {
       const slideIdx = Number(input.dataset.slideIndex);
       const overlay = cardEl.querySelector(`.overlay-canvas[data-slide-index="${slideIdx}"] .overlay-headline`);
-      if (overlay) overlay.textContent = input.value;
+      if (overlay) {
+        overlay.textContent = input.value;
+        fitOverlayHeadline(overlay);
+      }
+    });
+  });
+
+  // Font toggle (BRAND ↔ ESPN). Click → swaps the .overlay-headline class
+  // immediately + re-fits font size. Persisted on Save layout.
+  cardEl.querySelectorAll('.font-toggle button[data-font]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const slideIdx = Number(btn.dataset.slideIndex);
+      const font = btn.dataset.font;       // 'brand' | 'espn'
+      const panel = cardEl.querySelector(`.slide-panel[data-slide="${slideIdx}"]`);
+      if (!panel) return;
+      // Update toggle active state
+      panel.querySelectorAll('.font-toggle button').forEach((b) => b.classList.toggle('active', b === btn));
+      // Update the visible overlay
+      const overlay = cardEl.querySelector(`.overlay-canvas[data-slide-index="${slideIdx}"] .overlay-headline`);
+      if (overlay) {
+        overlay.classList.toggle('font-espn', font === 'espn');
+        overlay.dataset.overlayFont = font;
+        fitOverlayHeadline(overlay);
+      }
     });
   });
 
@@ -1257,11 +1309,72 @@ function wireCardActions(cardEl) {
     });
   });
 
-  // Drag overlay editor — make .overlay-headline draggable within its canvas
+  // Drag overlay editor — make .overlay-headline draggable within its canvas.
+  // Also: fit the overlay font-size to match the canvas dimensions (mirrors
+  // the server-side adaptive sizing). ResizeObserver re-fits on canvas
+  // dimension changes; img.onload fits once the photo loads (canvas may
+  // change size when the image's aspect locks in).
   cardEl.querySelectorAll('.overlay-canvas').forEach((canvas) => {
     initOverlayDrag(canvas);
+    const overlay = canvas.querySelector('.overlay-headline');
+    if (overlay) {
+      // Initial fit (will retry on resize/img-load if canvas isn't laid out yet)
+      fitOverlayHeadline(overlay);
+      if (_overlayFitObserver) _overlayFitObserver.observe(canvas);
+      const img = canvas.querySelector('img');
+      if (img) {
+        if (img.complete) fitOverlayHeadline(overlay);
+        else img.addEventListener('load', () => fitOverlayHeadline(overlay), { once: true });
+      }
+    }
   });
 }
+
+// Adaptive font sizing for the overlay headline. Mirrors the server-side
+// SVG renderer's character-budget tiers (imageRenderer.overlaySVG):
+//   ≤22 chars → big impact (canvas / 12)
+//   ≤50 chars → medium (canvas / 17)
+//   else      → small wrap (canvas / 22)
+// So a 3-word headline gets ESPN-card-massive type and a 12-word headline
+// shrinks to fit. Browser preview ↔ published JPEG stay visually aligned.
+function fitOverlayHeadline(overlayEl) {
+  if (!overlayEl) return;
+  const text = (overlayEl.textContent || '').trim();
+  if (!text) return;
+  const canvas = overlayEl.closest('.overlay-canvas');
+  if (!canvas) return;
+  const w = canvas.offsetWidth;
+  if (!w) return;  // not laid out yet
+  const len = text.length;
+  let divisor;
+  if (len <= 22)      divisor = 12;
+  else if (len <= 50) divisor = 17;
+  else                divisor = 22;
+  const size = Math.max(14, Math.round(w / divisor));
+  overlayEl.style.fontSize = size + 'px';
+}
+
+// One global ResizeObserver for all overlay-canvas elements: when the canvas
+// resizes (window resize, image load changes box dims, etc.) the overlay
+// re-fits.
+const _overlayFitObserver = (typeof ResizeObserver === 'function')
+  ? new ResizeObserver((entries) => {
+      for (const e of entries) {
+        const overlay = e.target.querySelector('.overlay-headline');
+        if (overlay) fitOverlayHeadline(overlay);
+      }
+    })
+  : null;
+
+// Window-resize fallback (debounced) for browsers without ResizeObserver
+// AND to catch any post-load reflow we miss.
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    document.querySelectorAll('.overlay-headline').forEach(fitOverlayHeadline);
+  }, 120);
+});
 
 // Initialize drag-to-position on a single overlay-canvas. Updates the live
 // preview position + the dataset coords; persistence happens via apply-layout.
@@ -1431,11 +1544,12 @@ async function actionApplyLayout(id, cardEl, slideIndex) {
   const overlay_x = parseFloat(headline.dataset.overlayX);
   const overlay_y = parseFloat(headline.dataset.overlayY);
   const overlay_color = colorInput?.value || '#FFFFFF';
+  const overlay_font = headline.dataset.overlayFont === 'espn' ? 'espn' : 'brand';
 
   const draft = DRAFTS.find((d) => d._id === id);
   if (!draft || !Array.isArray(draft.slides)) throw new Error('draft not found');
   const newSlides = draft.slides.map((s, i) => i === slideIndex
-    ? { ...s, overlay_x, overlay_y, overlay_color }
+    ? { ...s, overlay_x, overlay_y, overlay_color, overlay_font }
     : s);
   const r1 = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
