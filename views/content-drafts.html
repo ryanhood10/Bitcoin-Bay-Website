@@ -261,6 +261,31 @@
   .scene-cost { font-size: 11px; color: var(--muted); margin-left: auto; }
   .scene-hint { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
 
+  /* Focus modal (Phase 9.4) — click ⛶ to expand a card into a centered modal
+     for deep editing. Mobile: full-screen with safe-area-aware padding.
+     The card DOM is *moved* into the modal (not cloned), so all live event
+     handlers stay attached and any in-flight edits don't get reset. */
+  .expand-btn { background: transparent; border: 1px solid var(--border2); color: var(--muted); width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; padding: 0; transition: all 0.12s ease; margin-left: 6px; }
+  .expand-btn:hover { color: var(--gold); border-color: var(--gold); background: var(--surface2); }
+  .focus-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; z-index: 9999; overflow-y: auto; padding: 20px; backdrop-filter: blur(2px); }
+  .focus-modal-backdrop.open { display: flex; align-items: flex-start; justify-content: center; }
+  .focus-modal { background: var(--bg); border: 1px solid var(--border2); border-radius: 12px; max-width: 760px; width: 100%; margin: auto; padding: 0; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+  .focus-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border2); background: var(--surface); border-radius: 12px 12px 0 0; position: sticky; top: 0; z-index: 1; }
+  .focus-modal-head .title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .focus-modal-body { padding: 18px; }
+  /* In focus mode the card itself becomes the only thing on screen — drop
+     the per-card border so the modal frame does the framing instead. */
+  .focus-modal-body > .card { border: none; padding: 0; background: transparent; max-width: none; }
+  .focus-modal-body > .card .card-head { padding-top: 0; }
+  .focus-modal-body > .card .image-preview.large img { max-height: 60vh; }
+  @media (max-width: 700px) {
+    .focus-modal-backdrop { padding: 0; }
+    .focus-modal { max-width: 100%; height: 100dvh; border-radius: 0; display: flex; flex-direction: column; box-shadow: none; }
+    .focus-modal-head { border-radius: 0; padding: 12px 14px; }
+    .focus-modal-body { flex: 1; overflow-y: auto; padding: 14px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+    .focus-modal-body > .card .image-preview.large img { max-height: 70vw; }
+  }
+
   /* Photo-replace panel (Phase 9.2) — opens when operator clicks 📷 corner btn.
      Searches Wikimedia / Pexels / Unsplash for `subject` and shows up to 3
      thumbnails per source. Click a thumb to swap; or paste a manual URL. */
@@ -518,6 +543,18 @@
 </div>
 
 <div id="toast" class="toast"></div>
+<!-- Focus modal (Phase 9.4) — operator clicks ⛶ on any card to expand it
+     into this overlay for deep editing. The card DOM gets transplanted in
+     and back out so handlers stay live. -->
+<div id="focus-modal" class="focus-modal-backdrop" data-action="close-focus-modal-backdrop">
+  <div class="focus-modal" onclick="event.stopPropagation()">
+    <div class="focus-modal-head">
+      <span class="title">✨ Focus mode</span>
+      <button class="btn small ghost" data-action="close-focus-modal" aria-label="Close">✕ Close</button>
+    </div>
+    <div class="focus-modal-body"></div>
+  </div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────
@@ -564,7 +601,10 @@ function renderTwitterCard(d) {
         ${variantChip}
         <span class="status-pill ${status}">${status}</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">${safeText(d.format_hint || 'take')}</div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">${safeText(d.format_hint || 'take')}</span>
+        <button class="expand-btn" data-action="expand-card" title="Open in focus mode (full-screen editor)" aria-label="Focus mode">⛶</button>
+      </div>
     </div>
     <div class="collapsed-preview">${safeText((d.text || '').slice(0, 120))}…</div>
     <div class="card-body">
@@ -602,7 +642,10 @@ function renderInstagramSingleCard(d) {
       <div class="card-head-left">
         <span class="status-pill ${status}">${status}</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">single image</div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">single image</span>
+        <button class="expand-btn" data-action="expand-card" title="Open in focus mode (full-screen editor)" aria-label="Focus mode">⛶</button>
+      </div>
     </div>
     <div class="collapsed-preview">${safeText((d.caption || '').slice(0, 120))}…</div>
     <div class="card-body" style="padding-bottom:6px;">
@@ -742,7 +785,10 @@ function renderInstagramCarouselCard(d) {
         <span class="status-pill ${status}">${status}</span>
         <span class="pill" style="background:rgba(74,158,255,0.1); color: var(--blue); border-color: rgba(74,158,255,0.3);">${slides.length}-slide carousel</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">${safeText((d.topic || '').slice(0, 32))}${(d.topic || '').length > 32 ? '…' : ''}</div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">${safeText((d.topic || '').slice(0, 32))}${(d.topic || '').length > 32 ? '…' : ''}</span>
+        <button class="expand-btn" data-action="expand-card" title="Open in focus mode (full-screen editor)" aria-label="Focus mode">⛶</button>
+      </div>
     </div>
     <div class="collapsed-preview">${safeText((d.caption || '').slice(0, 120))}…</div>
     <div class="card-body" style="padding-bottom:6px;">
@@ -2031,22 +2077,27 @@ async function loadDrafts() {
     const xWrap = document.getElementById('x-cards');
     const igWrap = document.getElementById('ig-cards');
 
-    if (xCards.length === 0 && igCards.length === 0) {
-      xWrap.innerHTML = '';
-      igWrap.innerHTML = `<div class="empty-state">
-        <h3>No drafts yet for today</h3>
-        <p>Click <b>Run drafter now</b> at the top to generate today's batch from the latest research brief.</p>
-      </div>`;
-    } else {
-      xWrap.innerHTML = xCards.map(renderTwitterCard).join('') ||
-        `<div class="empty-state"><p>No Twitter drafts.</p></div>`;
-      igWrap.innerHTML = igCards.map((d) => (
-        d.platform === 'instagram_carousel' ? renderInstagramCarouselCard(d) : renderInstagramSingleCard(d)
-      )).join('') || `<div class="empty-state"><p>No Instagram draft.</p></div>`;
+    // Phase 9.4: skip column repaint while focus modal is open. The card
+    // currently being edited has been transplanted into the modal — wiping
+    // innerHTML here would leave it orphaned and we'd lose its return slot.
+    const modalOpen = document.getElementById('focus-modal')?.classList.contains('open');
+    if (!modalOpen) {
+      if (xCards.length === 0 && igCards.length === 0) {
+        xWrap.innerHTML = '';
+        igWrap.innerHTML = `<div class="empty-state">
+          <h3>No drafts yet for today</h3>
+          <p>Click <b>Run drafter now</b> at the top to generate today's batch from the latest research brief.</p>
+        </div>`;
+      } else {
+        xWrap.innerHTML = xCards.map(renderTwitterCard).join('') ||
+          `<div class="empty-state"><p>No Twitter drafts.</p></div>`;
+        igWrap.innerHTML = igCards.map((d) => (
+          d.platform === 'instagram_carousel' ? renderInstagramCarouselCard(d) : renderInstagramSingleCard(d)
+        )).join('') || `<div class="empty-state"><p>No Instagram draft.</p></div>`;
+      }
+      // Wire each card
+      document.querySelectorAll('.card[data-id]').forEach(wireCardActions);
     }
-
-    // Wire each card
-    document.querySelectorAll('.card[data-id]').forEach(wireCardActions);
 
     // Auto-trigger image rendering for any draft stuck in 'pending'.
     // The render is fire-and-forget (returns 202); we set up a single
@@ -2129,6 +2180,70 @@ async function autoRenderPendingDrafts() {
   // Single refresh cycle 12s later — should be enough for parallel render
   setTimeout(() => loadDrafts().catch(() => {}), 12_000);
 }
+
+// ── Phase 9.4: focus modal (click ⛶ on a card to expand) ─────────────────
+// We *transplant* the live card DOM into the modal so all wired event
+// handlers (drag, contenteditable, hashtag pills) keep working without
+// re-wiring. On close we put it back in its original column position.
+let MODAL_RETURN = null; // { parent, nextSibling } where the card came from
+
+function openFocusModal(cardEl) {
+  if (!cardEl) return;
+  const modal = document.getElementById('focus-modal');
+  const body = modal.querySelector('.focus-modal-body');
+  // Remember where this card lived so we can re-insert it on close
+  MODAL_RETURN = { parent: cardEl.parentElement, nextSibling: cardEl.nextElementSibling };
+  body.appendChild(cardEl);
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Pop scroll to top of the modal
+  modal.scrollTop = 0;
+}
+
+function closeFocusModal() {
+  const modal = document.getElementById('focus-modal');
+  const body = modal.querySelector('.focus-modal-body');
+  const cardEl = body.querySelector('.card[data-id]');
+  if (cardEl && MODAL_RETURN) {
+    if (MODAL_RETURN.nextSibling && MODAL_RETURN.parent.contains(MODAL_RETURN.nextSibling)) {
+      MODAL_RETURN.parent.insertBefore(cardEl, MODAL_RETURN.nextSibling);
+    } else if (MODAL_RETURN.parent) {
+      MODAL_RETURN.parent.appendChild(cardEl);
+    }
+  }
+  MODAL_RETURN = null;
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+  // Re-fetch so columns reflect any saves made while in focus mode
+  loadDrafts().catch(() => {});
+}
+
+document.getElementById('focus-modal').addEventListener('click', (e) => {
+  // Backdrop click closes — onclick="event.stopPropagation()" on .focus-modal
+  // means inner clicks don't bubble here.
+  if (e.target.id === 'focus-modal') closeFocusModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('focus-modal').classList.contains('open')) {
+    closeFocusModal();
+  }
+});
+// Top-level click delegation for expand/close — these targets aren't bound
+// inside wireCardActions because the card may be in the modal at the time.
+document.addEventListener('click', (e) => {
+  const expand = e.target.closest('[data-action="expand-card"]');
+  if (expand) {
+    e.preventDefault(); e.stopPropagation();
+    const cardEl = expand.closest('.card[data-id]');
+    openFocusModal(cardEl);
+    return;
+  }
+  const close = e.target.closest('[data-action="close-focus-modal"]');
+  if (close) {
+    e.preventDefault();
+    closeFocusModal();
+  }
+});
 
 // Initial load
 loadDrafts();
