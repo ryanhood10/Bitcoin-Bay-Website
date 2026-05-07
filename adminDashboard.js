@@ -538,6 +538,10 @@ router.post('/api/admin/dashboard/bonus-report', adminAuth.requireAdmin(adminAut
 // full-role anyway, no point teasing dashboard-role admins with a UI they
 // can't use.
 router.get('/admin/dashboard/content', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
+  // No-store: the SPA's JS lives inline in this HTML, so caching it would
+  // pin operators on stale code after a deploy. The page is small and only
+  // requested by full-role admins, so the cache miss is cheap.
+  res.set('Cache-Control', 'no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'views', 'content-drafts.html'));
 });
 

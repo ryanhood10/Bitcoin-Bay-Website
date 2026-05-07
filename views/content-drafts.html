@@ -542,27 +542,40 @@ function renderInstagramCarouselCard(d) {
     : '';
   const dots = realDots + ctaTile;
 
-  // Active slide's image — bigger, with "1/N" pill and corner 🎨 button.
-  // Fits the IG-native pattern: image dominates the card.
+  // Active slide's image. WYSIWYG approach (Phase 8.10):
+  //   - For real-photo slides: display the RAW image_url (external Wikimedia/
+  //     Pexels URL) + the HTML overlay headline on top. This way the visible
+  //     headline is ONLY the HTML overlay (no second baked-in copy from the
+  //     server-rendered composite). Operator drags/colors → instant feedback.
+  //     The composite_url is built behind the scenes for IG publishing only.
+  //   - For BB-branded CTA slides: show the composite directly (the whole
+  //     slide IS the BB composite — no overlay editing).
+  // Bonus: raw URLs aren't stored on the Heroku ephemeral filesystem, so they
+  // don't disappear on dyno restart.
   const active = slides[cur] || {};
-  const activeComposite = active.composite_url || active.image_url || '';
+  const isCta = !!active.is_cta_slide;
+  const baseImage = isCta
+    ? (active.composite_url || active.image_url || '')
+    : (active.image_url || active.composite_url || '');
+  const downloadUrl = active.composite_url || active.image_url || baseImage;
   const activeOverlayX = Number.isFinite(active.overlay_x) ? active.overlay_x : 5.5;
   const activeOverlayY = Number.isFinite(active.overlay_y) ? active.overlay_y : 92;
   const activeOverlayColor = (typeof active.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(active.overlay_color))
     ? active.overlay_color : '#FFFFFF';
-  const heroImage = activeComposite
+  const showOverlay = !isCta;
+  const heroImage = baseImage
     ? `<div class="image-preview large overlay-canvas" data-slide-index="${cur}">
-         <img src="${escapeHtml(activeComposite)}" alt="" onerror="this.parentElement.querySelector('.overlay-headline').style.display='none'"/>
-         <div class="overlay-headline${isLocked ? '' : ' draggable'}"
+         <img src="${escapeHtml(baseImage)}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.querySelector('.overlay-headline')?.remove()"/>
+         ${showOverlay ? `<div class="overlay-headline${isLocked ? '' : ' draggable'}"
               data-overlay-x="${activeOverlayX}" data-overlay-y="${activeOverlayY}"
-              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${escapeHtml(active.headline || '')}</div>
+              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${escapeHtml(active.headline || '')}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
          ${isLocked ? '' : `<div class="image-corner-actions">
            <button class="corner-btn" data-action="generate-art" data-slide-index="${cur}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
          </div>`}
          <div class="image-meta">
            <span>${escapeHtml(active.image_attribution || '')}</span>
-           ${activeComposite ? `<a class="download-btn" download="slide-${cur + 1}.jpg" href="${escapeHtml(activeComposite)}" title="Download this slide">💾</a>` : ''}
+           ${downloadUrl ? `<a class="download-btn" download="slide-${cur + 1}.jpg" href="${escapeHtml(downloadUrl)}" title="Download this slide (publish-ready composite)">💾</a>` : ''}
          </div>
        </div>`
     : `<div class="image-preview large">${renderEmptyImagePlaceholder(active.image_subject, cur, d.image_status)}</div>`;
@@ -1172,6 +1185,17 @@ function wireCardActions(cardEl) {
       } finally {
         btn.disabled = false;
       }
+    });
+  });
+
+  // Live headline-input → HTML overlay text. As operator types in the
+  // "Headline" field, the on-image overlay text updates instantly. No need to
+  // hit Save layout to see the change.
+  cardEl.querySelectorAll('input[data-slide-field="headline"]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const slideIdx = Number(input.dataset.slideIndex);
+      const overlay = cardEl.querySelector(`.overlay-canvas[data-slide-index="${slideIdx}"] .overlay-headline`);
+      if (overlay) overlay.textContent = input.value;
     });
   });
 
