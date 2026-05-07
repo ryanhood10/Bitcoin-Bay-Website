@@ -365,6 +365,28 @@
     .resize-handle { width: 28px; height: 28px; right: -14px; bottom: -14px; }
   }
 
+  /* Phase 9.7 — "⋯ More" popover menu in card-actions row. Replaces the
+     5-6 button cluster with Save · More · Approve. The popover is a small
+     anchored menu; click outside or ESC to close. Mobile gets a centered
+     bottom-sheet style for fat-finger friendliness. */
+  .more-wrap { position: relative; display: inline-flex; }
+  .more-menu { display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 6px; z-index: 50; box-shadow: 0 12px 32px rgba(0,0,0,0.55); flex-direction: column; gap: 1px; }
+  .more-menu.open { display: flex; }
+  .more-menu .menu-item { background: transparent; border: 0; text-align: left; padding: 9px 11px; border-radius: 6px; font-size: 12px; color: var(--text); cursor: pointer; font-family: inherit; display: flex; justify-content: space-between; align-items: center; gap: 12px; transition: background 0.1s ease; }
+  .more-menu .menu-item:hover { background: var(--surface2); }
+  .more-menu .menu-item .menu-hint { font-size: 10px; color: var(--muted2); font-weight: 400; }
+  .more-menu .menu-item.destructive { color: var(--red); }
+  .more-menu .menu-item.destructive:hover { background: rgba(255,92,92,0.08); }
+  .more-menu .menu-item.destructive .menu-hint { color: var(--red); opacity: 0.7; }
+  .menu-divider { height: 1px; background: var(--border2); margin: 4px 0; }
+  @media (max-width: 700px) {
+    .more-menu { position: fixed; top: auto; bottom: env(safe-area-inset-bottom, 0); left: 0; right: 0; min-width: 0; border-radius: 12px 12px 0 0; padding: 12px 8px calc(12px + env(safe-area-inset-bottom, 0)); box-shadow: 0 -12px 32px rgba(0,0,0,0.6); }
+    .more-menu .menu-item { padding: 14px 14px; font-size: 14px; }
+  }
+
+  /* Sticker selection state — click to highlight, then Delete key removes. */
+  .sticker-overlay.selected { outline: 2px solid var(--gold); outline-offset: 4px; box-shadow: 0 0 0 4px rgba(247,148,29,0.2); }
+
   /* Photo-replace panel (Phase 9.2) — opens when operator clicks 📷 corner btn.
      Searches Wikimedia / Pexels / Unsplash for `subject` and shows up to 3
      thumbnails per source. Click a thumb to swap; or paste a manual URL. */
@@ -785,7 +807,11 @@ function renderInstagramCarouselCard(d) {
   // "+" tile appears IF no CTA slide has been added yet — click it to open
   // the CTA editor in place. Operator-clear way of showing where the BB CTA
   // slide will go (vs the old opaque "Add BB CTA slide" button).
-  const hasCtaSlide = slides.some((s) => s.is_cta_slide);
+  // Treat ANY cta-role slide as already having a CTA — Claude often
+  // generates a content-CTA at the end of the deck, and we don't want
+  // to tempt the operator into adding a second BB-branded CTA on top
+  // of it. Operator can still delete the existing one + add their own.
+  const hasCtaSlide = slides.some((s) => s.is_cta_slide || s.slide_role === 'cta');
   const ctaSlotActive = cur === 'cta_slot';
   const showAddCtaTile = !isLocked && !hasCtaSlide && slides.length < 10 && slides.length > 0;
   const realDots = slides.map((_, i) =>
@@ -842,6 +868,7 @@ function renderInstagramCarouselCard(d) {
            <button class="corner-btn" data-action="replace-photo" data-slide-index="${cur}" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
            <button class="corner-btn" data-action="add-sticker" data-slide-index="${cur}" title="Add a crypto/exchange branded sticker">🏷️</button>
            <button class="corner-btn" data-action="generate-art" data-slide-index="${cur}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
+           ${slides.length > 2 ? `<button class="corner-btn danger" data-action="delete-slide" data-slide-index="${cur}" title="Delete this slide">🗑</button>` : ''}
          </div>`}
          <div class="image-meta">
            <span>${safeText(active.image_attribution || '')}</span>
@@ -1362,24 +1389,30 @@ function renderActions(d, isLocked) {
       <span style="color:var(--muted2); font-size:11px;">${d.status === 'posted' ? '✓ Posted' : '⛔ Skipped'} · ${formatTimestamp(d.updated_at)}</span>
     </div>`;
   }
-  // 🎨 AI scene moved to a corner button on the image preview itself.
-  // Twitter cards get the ⇄ Variant swap button when 2 variants exist.
-  // 🆕 New text replaces the old "🔄 Regen" — destructive, confirm dialog wired
-  // in actionRegenerate. Carousel cards get the per-deck tools (regen all
-  // images + ZIP) folded into this row instead of a separate tools strip.
-  const variantBtn = (d.platform === 'twitter' && Array.isArray(d.variants) && d.variants.length >= 2)
-    ? `<button class="btn small" data-action="swap-variant" title="Swap to alternate variant (meme ↔ news)">⇄ Variant</button>`
+  // Phase 9.7: collapse the cluttered 5-6 button row into 3 visible
+  // buttons (Save · ⋯ More · Approve). The "More" button opens a popover
+  // menu containing the less-frequent / destructive actions.
+  const isTwitter = d.platform === 'twitter';
+  const isCarousel = d.platform === 'instagram_carousel';
+  const variantItem = (isTwitter && Array.isArray(d.variants) && d.variants.length >= 2)
+    ? `<button class="menu-item" data-action="swap-variant"><span>⇄ Switch variant</span><span class="menu-hint">meme ↔ news</span></button>`
     : '';
-  const carouselTools = d.platform === 'instagram_carousel'
-    ? `<button class="btn small" data-action="regen-all-images" title="Re-render all carousel slide composites with current text + colors + drag positions (~30s)">🔁 Regen images</button>
-       <button class="btn small" data-action="download-zip" title="Download all carousel slide JPEGs as a ZIP file">📦 ZIP</button>`
+  const carouselItems = isCarousel
+    ? `<button class="menu-item" data-action="regen-all-images"><span>🔁 Re-render all images</span><span class="menu-hint">bake new composites (~30s)</span></button>
+       <button class="menu-item" data-action="download-zip"><span>📦 Download ZIP</span><span class="menu-hint">all slide JPEGs</span></button>`
     : '';
   return `<div class="card-actions">
-    <button class="btn small" data-action="save">💾 Save</button>
-    <button class="btn small danger" data-action="regen" title="Replace the current draft text with a new one (Claude re-prompt)">🆕 New text</button>
-    ${variantBtn}
-    ${carouselTools}
-    <button class="btn small danger" data-action="skip">⛔ Skip</button>
+    <button class="btn small primary" data-action="save">💾 Save</button>
+    <div class="more-wrap">
+      <button class="btn small" data-action="open-more-menu" data-menu-target="${d._id}" aria-haspopup="menu" aria-expanded="false" title="More actions">⋯ More</button>
+      <div class="more-menu" data-more-menu="${d._id}" role="menu">
+        <button class="menu-item" data-action="regen"><span>🆕 New draft text</span><span class="menu-hint">re-prompt Claude</span></button>
+        ${variantItem}
+        ${carouselItems}
+        <div class="menu-divider"></div>
+        <button class="menu-item destructive" data-action="skip"><span>⛔ Skip post</span><span class="menu-hint">don't publish</span></button>
+      </div>
+    </div>
     <button class="btn small success" data-action="approve" style="margin-left:auto;">✓ Approve</button>
   </div>`;
 }
@@ -1546,6 +1579,8 @@ function wireCardActions(cardEl) {
       const action = btn.dataset.action;
       const slideIdx = btn.dataset.slideIndex !== undefined && btn.dataset.slideIndex !== ''
         ? Number(btn.dataset.slideIndex) : null;
+      // Auto-close the More menu when an item inside it is picked.
+      if (btn.classList.contains('menu-item')) closeAllMoreMenus();
       try {
         // disable=true only applies to <button>; div/span thumbs ignore it
         btn.disabled = true;
@@ -1573,6 +1608,7 @@ function wireCardActions(cardEl) {
         else if (action === 'sticker-pick') await actionStickerPick(id, cardEl, slideIdx, btn);
         else if (action === 'remove-sticker') await actionRemoveSticker(id, slideIdx);
         else if (action === 'save-sticker-layout') await actionSaveStickerLayout(id, cardEl, slideIdx);
+        else if (action === 'open-more-menu') toggleMoreMenu(btn.dataset.menuTarget, btn);
         else if (action === 'add-cta-slide-cancel') {
           // Switch back to the first real slide
           CURRENT_SLIDE[id] = 0;
@@ -2666,6 +2702,74 @@ async function autoRenderPendingDrafts() {
   setTimeout(() => loadDrafts().catch(() => {}), 12_000);
 }
 
+// ── Phase 9.7: ⋯ More menu open/close + outside-click + ESC ─────────────
+function toggleMoreMenu(targetId, btn) {
+  // Close any other open menus first.
+  document.querySelectorAll('.more-menu.open').forEach((m) => {
+    if (m.dataset.moreMenu !== targetId) {
+      m.classList.remove('open');
+      const trigger = document.querySelector(`[data-menu-target="${m.dataset.moreMenu}"]`);
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+  const menu = document.querySelector(`.more-menu[data-more-menu="${targetId}"]`);
+  if (!menu) return;
+  const opened = menu.classList.toggle('open');
+  if (btn) btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+}
+function closeAllMoreMenus() {
+  document.querySelectorAll('.more-menu.open').forEach((m) => {
+    m.classList.remove('open');
+    const trigger = document.querySelector(`[data-menu-target="${m.dataset.moreMenu}"]`);
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', (e) => {
+  // Don't close if click is inside an open menu OR is the trigger that
+  // opened it. Anything else: close all.
+  if (e.target.closest('.more-menu')) return;
+  if (e.target.closest('[data-action="open-more-menu"]')) return;
+  closeAllMoreMenus();
+});
+
+// ── Phase 9.7: sticker selection + keyboard delete ──────────────────────
+let SELECTED_STICKER = null; // { cardId, slideIndex } | null
+function clearStickerSelection() {
+  document.querySelectorAll('.sticker-overlay.selected').forEach((s) => s.classList.remove('selected'));
+  SELECTED_STICKER = null;
+}
+document.addEventListener('click', (e) => {
+  // Click on sticker body (not the resize handle) → select. Click outside any
+  // sticker → clear. Resize handle clicks fall through (don't change selection).
+  if (e.target.closest('.resize-handle')) return;
+  const sticker = e.target.closest('.sticker-overlay');
+  if (sticker && sticker.classList.contains('draggable')) {
+    clearStickerSelection();
+    sticker.classList.add('selected');
+    const cardEl = sticker.closest('.card[data-id]');
+    const slideRaw = sticker.dataset.slideIndex;
+    SELECTED_STICKER = {
+      cardId: cardEl?.dataset.id || null,
+      slideIndex: (slideRaw !== undefined && slideRaw !== '') ? Number(slideRaw) : null,
+    };
+  } else if (!e.target.closest('.sticker-panel') && !e.target.closest('[data-action="add-sticker"]')) {
+    // Don't deselect when interacting with the sticker picker — operator
+    // is mid-edit and probably wants to swap stickers, not deselect.
+    clearStickerSelection();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+  if (!SELECTED_STICKER) return;
+  // Don't fire when the operator is typing in an input / textarea / contenteditable.
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  e.preventDefault();
+  const { cardId, slideIndex } = SELECTED_STICKER;
+  SELECTED_STICKER = null;
+  actionRemoveSticker(cardId, slideIndex);
+});
+
 // ── Phase 9.6: shared tool-modal backdrop helpers ───────────────────────
 // The 🎨 / 📷 / 🏷️ panels reuse a single backdrop element. Show it whenever
 // any panel has .open; hide once they all close. Backdrop click + ESC both
@@ -2738,8 +2842,13 @@ document.getElementById('focus-modal').addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  // Tool modals (corner-button panels) take priority over the focus modal —
-  // ESC should close the inner overlay first if both are stacked.
+  // Priority: More menus > tool modals > focus modal. Each layer closes
+  // and the deeper layers stay open until the operator hits ESC again.
+  const moreOpen = document.querySelector('.more-menu.open');
+  if (moreOpen) {
+    closeAllMoreMenus();
+    return;
+  }
   const anyTool = document.querySelector('.scene-panel.open, .photo-panel.open, .sticker-panel.open');
   if (anyTool) {
     closeAllToolModals();
