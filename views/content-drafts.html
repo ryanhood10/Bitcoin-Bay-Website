@@ -236,10 +236,18 @@
   .ig-card-num { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.72); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; pointer-events: none; z-index: 3; }
 
   /* Carousel dot row under the image (native IG style) */
-  .ig-dots { display: flex; justify-content: center; gap: 5px; padding: 6px 0 4px; background: var(--surface); }
+  .ig-dots { display: flex; justify-content: center; gap: 5px; padding: 6px 0 4px; background: var(--surface); align-items: center; }
   .ig-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); cursor: pointer; transition: all 0.12s ease; flex-shrink: 0; }
   .ig-dots .dot.active { background: var(--blue); transform: scale(1.2); }
   .ig-dots .dot:hover { background: var(--muted2); }
+  /* "+" CTA slot tile in the dot row — appears at the end when no CTA
+     slide has been added yet. Click → opens the CTA editor in the slide
+     panel below. Visually distinct from real dots (dashed gold ring). */
+  .ig-dots .dot.add-cta { width: 14px; height: 14px; border-radius: 50%; background: transparent; border: 1.5px dashed var(--gold); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; line-height: 1; padding: 0; }
+  .ig-dots .dot.add-cta:hover { background: rgba(240,180,41,0.15); transform: scale(1.15); }
+  .ig-dots .dot.add-cta.active { background: var(--gold); color: var(--bg); border-color: var(--gold); transform: scale(1.15); }
+  /* Section header inside the slide panel area */
+  .slide-section-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted2); padding: 12px 12px 6px; border-top: 1px solid var(--border); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
 
   /* Scene-prompt panel — hidden until the operator clicks 🎨 Generate scene.
      Operator-triggered AI image generation (Replicate InstantID, ~$0.05/call). */
@@ -533,10 +541,20 @@ function renderInstagramCarouselCard(d) {
   const isCollapsed = isLocked;
 
   // Native-style dot row (replaces the giant thumbnail strip per UI research).
-  // Click a dot to switch the active slide.
-  const dots = slides.map((_, i) =>
-    `<div class="dot ${i === cur ? 'active' : ''}" data-slide="${i}" title="Slide ${i + 1}"></div>`
+  // Click a dot to switch the active slide. After the last real slide, a
+  // "+" tile appears IF no CTA slide has been added yet — click it to open
+  // the CTA editor in place. Operator-clear way of showing where the BB CTA
+  // slide will go (vs the old opaque "Add BB CTA slide" button).
+  const hasCtaSlide = slides.some((s) => s.is_cta_slide);
+  const ctaSlotActive = cur === 'cta_slot';
+  const showAddCtaTile = !isLocked && !hasCtaSlide && slides.length < 10 && slides.length > 0;
+  const realDots = slides.map((_, i) =>
+    `<div class="dot ${i === cur && !ctaSlotActive ? 'active' : ''}" data-slide="${i}" title="Slide ${i + 1}"></div>`
   ).join('');
+  const ctaTile = showAddCtaTile
+    ? `<div class="dot add-cta ${ctaSlotActive ? 'active' : ''}" data-slide="cta_slot" title="Add a BB-branded CTA slide at the end">+</div>`
+    : '';
+  const dots = realDots + ctaTile;
 
   // Active slide's image — bigger, with "1/N" pill and corner 🎨 button.
   // Fits the IG-native pattern: image dominates the card.
@@ -563,18 +581,21 @@ function renderInstagramCarouselCard(d) {
        </div>`
     : `<div class="image-preview large"><div class="placeholder">Image rendering — refresh in 30s, or paste a URL in the editor below.</div></div>`;
 
-  // Carousel-level tools (between hero image / dot row and active-slide editor)
-  const tools = isLocked ? '' : `
-    <div class="carousel-tools">
-      <button class="btn small" data-action="regen-all-images">🔁 Regen all images</button>
-      <button class="btn small" data-action="add-cta-slide" ${slides.length >= 10 ? 'disabled' : ''}>➕ Add BB CTA slide</button>
-      <button class="btn small" data-action="download-zip" ${slides.length === 0 ? 'disabled' : ''}>📦 Download all (ZIP)</button>
-    </div>`;
+  // Carousel-level tools row removed in Phase 8.5: "Add BB CTA slide" became
+  // the "+" tile in the dot row (clearer intent). "🔁 Regen images" + "📦 ZIP"
+  // moved into the card-actions row alongside Save/Skip/Approve. Cleaner card.
+  const tools = '';
 
   // Active-slide editor (only the currently-focused slide gets the editing
   // surface — operator switches via the dot row above). Per UI research, the
   // old per-slide-stacked-vertically layout was making 1500px-tall cards.
-  const activePanelHtml = slides[cur] ? buildSlideEditor(d, slides[cur], cur, isLocked, slides.length) : '';
+  // When ctaSlotActive (operator clicked "+" tile), show the CTA editor form.
+  let activePanelHtml = '';
+  if (ctaSlotActive) {
+    activePanelHtml = renderCtaSlotForm(d);
+  } else if (slides[cur]) {
+    activePanelHtml = buildSlideEditor(d, slides[cur], cur, isLocked, slides.length);
+  }
 
   return `<div class="card platform-instagram ${status}${isCollapsed ? ' collapsed' : ''}" data-id="${d._id}">
     <div class="card-head">
@@ -625,6 +646,35 @@ function renderInstagramCarouselCard(d) {
   </div>`;
 }
 
+// CTA slot form — shown when the operator clicks the "+" tile in the dot row.
+// Lets them set the headline + subhead for a BB-branded CTA slide that gets
+// appended to the end of the carousel. On submit, calls /add-cta-slide.
+function renderCtaSlotForm(d) {
+  return `<div class="slide-panel active cta-slot-form" data-slide="cta_slot">
+      <div class="slide-panel-head">
+        <span class="slide-role-pill" style="background: rgba(240,180,41,0.15); color: var(--gold); border-color: rgba(240,180,41,0.3);">+ NEW BB CTA SLIDE</span>
+        <span style="font-size:10px;color:var(--muted);">appended at the end · BB-branded composite</span>
+      </div>
+      <p style="font-size:12px; color:var(--muted2); margin: 8px 0 12px; line-height:1.5;">
+        Add a Bitcoin Bay-branded promotional slide to the end of this carousel.
+        The slide uses the BB logo + brand-palette gradient + your custom headline.
+        Operator-optional — leave the "+" alone if today's deck doesn't need a CTA.
+      </p>
+      <div class="field-row">
+        <div class="field-label">Headline (≤80 chars)</div>
+        <input class="field-input" data-cta-headline value="Sharp picks. Bitcoin only." />
+      </div>
+      <div class="field-row">
+        <div class="field-label">Sub-headline / footer (≤80 chars)</div>
+        <input class="field-input" data-cta-subhead value="bitcoinbay.com" />
+      </div>
+      <div style="margin-top:12px; display:flex; gap:5px;">
+        <button class="btn small primary" data-action="add-cta-slide-confirm">+ Add CTA slide</button>
+        <button class="btn small ghost" data-action="add-cta-slide-cancel">Cancel</button>
+      </div>
+    </div>`;
+}
+
 // Editor for the currently-active carousel slide. Layered ABOVE the existing
 // scene-panel logic — kept compact since only one slide is editable at a time.
 function buildSlideEditor(d, s, i, isLocked, totalSlides) {
@@ -642,28 +692,33 @@ function buildSlideEditor(d, s, i, isLocked, totalSlides) {
       <button class="color-swatch${overlayColor.toUpperCase() === '#22C55E' ? ' active' : ''}" data-color="#22C55E" data-slide-index="${i}" style="background:#22C55E;" title="Accent green"></button>
       <button class="btn small primary" data-action="apply-layout" data-slide-index="${i}" style="margin-left:auto;">💾 Save layout</button>
     </div>`;
+  // Primary editing surface: headline + color + save layout. That's the
+  // only thing most operators touch. Everything else lives behind "More edits".
   return `<div class="slide-panel active" data-slide="${i}">
       <div class="slide-panel-head">
         <span class="slide-role-pill">${escapeHtml((s.slide_role || '').replace(/_/g, ' '))}</span>
         <span style="font-size:10px;color:var(--muted);">slide ${i + 1} of ${totalSlides}${s.is_cta_slide ? ' · BB CTA' : ''}</span>
       </div>
+      <div class="field-row">
+        <div class="field-label">Headline (shown on the image, ≤8 words)</div>
+        <input class="field-input" data-slide-field="headline" data-slide-index="${i}" value="${escapeHtml(s.headline || '')}" ${isLocked ? 'disabled' : ''} placeholder="Drag the headline on the image to reposition it" />
+      </div>
       ${colorRow}
-      <div class="field-row">
-        <div class="field-label">Headline (on-image overlay, ≤8 words)</div>
-        <input class="field-input" data-slide-field="headline" data-slide-index="${i}" value="${escapeHtml(s.headline || '')}" ${isLocked ? 'disabled' : ''} />
-      </div>
-      <div class="field-row">
-        <div class="field-label">Body / alt text</div>
-        <textarea class="editor" data-slide-field="body_text" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="min-height:50px;">${escapeHtml(s.body_text || '')}</textarea>
-      </div>
-      <div class="field-row">
-        <div class="field-label">Image subject</div>
-        <input class="field-input" data-slide-field="image_subject" data-slide-index="${i}" value="${escapeHtml(s.image_subject || '')}" ${isLocked ? 'disabled' : ''} />
-      </div>
-      <details class="advanced">
-        <summary>Advanced — manual image URL override + Claude re-prompt</summary>
-        <input class="field-input" data-slide-field="image_url" data-slide-index="${i}" placeholder="paste a public image URL" value="${escapeHtml(s.image_url || '')}" ${isLocked ? 'disabled' : ''} style="margin-top:6px;" />
-        <button class="btn small danger" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="margin-top:8px;" title="Re-prompt Claude for this slide's text only (replaces headline+body)">🆕 New slide text</button>
+      <details class="advanced" style="margin-top:10px;">
+        <summary>✏️ More edits — body text, image subject, manual URL, Claude re-prompt</summary>
+        <div class="field-row">
+          <div class="field-label">Body / alt text (not shown on image — only for accessibility + dev preview)</div>
+          <textarea class="editor" data-slide-field="body_text" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="min-height:50px;">${escapeHtml(s.body_text || '')}</textarea>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Image subject (drives the photo lookup — full athlete name, no abbreviations)</div>
+          <input class="field-input" data-slide-field="image_subject" data-slide-index="${i}" value="${escapeHtml(s.image_subject || '')}" ${isLocked ? 'disabled' : ''} />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Manual image URL override</div>
+          <input class="field-input" data-slide-field="image_url" data-slide-index="${i}" placeholder="paste a public image URL to override the auto-found one" value="${escapeHtml(s.image_url || '')}" ${isLocked ? 'disabled' : ''} />
+        </div>
+        <button class="btn small danger" data-action="regen-slide" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="margin-top:8px;" title="Re-prompt Claude for this slide's text only (replaces headline+body)">🆕 New slide text (Claude re-prompt)</button>
       </details>
       ${renderScenePanel(d, i)}
     </div>`;
@@ -893,16 +948,22 @@ function renderActions(d, isLocked) {
     </div>`;
   }
   // 🎨 AI scene moved to a corner button on the image preview itself.
-  // Twitter cards get the ⇄ Variant swap button when 2 variants are available.
-  // 🆕 New text replaces the old "🔄 Regen" — destructive (rewrites the
-  // current draft text), so it has a confirm dialog wired in actionRegenerate.
+  // Twitter cards get the ⇄ Variant swap button when 2 variants exist.
+  // 🆕 New text replaces the old "🔄 Regen" — destructive, confirm dialog wired
+  // in actionRegenerate. Carousel cards get the per-deck tools (regen all
+  // images + ZIP) folded into this row instead of a separate tools strip.
   const variantBtn = (d.platform === 'twitter' && Array.isArray(d.variants) && d.variants.length >= 2)
     ? `<button class="btn small" data-action="swap-variant" title="Swap to alternate variant (meme ↔ news)">⇄ Variant</button>`
+    : '';
+  const carouselTools = d.platform === 'instagram_carousel'
+    ? `<button class="btn small" data-action="regen-all-images" title="Re-render all carousel slide composites with current text + colors + drag positions (~30s)">🔁 Regen images</button>
+       <button class="btn small" data-action="download-zip" title="Download all carousel slide JPEGs as a ZIP file">📦 ZIP</button>`
     : '';
   return `<div class="card-actions">
     <button class="btn small" data-action="save">💾 Save</button>
     <button class="btn small danger" data-action="regen" title="Replace the current draft text with a new one (Claude re-prompt)">🆕 New text</button>
     ${variantBtn}
+    ${carouselTools}
     <button class="btn small danger" data-action="skip">⛔ Skip</button>
     <button class="btn small success" data-action="approve" style="margin-left:auto;">✓ Approve</button>
   </div>`;
@@ -934,11 +995,12 @@ function wireCardActions(cardEl) {
 
   // Slide switching via the native-style dot row under the carousel image.
   // Re-renders the whole card so the active-slide editor + hero image swap.
+  // Special case: data-slide="cta_slot" → opens the CTA editor in the slide
+  // panel (not a real slide; "+" tile in the dot row).
   cardEl.querySelectorAll('.ig-dots .dot[data-slide]').forEach((dot) => {
     dot.addEventListener('click', () => {
-      const idx = Number(dot.dataset.slide);
-      CURRENT_SLIDE[id] = idx;
-      // Just re-render this card from current DRAFTS state
+      const raw = dot.dataset.slide;
+      CURRENT_SLIDE[id] = (raw === 'cta_slot') ? 'cta_slot' : Number(raw);
       const draft = DRAFTS.find((x) => x._id === id);
       if (!draft) return;
       const newHtml = renderInstagramCarouselCard(draft);
@@ -1053,9 +1115,22 @@ function wireCardActions(cardEl) {
         else if (action === 'generate-art-submit') await actionGenerateArt(id, cardEl, slideIdx);
         else if (action === 'generate-art-cancel') closeScenePanel(cardEl, slideIdx);
         else if (action === 'regen-all-images') await actionRegenAllImages(id);
-        else if (action === 'add-cta-slide') await actionAddCtaSlide(id);
         else if (action === 'download-zip') downloadZip(id);
         else if (action === 'apply-layout') await actionApplyLayout(id, cardEl, slideIdx);
+        else if (action === 'add-cta-slide-confirm') await actionAddCtaSlide(id, cardEl);
+        else if (action === 'add-cta-slide-cancel') {
+          // Switch back to the first real slide
+          CURRENT_SLIDE[id] = 0;
+          const draft = DRAFTS.find((x) => x._id === id);
+          if (draft) {
+            const newHtml = renderInstagramCarouselCard(draft);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = newHtml;
+            const newCard = wrapper.firstElementChild;
+            cardEl.replaceWith(newCard);
+            wireCardActions(newCard);
+          }
+        }
       } catch (e) {
         toast(e.message || 'Action failed', 'error');
       } finally {
@@ -1277,11 +1352,13 @@ async function actionRegenAllImages(id) {
   setTimeout(() => loadDrafts(), 30000);
 }
 
-async function actionAddCtaSlide(id) {
-  const headline = prompt('CTA headline (≤80 chars):', 'Sharp picks. Bitcoin only.');
-  if (headline === null) return; // cancelled
-  const subhead = prompt('CTA sub-headline (≤80 chars):', 'bitcoinbay.com');
-  if (subhead === null) return;
+async function actionAddCtaSlide(id, cardEl) {
+  // Reads from the inline CTA slot form (rendered when "+" tile is active).
+  const headlineEl = cardEl.querySelector('input[data-cta-headline]');
+  const subheadEl = cardEl.querySelector('input[data-cta-subhead]');
+  const headline = (headlineEl?.value || 'Sharp picks. Bitcoin only.').trim();
+  const subhead = (subheadEl?.value || 'bitcoinbay.com').trim();
+  toast('Adding CTA slide…', '');
   const res = await fetch(`/api/admin/dashboard/post-drafts/${id}/add-cta-slide`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ headline, subhead }),
@@ -1289,6 +1366,8 @@ async function actionAddCtaSlide(id) {
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.error || 'add-cta failed');
   toast(`CTA slide added (now ${json.slides_count} slides)`, 'success');
+  // Switch to the newly-added slide so operator sees it
+  CURRENT_SLIDE[id] = Number.isInteger(json.slide_index) ? json.slide_index : 0;
   await loadDrafts();
 }
 
