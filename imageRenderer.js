@@ -621,9 +621,10 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
 
   if (draft.platform === 'instagram_carousel') {
     const slides = draft.slides || [];
-    const newSlides = [];
-    for (let i = 0; i < slides.length; i++) {
-      const s = slides[i];
+    // Parallelize slide rendering — Wikimedia/Pexels easily handle 5
+    // concurrent lookups, and sharp encoding is CPU-bound but small.
+    // Was the source of "Image pending" sticking around 30s+ for carousels.
+    const renderOne = async (s, i) => {
       // BB-subject slides → branded composite, skip the real-photo cascade.
       if (isBBSubject(s.image_subject)) {
         try {
@@ -634,13 +635,12 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
             kind: inferBrandedKind({ ...draft, image_subject: s.image_subject }),
             outPath,
           });
-          newSlides.push({
+          return {
             ...s,
             image_url: composite.url,
             image_attribution: composite.attribution,
             composite_url: composite.url,
-          });
-          continue;
+          };
         } catch (e) {
           console.warn(`[imageRenderer] slide ${i} branded composite failed: ${e.message}`);
         }
@@ -666,13 +666,14 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
           console.warn(`[imageRenderer] slide ${i} composite failed: ${e.message}`);
         }
       }
-      newSlides.push({
+      return {
         ...s,
         image_url: hit?.url || null,
         image_attribution: hit?.attribution || null,
         composite_url: composite,
-      });
-    }
+      };
+    };
+    const newSlides = await Promise.all(slides.map((s, i) => renderOne(s, i)));
     const ready = newSlides.filter((s) => s.composite_url || s.image_url).length;
     return {
       slides: newSlides,

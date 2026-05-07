@@ -576,9 +576,11 @@ async function runDrafter({ briefDate, dryRun = false } = {}) {
     return Object.values(result.insertedIds);
   });
 
-  // Image pass — sequential to avoid hammering Wikimedia/Pexels rate limits
-  for (let i = 0; i < drafts.length; i++) {
-    const draft = drafts[i];
+  // Image pass — parallelize across drafts. saveDraftImages internally
+  // parallelizes per-slide for carousels too, so a 4-draft batch with a
+  // 5-slide carousel renders all images concurrently instead of taking
+  // 30-50s sequentially. Wikimedia/Pexels both handle the burst fine.
+  await Promise.all(drafts.map(async (draft, i) => {
     const _id = ids[i];
     try {
       const patch = await imageRenderer.saveDraftImages(draft, { draftId: _id.toString() });
@@ -593,7 +595,7 @@ async function runDrafter({ briefDate, dryRun = false } = {}) {
         { $set: { image_status: 'failed', image_error: e.message, updated_at: new Date() } }
       ));
     }
-  }
+  }));
 
   return { brief_date: date, drafts_count: drafts.length, ids: ids.map((id) => id.toString()) };
 }

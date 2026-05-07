@@ -63,10 +63,17 @@
   .status-strip .value { color: var(--text); font-weight: 600; }
   .status-strip .topic { color: var(--gold); }
 
-  /* GRID */
+  /* GRID — cards centered within columns at native widths.
+     Twitter native ≈ 600px on x.com, IG native ≈ 470px. Constraining + centering
+     makes the page read as a feed scroll rather than a dashboard form. */
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-  @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
-  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; align-items: center; }
+  .col > .card { width: 100%; max-width: 580px; }
+  .col > .platform-header { width: 100%; max-width: 580px; }
+  .col-stack { width: 100%; max-width: 580px; align-items: stretch; }
+  /* IG cards are narrower per native dimensions */
+  .col-stack .card.platform-instagram { max-width: 470px; align-self: center; }
 
   /* PLATFORM HEADER — strong visual separation between Twitter and Instagram columns */
   .platform-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px 10px 0 0; font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; position: sticky; top: 0; z-index: 5; }
@@ -156,7 +163,65 @@
   details.advanced summary::-webkit-details-marker { color: var(--muted); }
   details.advanced[open] summary { color: var(--text); margin-bottom: 6px; }
 
-  .card-actions { padding: 8px 12px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+  /* HOVER-REVEAL action row — less permanent chrome per the UI research.
+     Stays at 65% opacity until card hover/focus, fades to full. */
+  .card-actions { padding: 8px 12px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; gap: 5px; flex-wrap: wrap; align-items: center; opacity: 0.7; transition: opacity 0.15s ease; }
+  .card:hover .card-actions, .card:focus-within .card-actions { opacity: 1; }
+
+  /* ─── NATIVE-STYLE POST MOCKS (Phase 6.9 — UI research recommendation) ───
+     These elements layer ABOVE the editor to make each card feel like the
+     actual platform. The editor underneath stays functional for editing. */
+
+  /* Twitter mock header — avatar + display name + @handle + timestamp */
+  .tweet-mock-header { display: flex; gap: 10px; align-items: center; padding: 0 0 6px; }
+  .tweet-mock-header .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--bg); object-fit: cover; flex-shrink: 0; border: 1px solid var(--border2); }
+  .tweet-mock-header .name-row { font-size: 13px; line-height: 1.2; }
+  .tweet-mock-header .display-name { font-weight: 700; color: var(--text); }
+  .tweet-mock-header .handle { color: var(--muted2); font-weight: 400; margin-left: 4px; }
+  .tweet-mock-header .handle::before { content: '· now'; color: var(--muted2); font-weight: 400; margin-left: 4px; opacity: 0; }
+
+  /* Twitter editor — borderless, native font + size, focus-on-click */
+  .editor.tweet-text { font-family: -apple-system, "Segoe UI", "Inter", BlinkMacSystemFont, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.45; border: 1px solid transparent; background: transparent; padding: 4px 6px; min-height: 60px; resize: vertical; color: var(--text); border-radius: 6px; }
+  .editor.tweet-text:hover { background: var(--surface2); }
+  .editor.tweet-text:focus { background: var(--surface2); border-color: var(--twitter); outline: none; }
+
+  /* Twitter mock action row — reply, retweet, like, view, share icons */
+  .tweet-mock-actions { display: flex; gap: 0; padding: 6px 0 0; color: var(--muted2); font-size: 12px; align-items: center; justify-content: space-between; max-width: 100%; }
+  .tweet-mock-actions .act { display: inline-flex; align-items: center; gap: 4px; flex: 1; }
+  .tweet-mock-actions .act svg { width: 16px; height: 16px; opacity: 0.7; }
+
+  /* IG mock header — gradient-ring avatar + username */
+  .ig-mock-header { display: flex; gap: 10px; align-items: center; padding: 4px 0 8px; }
+  .ig-mock-header .ig-avatar-ring { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%); padding: 2px; flex-shrink: 0; }
+  .ig-mock-header .ig-avatar-ring img, .ig-mock-header .ig-avatar-ring .ig-avatar-fallback { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--bg); }
+  .ig-mock-header .ig-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--gold); }
+  .ig-mock-header .ig-username { font-weight: 600; font-size: 14px; color: var(--text); }
+  .ig-mock-header .ig-dot { color: var(--muted); }
+
+  /* IG mock action row — heart, comment, paperplane, bookmark */
+  .ig-mock-actions { display: flex; gap: 14px; padding: 8px 2px 4px; font-size: 22px; color: var(--text); align-items: center; }
+  .ig-mock-actions .right { margin-left: auto; }
+
+  /* IG "Liked by" placeholder line */
+  .ig-likes { font-size: 13px; color: var(--text); padding: 2px 0 4px; }
+  .ig-likes b { font-weight: 700; }
+
+  /* IG caption preview — username bold, caption text inline,
+     hashtags rendered as inline IG-blue text (NOT pills). */
+  .ig-caption-preview { font-size: 13px; line-height: 1.5; padding: 4px 0; word-break: break-word; max-height: 5.5em; overflow: hidden; }
+  .ig-caption-preview .ig-username { font-weight: 700; margin-right: 4px; color: var(--text); }
+  .ig-caption-preview .ht, .ig-caption-preview .mt { color: var(--blue); font-weight: 500; }
+  .ig-caption-preview .more-link { color: var(--muted2); cursor: pointer; }
+  .ig-caption-preview.expanded { max-height: none; }
+
+  /* Carousel "1/N" pill on the image (native IG style) */
+  .ig-card-num { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.72); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; pointer-events: none; z-index: 3; }
+
+  /* Carousel dot row under the image (native IG style) */
+  .ig-dots { display: flex; justify-content: center; gap: 5px; padding: 6px 0 4px; background: var(--surface); }
+  .ig-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); cursor: pointer; transition: all 0.12s ease; flex-shrink: 0; }
+  .ig-dots .dot.active { background: var(--blue); transform: scale(1.2); }
+  .ig-dots .dot:hover { background: var(--muted2); }
 
   /* Scene-prompt panel — hidden until the operator clicks 🎨 Generate scene.
      Operator-triggered AI image generation (Replicate InstantID, ~$0.05/call). */
@@ -316,16 +381,21 @@ function renderTwitterCard(d) {
         ${variantChip}
         <span class="status-pill ${status}">${status}</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);">${escapeHtml(d.format_hint || 'take')}</div>
+      <div style="font-size:10px;color:var(--muted);" title="${escapeHtml(d.topic || '')}">${escapeHtml(d.format_hint || 'take')}</div>
     </div>
     <div class="collapsed-preview">${escapeHtml((d.text || '').slice(0, 120))}…</div>
-    <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
     <div class="card-body">
-      <textarea class="editor" data-field="text" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.text || '')}</textarea>
+      <div class="tweet-mock-header">
+        <img class="avatar" src="/bb-logo.png" alt="" onerror="this.style.display='none'"/>
+        <div class="name-row">
+          <span class="display-name">Bitcoin Bay</span>
+          <span class="handle">@BitcoinBay_com · now</span>
+        </div>
+      </div>
+      <textarea class="editor tweet-text" data-field="text" ${isLocked ? 'disabled' : ''} placeholder="Type your tweet…">${escapeHtml(d.text || '')}</textarea>
       <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${TWITTER_LIMIT}</div>
       ${sourceChip}
       ${imageBlock}
-      ${renderHashtagRow(d, isLocked)}
       ${renderAdvanced(d, isLocked)}
     </div>
     ${renderScenePanel(d)}
@@ -348,24 +418,48 @@ function renderInstagramSingleCard(d) {
       <div class="card-head-left">
         <span class="status-pill ${status}">${status}</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);">single image</div>
+      <div style="font-size:10px;color:var(--muted);" title="${escapeHtml(d.topic || '')}">single image</div>
     </div>
     <div class="collapsed-preview">${escapeHtml((d.caption || '').slice(0, 120))}…</div>
-    <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
-    <div class="card-body">
-      ${renderImageBlock(d, 'above-text', 'large')}
-      <div class="field-row" style="margin-top:0;">
-        <div class="field-label">Image overlay text (≤8 words)</div>
-        <input class="field-input" data-field="image_overlay_text" value="${escapeHtml(d.image_overlay_text || '')}" ${isLocked ? 'disabled' : ''} />
+    <div class="card-body" style="padding-bottom:6px;">
+      <div class="ig-mock-header">
+        <div class="ig-avatar-ring"><img src="/bb-logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ig-avatar-fallback',textContent:'BB'}))"/></div>
+        <span class="ig-username">bitcoin_bay</span>
+        <span class="ig-dot">·</span>
+        <span style="color:var(--muted2); font-size:12px;">now</span>
       </div>
-      <div class="field-row">
-        <div class="field-label">Caption</div>
-        <textarea class="editor ig" data-field="caption" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.caption || '')}</textarea>
-        <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
+    </div>
+    ${renderImageBlock(d, 'above-text', 'large')}
+    <div class="card-body" style="padding-top:6px;">
+      <div class="ig-mock-actions">
+        <span title="Like">♡</span>
+        <span title="Comment">💬</span>
+        <span title="Share">⤴</span>
+        <span class="right" title="Save">🔖</span>
       </div>
+      <div class="ig-likes">Liked by <b>fans</b> and others</div>
+      ${renderIgCaptionPreview(d)}
+      <details class="advanced">
+        <summary>Edit caption + hashtags + image overlay</summary>
+        <div class="field-row">
+          <div class="field-label">Caption</div>
+          <textarea class="editor ig" data-field="caption" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.caption || '')}</textarea>
+          <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Hashtags (comma-separated)</div>
+          <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Image overlay text (≤8 words)</div>
+          <input class="field-input" data-field="image_overlay_text" value="${escapeHtml(d.image_overlay_text || '')}" ${isLocked ? 'disabled' : ''} />
+        </div>
+        <div class="field-row">
+          <div class="field-label">Override image URL (manual)</div>
+          <input class="field-input" data-field="image_url" placeholder="paste a public image URL" value="${escapeHtml(d.image_url_override || '')}" ${isLocked ? 'disabled' : ''} />
+        </div>
+      </details>
       ${sourceChip}
-      ${renderHashtagRow(d, isLocked)}
-      ${renderAdvanced(d, isLocked)}
     </div>
     ${renderScenePanel(d)}
     ${renderActions(d, isLocked)}
@@ -381,60 +475,121 @@ function renderInstagramCarouselCard(d) {
   const isLocked = ['posted', 'skipped'].includes(status);
   const isCollapsed = isLocked;
 
-  // Thumbnail strip — visual preview of every slide; click to focus
-  const thumbs = slides.map((s, i) => {
-    const composite = s.composite_url || s.image_url || '';
-    const role = (s.slide_role || '').replace(/_/g, ' ');
-    return `<div class="slide-thumb ${i === cur ? 'active' : ''}" data-slide="${i}">
-      ${composite
-        ? `<img src="${escapeHtml(composite)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'thumb-empty',textContent:'?'}))"/>`
-        : `<div class="thumb-empty">⏳</div>`}
-      <span class="thumb-num">${i + 1}</span>
-      <span class="thumb-role">${escapeHtml(role)}</span>
-    </div>`;
-  }).join('');
+  // Native-style dot row (replaces the giant thumbnail strip per UI research).
+  // Click a dot to switch the active slide.
+  const dots = slides.map((_, i) =>
+    `<div class="dot ${i === cur ? 'active' : ''}" data-slide="${i}" title="Slide ${i + 1}"></div>`
+  ).join('');
 
-  // Per-slide editor — image-first with drag-positioned overlay headline +
-  // color picker (Phase 6.4). The composite_url is the baked image; the
-  // .overlay-headline div is layered on top so the operator can drag it to a
-  // new position. Save Layout PATCHes the new coords + queues a re-render.
-  const panels = slides.map((s, i) => {
-    const composite = s.composite_url || s.image_url || '';
-    const overlayX = Number.isFinite(s.overlay_x) ? s.overlay_x : 5.5;
-    const overlayY = Number.isFinite(s.overlay_y) ? s.overlay_y : 92;
-    const overlayColor = (typeof s.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(s.overlay_color))
-      ? s.overlay_color : '#FFFFFF';
-    const compositeBlock = composite
-      ? `<div class="image-preview large overlay-canvas" data-slide-index="${i}">
-           <img src="${escapeHtml(composite)}" alt="" onerror="this.parentElement.querySelector('.overlay-headline').style.display='none'; this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',textContent:'image not yet rendered'}))"/>
-           <div class="overlay-headline${isLocked ? '' : ' draggable'}"
-                data-overlay-x="${overlayX}" data-overlay-y="${overlayY}"
-                style="left:${overlayX}%; top:${overlayY}%; color:${escapeHtml(overlayColor)};">${escapeHtml(s.headline || '')}</div>
-           ${isLocked ? '' : `<div class="image-corner-actions">
-             <button class="corner-btn" data-action="generate-art" data-slide-index="${i}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
-           </div>`}
-           <div class="image-meta">
-             <span>${escapeHtml(s.image_attribution || '')}</span>
-             <a class="download-btn" download="slide-${i + 1}.jpg" href="${escapeHtml(composite)}" title="Download this slide">💾</a>
-           </div>
-         </div>`
-      : `<div class="image-preview large"><div class="placeholder">Image pending — paste URL below or regenerate this slide.</div></div>`;
-    const colorRow = isLocked ? '' : `
-      <div class="color-row">
-        <span class="field-label">Headline color</span>
-        <input type="color" data-overlay-color data-slide-index="${i}" value="${escapeHtml(overlayColor)}" />
-        <button class="color-swatch${overlayColor.toUpperCase() === '#FFFFFF' ? ' active' : ''}" data-color="#FFFFFF" data-slide-index="${i}" style="background:#FFFFFF;" title="White"></button>
-        <button class="color-swatch${overlayColor.toUpperCase() === '#F7941D' ? ' active' : ''}" data-color="#F7941D" data-slide-index="${i}" style="background:#F7941D;" title="BB Gold"></button>
-        <button class="color-swatch${overlayColor.toUpperCase() === '#F26522' ? ' active' : ''}" data-color="#F26522" data-slide-index="${i}" style="background:#F26522;" title="BB Orange"></button>
-        <button class="color-swatch${overlayColor.toUpperCase() === '#22C55E' ? ' active' : ''}" data-color="#22C55E" data-slide-index="${i}" style="background:#22C55E;" title="Accent green"></button>
-        <button class="btn small primary" data-action="apply-layout" data-slide-index="${i}" style="margin-left:auto;">💾 Save layout</button>
-      </div>`;
-    return `<div class="slide-panel ${i === cur ? 'active' : ''}" data-slide="${i}">
+  // Active slide's image — bigger, with "1/N" pill and corner 🎨 button.
+  // Fits the IG-native pattern: image dominates the card.
+  const active = slides[cur] || {};
+  const activeComposite = active.composite_url || active.image_url || '';
+  const activeOverlayX = Number.isFinite(active.overlay_x) ? active.overlay_x : 5.5;
+  const activeOverlayY = Number.isFinite(active.overlay_y) ? active.overlay_y : 92;
+  const activeOverlayColor = (typeof active.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(active.overlay_color))
+    ? active.overlay_color : '#FFFFFF';
+  const heroImage = activeComposite
+    ? `<div class="image-preview large overlay-canvas" data-slide-index="${cur}">
+         <img src="${escapeHtml(activeComposite)}" alt="" onerror="this.parentElement.querySelector('.overlay-headline').style.display='none'"/>
+         <div class="overlay-headline${isLocked ? '' : ' draggable'}"
+              data-overlay-x="${activeOverlayX}" data-overlay-y="${activeOverlayY}"
+              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${escapeHtml(active.headline || '')}</div>
+         ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
+         ${isLocked ? '' : `<div class="image-corner-actions">
+           <button class="corner-btn" data-action="generate-art" data-slide-index="${cur}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
+         </div>`}
+         <div class="image-meta">
+           <span>${escapeHtml(active.image_attribution || '')}</span>
+           ${activeComposite ? `<a class="download-btn" download="slide-${cur + 1}.jpg" href="${escapeHtml(activeComposite)}" title="Download this slide">💾</a>` : ''}
+         </div>
+       </div>`
+    : `<div class="image-preview large"><div class="placeholder">Image rendering — refresh in 30s, or paste a URL in the editor below.</div></div>`;
+
+  // Carousel-level tools (between hero image / dot row and active-slide editor)
+  const tools = isLocked ? '' : `
+    <div class="carousel-tools">
+      <button class="btn small" data-action="regen-all-images">🔁 Regen all images</button>
+      <button class="btn small" data-action="add-cta-slide" ${slides.length >= 10 ? 'disabled' : ''}>➕ Add BB CTA slide</button>
+      <button class="btn small" data-action="download-zip" ${slides.length === 0 ? 'disabled' : ''}>📦 Download all (ZIP)</button>
+    </div>`;
+
+  // Active-slide editor (only the currently-focused slide gets the editing
+  // surface — operator switches via the dot row above). Per UI research, the
+  // old per-slide-stacked-vertically layout was making 1500px-tall cards.
+  const activePanelHtml = slides[cur] ? buildSlideEditor(d, slides[cur], cur, isLocked, slides.length) : '';
+
+  return `<div class="card platform-instagram ${status}${isCollapsed ? ' collapsed' : ''}" data-id="${d._id}">
+    <div class="card-head">
+      <div class="card-head-left">
+        ${d.athlete_crypto_pin ? '<span class="pill orange">🚨 ATHLETE×CRYPTO</span>' : ''}
+        <span class="status-pill ${status}">${status}</span>
+        <span class="pill" style="background:rgba(74,158,255,0.1); color: var(--blue); border-color: rgba(74,158,255,0.3);">${slides.length}-slide carousel</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);" title="${escapeHtml(d.topic || '')}">${escapeHtml((d.topic || '').slice(0, 32))}${(d.topic || '').length > 32 ? '…' : ''}</div>
+    </div>
+    <div class="collapsed-preview">${escapeHtml((d.caption || '').slice(0, 120))}…</div>
+    <div class="card-body" style="padding-bottom:6px;">
+      <div class="ig-mock-header">
+        <div class="ig-avatar-ring"><img src="/bb-logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ig-avatar-fallback',textContent:'BB'}))"/></div>
+        <span class="ig-username">bitcoin_bay</span>
+        <span class="ig-dot">·</span>
+        <span style="color:var(--muted2); font-size:12px;">now</span>
+      </div>
+    </div>
+    ${slides.length === 0
+      ? `<div class="slide-strip-empty">No slides yet — click <b>↻ Run drafter now</b> at the top to generate today's batch.</div>`
+      : `${heroImage}<div class="ig-dots">${dots}</div>`}
+    <div class="card-body" style="padding-top:6px; padding-bottom:8px;">
+      <div class="ig-mock-actions">
+        <span title="Like">♡</span>
+        <span title="Comment">💬</span>
+        <span title="Share">⤴</span>
+        <span class="right" title="Save">🔖</span>
+      </div>
+      <div class="ig-likes">Liked by <b>fans</b> and others</div>
+      ${renderIgCaptionPreview(d)}
+      <details class="advanced">
+        <summary>Edit deck caption + hashtags</summary>
+        <div class="field-row">
+          <div class="field-label">Caption</div>
+          <textarea class="editor ig" data-field="caption" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.caption || '')}</textarea>
+          <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Hashtags (comma-separated)</div>
+          <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
+        </div>
+      </details>
+    </div>
+    ${tools}
+    ${activePanelHtml ? `<div class="card-body" style="border-top: 1px dashed var(--border);">${activePanelHtml}</div>` : ''}
+    ${renderActions(d, isLocked)}
+  </div>`;
+}
+
+// Editor for the currently-active carousel slide. Layered ABOVE the existing
+// scene-panel logic — kept compact since only one slide is editable at a time.
+function buildSlideEditor(d, s, i, isLocked, totalSlides) {
+  const overlayColor = (typeof s.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(s.overlay_color))
+    ? s.overlay_color : '#FFFFFF';
+  const colorRow = isLocked ? '' : `
+    <div class="color-row">
+      <span class="field-label">Headline color</span>
+      <input type="color" data-overlay-color data-slide-index="${i}" value="${escapeHtml(overlayColor)}" />
+      <button class="color-swatch${overlayColor.toUpperCase() === '#FFFFFF' ? ' active' : ''}" data-color="#FFFFFF" data-slide-index="${i}" style="background:#FFFFFF;" title="White"></button>
+      <button class="color-swatch${overlayColor.toUpperCase() === '#000000' ? ' active' : ''}" data-color="#000000" data-slide-index="${i}" style="background:#000000;" title="Black"></button>
+      <button class="color-swatch${overlayColor.toUpperCase() === '#0A1628' ? ' active' : ''}" data-color="#0A1628" data-slide-index="${i}" style="background:#0A1628;" title="BB Navy"></button>
+      <button class="color-swatch${overlayColor.toUpperCase() === '#F7941D' ? ' active' : ''}" data-color="#F7941D" data-slide-index="${i}" style="background:#F7941D;" title="BB Gold"></button>
+      <button class="color-swatch${overlayColor.toUpperCase() === '#F26522' ? ' active' : ''}" data-color="#F26522" data-slide-index="${i}" style="background:#F26522;" title="BB Orange"></button>
+      <button class="color-swatch${overlayColor.toUpperCase() === '#22C55E' ? ' active' : ''}" data-color="#22C55E" data-slide-index="${i}" style="background:#22C55E;" title="Accent green"></button>
+      <button class="btn small primary" data-action="apply-layout" data-slide-index="${i}" style="margin-left:auto;">💾 Save layout</button>
+    </div>`;
+  return `<div class="slide-panel active" data-slide="${i}">
       <div class="slide-panel-head">
         <span class="slide-role-pill">${escapeHtml((s.slide_role || '').replace(/_/g, ' '))}</span>
-        <span style="font-size:10px;color:var(--muted);">slide ${i + 1} of ${slides.length}${s.is_cta_slide ? ' · BB CTA' : ''}</span>
+        <span style="font-size:10px;color:var(--muted);">slide ${i + 1} of ${totalSlides}${s.is_cta_slide ? ' · BB CTA' : ''}</span>
       </div>
-      ${compositeBlock}
       ${colorRow}
       <div class="field-row">
         <div class="field-label">Headline (on-image overlay, ≤8 words)</div>
@@ -455,41 +610,6 @@ function renderInstagramCarouselCard(d) {
       </details>
       ${renderScenePanel(d, i)}
     </div>`;
-  }).join('');
-
-  // Carousel-level tools (between thumbnail strip and slide editor)
-  const tools = isLocked ? '' : `
-    <div class="carousel-tools">
-      <button class="btn small" data-action="regen-all-images">🔁 Regen all images</button>
-      <button class="btn small" data-action="add-cta-slide" ${slides.length >= 10 ? 'disabled' : ''}>➕ Add BB CTA slide</button>
-      <button class="btn small" data-action="download-zip" ${slides.length === 0 ? 'disabled' : ''}>📦 Download all (ZIP)</button>
-    </div>`;
-
-  return `<div class="card platform-instagram ${status}${isCollapsed ? ' collapsed' : ''}" data-id="${d._id}">
-    <div class="card-head">
-      <div class="card-head-left">
-        ${d.athlete_crypto_pin ? '<span class="pill orange">🚨 ATHLETE×CRYPTO</span>' : ''}
-        <span class="status-pill ${status}">${status}</span>
-        <span class="pill" style="background:rgba(74,158,255,0.1); color: var(--blue); border-color: rgba(74,158,255,0.3);">${slides.length}-slide carousel</span>
-      </div>
-    </div>
-    <div class="collapsed-preview">${escapeHtml((d.caption || '').slice(0, 120))}…</div>
-    <div class="topic-line"><strong>Topic:</strong> ${escapeHtml(d.topic || '')}</div>
-    ${slides.length === 0
-      ? `<div class="slide-strip-empty">No slides yet — click <b>↻ Run drafter now</b> at the top to generate today's batch, or paste an image URL in a panel below to seed the carousel.</div>`
-      : `<div class="slide-strip">${thumbs}</div>`}
-    ${tools}
-    <div class="card-body">${panels || '<div class="empty-state"><p>No slides yet.</p></div>'}</div>
-    <div class="card-body" style="padding-top:0; border-top: 1px dashed var(--border);">
-      <div class="field-row" style="margin-top:8px;">
-        <div class="field-label">Deck caption (shown under all slides)</div>
-        <textarea class="editor ig" data-field="caption" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.caption || '')}</textarea>
-        <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
-      </div>
-      ${renderHashtagRow(d, isLocked)}
-    </div>
-    ${renderActions(d, isLocked)}
-  </div>`;
 }
 
 function renderImageBlock(d, position = 'below-text', size = '') {
@@ -544,6 +664,27 @@ function renderVariantChip(d) {
   const kind = d.variants[idx]?.variant_kind || 'meme';
   const label = kind === 'professional' ? 'NEWS' : 'MEME';
   return `<span class="variant-chip ${kind}">${label}</span>`;
+}
+
+// Render plain text with inline-blue hashtags and @mentions, line breaks
+// preserved. The single biggest "feels native" lever per UI research.
+function renderInlineText(text) {
+  return escapeHtml(text)
+    .replace(/(#[\w]+)/g, '<span class="ht">$1</span>')
+    .replace(/(@[\w_]+)/g, '<span class="mt">$1</span>')
+    .replace(/\n/g, '<br>');
+}
+
+// Build the IG-style caption preview: bold username, then caption text +
+// hashtags inline. Hashtags come from d.hashtags array (the prompt schema
+// keeps them separate); we visually inline them at the end of the caption.
+function renderIgCaptionPreview(d) {
+  const caption = d.caption || '';
+  const tags = (d.hashtags || []).map((t) => '#' + String(t).replace(/^#/, '')).join(' ');
+  const combined = caption + (tags ? '\n\n' + tags : '');
+  return `<div class="ig-caption-preview" data-ig-caption-preview>
+    <span class="ig-username">bitcoin_bay</span><span class="caption-body">${renderInlineText(combined)}</span>
+  </div>`;
 }
 
 // Build a context-aware scene-prompt suggestion when Claude didn't produce one.
@@ -631,13 +772,21 @@ function wireCardActions(cardEl) {
     });
   });
 
-  // Slide thumb switching (carousels only) — replaces the old text slide-tabs
-  cardEl.querySelectorAll('.slide-thumb').forEach((thumb) => {
-    thumb.addEventListener('click', () => {
-      const idx = Number(thumb.dataset.slide);
+  // Slide switching via the native-style dot row under the carousel image.
+  // Re-renders the whole card so the active-slide editor + hero image swap.
+  cardEl.querySelectorAll('.ig-dots .dot[data-slide]').forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const idx = Number(dot.dataset.slide);
       CURRENT_SLIDE[id] = idx;
-      cardEl.querySelectorAll('.slide-thumb').forEach((t) => t.classList.toggle('active', t === thumb));
-      cardEl.querySelectorAll('.slide-panel').forEach((p) => p.classList.toggle('active', Number(p.dataset.slide) === idx));
+      // Just re-render this card from current DRAFTS state
+      const draft = DRAFTS.find((x) => x._id === id);
+      if (!draft) return;
+      const newHtml = renderInstagramCarouselCard(draft);
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = newHtml;
+      const newCard = wrapper.firstElementChild;
+      cardEl.replaceWith(newCard);
+      wireCardActions(newCard);
     });
   });
 
