@@ -1156,9 +1156,15 @@ function safeText(s) {
 // Render plain text with inline-blue hashtags and @mentions, line breaks
 // preserved. The single biggest "feels native" lever per UI research.
 function renderInlineText(text) {
+  // The hashtag/mention regexes must NOT match inside a numeric character
+  // entity like `&#39;` (apostrophe). Without the lookbehind, `#39` inside
+  // `&#39;` matched the hashtag pattern and wrapped to `&<span>#39</span>;`,
+  // which the browser then rendered as the literal entity sequence on screen.
+  // Lookbehind requires the char before `#`/`@` to NOT be `&` or another
+  // word char (so we still match `#tag` at start-of-line or after a space).
   return escapeHtml(decodeHtmlEntities(text))
-    .replace(/(#[\w]+)/g, '<span class="ht">$1</span>')
-    .replace(/(@[\w_]+)/g, '<span class="mt">$1</span>')
+    .replace(/(^|[^&\w])(#[\w]+)/g, '$1<span class="ht">$2</span>')
+    .replace(/(^|[^&\w])(@[\w_]+)/g, '$1<span class="mt">$2</span>')
     .replace(/\n/g, '<br>');
 }
 
