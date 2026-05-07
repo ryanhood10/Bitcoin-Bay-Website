@@ -180,28 +180,23 @@
   .tweet-mock-header .handle { color: var(--muted2); font-weight: 400; margin-left: 4px; }
   .tweet-mock-header .handle::before { content: '· now'; color: var(--muted2); font-weight: 400; margin-left: 4px; opacity: 0; }
 
-  /* Twitter editor — borderless, native font + size, focus-on-click */
-  .editor.tweet-text { font-family: -apple-system, "Segoe UI", "Inter", BlinkMacSystemFont, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.45; border: 1px solid transparent; background: transparent; padding: 4px 6px; min-height: 60px; resize: vertical; color: var(--text); border-radius: 6px; }
-  .editor.tweet-text:hover { background: var(--surface2); }
-  .editor.tweet-text:focus { background: var(--surface2); border-color: var(--twitter); outline: none; }
-
-  /* Click-to-edit display layer (Buffer pattern). Shown by default with
-     inline blue hashtags; click to swap in the textarea for editing.
-     Blur swaps back + auto-saves. */
-  .text-display { font-family: -apple-system, "Segoe UI", "Inter", BlinkMacSystemFont, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.45; border: 1px solid transparent; padding: 4px 6px; min-height: 60px; color: var(--text); border-radius: 6px; cursor: text; white-space: pre-wrap; word-wrap: break-word; }
-  .text-display:hover { background: var(--surface2); border-color: var(--border); }
-  .text-display .ht, .text-display .mt { color: var(--twitter); font-weight: 500; }
-  .text-display .placeholder { color: var(--muted); font-style: italic; }
-  .text-display.empty::before { content: 'Click to write your tweet…'; color: var(--muted); font-style: italic; }
-  .editor.tweet-text.hidden { display: none; }
-  .text-display.hidden { display: none; }
-
-  /* Same pattern for IG caption preview when click-to-edit is wired */
-  .ig-caption-preview { cursor: text; padding: 4px 6px; border-radius: 6px; transition: background 0.12s ease; }
-  .ig-caption-preview:hover { background: var(--surface2); }
-  .ig-caption-edit { display: none; padding: 6px 0 0; }
-  .ig-caption-edit.editing { display: block; }
-  .ig-caption-preview.editing { display: none; }
+  /* ─── UNIFIED contenteditable POST TEXT (replaces text-display + textarea
+     swap pattern). Same element is the display AND the editor — sizing,
+     padding, font, line-height all stay identical regardless of focus state.
+     Hashtags + @mentions render as inline blue spans both at rest and while
+     editing. The blur handler re-renders to clean up any messy span structure
+     introduced by typing inside spans. */
+  .post-text { font-family: -apple-system, "Segoe UI", "Inter", BlinkMacSystemFont, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.45; border: 1px solid transparent; background: transparent; padding: 6px 8px; min-height: 60px; color: var(--text); border-radius: 6px; outline: none; white-space: pre-wrap; word-wrap: break-word; cursor: text; transition: background 0.12s ease, border-color 0.12s ease; }
+  .post-text:hover { background: var(--surface2); }
+  .post-text:focus { background: var(--surface2); border-color: var(--twitter); }
+  .post-text .ht, .post-text .mt { color: var(--twitter); font-weight: 500; }
+  /* IG-flavored variant — slightly smaller line-height to match IG feed */
+  .post-text.ig { font-size: 14px; line-height: 1.4; min-height: 50px; padding: 4px 0; border: none; }
+  .post-text.ig:hover { background: var(--surface2); border-radius: 4px; }
+  .post-text.ig:focus { background: var(--surface2); border-radius: 4px; }
+  .post-text.ig .ht, .post-text.ig .mt { color: var(--blue); }
+  /* Empty-state placeholder via :empty + ::before (works on contenteditable) */
+  .post-text:empty::before { content: attr(data-placeholder); color: var(--muted); font-style: italic; pointer-events: none; }
 
   /* Twitter mock action row — reply, retweet, like, view, share icons */
   .tweet-mock-actions { display: flex; gap: 0; padding: 6px 0 0; color: var(--muted2); font-size: 12px; align-items: center; justify-content: space-between; max-width: 100%; }
@@ -456,8 +451,7 @@ function renderTwitterCard(d) {
           <span class="handle">@BitcoinBay_com · now</span>
         </div>
       </div>
-      <div class="text-display${(d.text || '').trim() ? '' : ' empty'}" data-display-for="text">${renderInlineText(d.text || '')}</div>
-      <textarea class="editor tweet-text hidden" data-field="text" ${isLocked ? 'disabled' : ''} placeholder="Type your tweet…">${escapeHtml(d.text || '')}</textarea>
+      <div class="post-text" ${isLocked ? '' : 'contenteditable="true"'} data-field="text" data-placeholder="Type your tweet…" spellcheck="true">${renderInlineText(d.text || '')}</div>
       <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${TWITTER_LIMIT}</div>
       ${sourceChip}
       ${imageBlock}
@@ -503,20 +497,12 @@ function renderInstagramSingleCard(d) {
         <span class="right" title="Save">🔖</span>
       </div>
       <div class="ig-likes">Liked by <b>fans</b> and others</div>
-      ${renderIgCaptionPreview(d)}
+      ${renderIgCaptionPreview(d, isLocked)}
+      <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
       <details class="advanced">
-        <summary>Edit caption + hashtags + image overlay</summary>
+        <summary>✏️ More edits — image overlay text + manual URL override</summary>
         <div class="field-row">
-          <div class="field-label">Caption</div>
-          <textarea class="editor ig" data-field="caption" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.caption || '')}</textarea>
-          <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
-        </div>
-        <div class="field-row">
-          <div class="field-label">Hashtags (comma-separated)</div>
-          <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
-        </div>
-        <div class="field-row">
-          <div class="field-label">Image overlay text (≤8 words)</div>
+          <div class="field-label">Image overlay text (≤8 words, shown on the photo)</div>
           <input class="field-input" data-field="image_overlay_text" value="${escapeHtml(d.image_overlay_text || '')}" ${isLocked ? 'disabled' : ''} />
         </div>
         <div class="field-row">
@@ -626,19 +612,8 @@ function renderInstagramCarouselCard(d) {
         <span class="right" title="Save">🔖</span>
       </div>
       <div class="ig-likes">Liked by <b>fans</b> and others</div>
-      ${renderIgCaptionPreview(d)}
-      <details class="advanced">
-        <summary>Edit deck caption + hashtags</summary>
-        <div class="field-row">
-          <div class="field-label">Caption</div>
-          <textarea class="editor ig" data-field="caption" ${isLocked ? 'disabled' : ''}>${escapeHtml(d.caption || '')}</textarea>
-          <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
-        </div>
-        <div class="field-row">
-          <div class="field-label">Hashtags (comma-separated)</div>
-          <input class="field-input" data-field="hashtags" value="${escapeHtml((d.hashtags || []).join(', '))}" ${isLocked ? 'disabled' : ''} />
-        </div>
-      </details>
+      ${renderIgCaptionPreview(d, isLocked)}
+      <div class="char-count ${overLimit ? 'over' : ''}" data-counter><span class="len">${len}</span> / ${IG_CAPTION_LIMIT}</div>
     </div>
     ${tools}
     ${activePanelHtml ? `<div class="card-body" style="border-top: 1px dashed var(--border);">${activePanelHtml}</div>` : ''}
@@ -881,24 +856,40 @@ async function actionDraftFromGame(eventId, leaguePath) {
 }
 
 
+// Decode HTML entities back to characters. Defensive — Claude (or some
+// intermediate layer) occasionally emits text with `&#39;` for apostrophes,
+// `&amp;` for &, etc. Without this, escapeHtml below would re-escape
+// `&#39;` → `&amp;#39;` which renders as the literal text `&#39;` on screen.
+// Was the source of "the players&#39; unions" showing literally in the IG
+// caption preview.
+function decodeHtmlEntities(s) {
+  if (!s) return '';
+  const t = document.createElement('textarea');
+  t.innerHTML = String(s);
+  return t.value;
+}
+
 // Render plain text with inline-blue hashtags and @mentions, line breaks
 // preserved. The single biggest "feels native" lever per UI research.
 function renderInlineText(text) {
-  return escapeHtml(text)
+  return escapeHtml(decodeHtmlEntities(text))
     .replace(/(#[\w]+)/g, '<span class="ht">$1</span>')
     .replace(/(@[\w_]+)/g, '<span class="mt">$1</span>')
     .replace(/\n/g, '<br>');
 }
 
-// Build the IG-style caption preview: bold username, then caption text +
-// hashtags inline. Hashtags come from d.hashtags array (the prompt schema
-// keeps them separate); we visually inline them at the end of the caption.
-function renderIgCaptionPreview(d) {
+// IG caption + hashtags as a single contenteditable. Operator types caption
+// and hashtags inline (with #tag syntax); on blur we extract trailing
+// hashtags into the d.hashtags array and store the bare caption in d.caption.
+// The username sits next to (not inside) the editable region so it can't
+// be accidentally edited.
+function renderIgCaptionPreview(d, isLocked) {
   const caption = d.caption || '';
   const tags = (d.hashtags || []).map((t) => '#' + String(t).replace(/^#/, '')).join(' ');
   const combined = caption + (tags ? '\n\n' + tags : '');
-  return `<div class="ig-caption-preview" data-ig-caption-preview>
-    <span class="ig-username">bitcoin_bay</span><span class="caption-body">${renderInlineText(combined)}</span>
+  return `<div class="ig-caption-preview">
+    <span class="ig-username">bitcoin_bay</span>
+    <span class="post-text ig" ${isLocked ? '' : 'contenteditable="true"'} data-field="caption_with_tags" data-placeholder="Write a caption…" spellcheck="true">${renderInlineText(combined)}</span>
   </div>`;
 }
 
@@ -1012,60 +1003,76 @@ function wireCardActions(cardEl) {
     });
   });
 
-  // Click-to-edit on the styled text-display (Buffer pattern). The display
-  // shows blue inline hashtags; click swaps in the textarea for editing;
-  // blur swaps back + auto-saves.
-  cardEl.querySelectorAll('.text-display[data-display-for]').forEach((display) => {
-    display.addEventListener('click', () => {
-      const field = display.dataset.displayFor;
-      const ta = cardEl.querySelector(`textarea[data-field="${field}"]`);
-      if (!ta || ta.disabled) return;
-      display.classList.add('hidden');
-      ta.classList.remove('hidden');
-      ta.focus();
-      // Move cursor to the end
-      try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (_) {}
-    });
-  });
-  cardEl.querySelectorAll('.editor.tweet-text, .editor.ig').forEach((ta) => {
-    ta.addEventListener('blur', async () => {
-      const field = ta.dataset.field;
-      const display = cardEl.querySelector(`.text-display[data-display-for="${field}"]`)
-                   || cardEl.querySelector(`.ig-caption-preview[data-ig-caption-preview]`);
-      if (!display) return;
-      // Re-render the styled preview from current textarea value
-      if (display.classList.contains('text-display')) {
-        const text = ta.value;
-        display.innerHTML = renderInlineText(text);
-        display.classList.toggle('empty', !text.trim());
-      } else if (display.classList.contains('ig-caption-preview')) {
-        // Rebuild caption preview using current draft data + new caption
-        const draft = DRAFTS.find((x) => x._id === id);
-        if (draft) {
-          draft.caption = ta.value;
-          display.outerHTML = renderIgCaptionPreview(draft);
-        }
+  // Unified contenteditable .post-text: display IS the editor. No toggle.
+  // On input, update the char counter live (no re-render — that would jump
+  // the cursor). On blur, extract plain text + re-render styled spans + save.
+  cardEl.querySelectorAll('.post-text[contenteditable="true"]').forEach((el) => {
+    // Live char counter (twitter only — has data-field="text")
+    el.addEventListener('input', () => {
+      const counter = el.parentElement.querySelector('[data-counter]')
+                   || el.closest('.card-body')?.querySelector('[data-counter]')
+                   || cardEl.querySelector('[data-counter]');
+      if (counter) {
+        const len = (el.innerText || '').length;
+        const limit = el.dataset.field === 'text' ? TWITTER_LIMIT : IG_CAPTION_LIMIT;
+        counter.querySelector('.len').textContent = len;
+        counter.classList.toggle('over', len > limit);
       }
-      ta.classList.add('hidden');
-      display.classList.remove('hidden');
-      // Auto-save
-      try { await actionSave(id, cardEl); } catch (e) { console.warn('auto-save failed', e); }
     });
-  });
-
-  // Click on IG caption preview → open the Advanced expander (where the
-  // caption textarea lives) for editing.
-  cardEl.querySelectorAll('.ig-caption-preview[data-ig-caption-preview]').forEach((preview) => {
-    preview.addEventListener('click', () => {
-      const advanced = cardEl.querySelector('details.advanced');
-      if (advanced && !advanced.open) {
-        advanced.open = true;
-        const ta = advanced.querySelector('textarea[data-field="caption"]');
-        if (ta) {
-          ta.focus();
-          try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (_) {}
+    el.addEventListener('blur', async () => {
+      const field = el.dataset.field;
+      const text = (el.innerText || '').replace(/ /g, ' ').trim();  // normalize NBSPs
+      const draft = DRAFTS.find((x) => x._id === id);
+      if (!draft) return;
+      let savePayload = {};
+      if (field === 'text') {
+        if (draft.text === text) return;  // no change, skip
+        draft.text = text;
+        savePayload = { text };
+      } else if (field === 'caption_with_tags') {
+        // Auto-extract trailing hashtag block. Pattern: split on last \n\n;
+        // if the chunk after is all #words, treat it as the hashtags array.
+        // Otherwise keep everything in caption.
+        const parts = text.split(/\n\n+/);
+        const tail = parts[parts.length - 1] || '';
+        const tailIsTags = parts.length > 1 && /^[#\w\s]+$/.test(tail) && /#/.test(tail);
+        let captionStr, tagsArr;
+        if (tailIsTags) {
+          captionStr = parts.slice(0, -1).join('\n\n').trim();
+          tagsArr = (tail.match(/#[\w]+/g) || []).map((t) => t.replace(/^#/, '').toLowerCase());
+        } else {
+          captionStr = text;
+          tagsArr = [];
         }
+        if (draft.caption === captionStr && JSON.stringify(draft.hashtags || []) === JSON.stringify(tagsArr)) {
+          return;
+        }
+        draft.caption = captionStr;
+        draft.hashtags = tagsArr;
+        savePayload = { caption: captionStr, hashtags: tagsArr };
       }
+      // Re-render the contenteditable to clean up any messy span structure
+      // typing introduced (operator may have typed inside an .ht span etc.)
+      el.innerHTML = renderInlineText(field === 'caption_with_tags'
+        ? `${draft.caption || ''}${(draft.hashtags || []).length ? '\n\n' + (draft.hashtags || []).map((t) => '#' + t).join(' ') : ''}`
+        : (draft.text || ''));
+      // PATCH backend
+      try {
+        const res = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(savePayload),
+        });
+        if (!res.ok) throw new Error('save failed');
+      } catch (e) {
+        toast('Auto-save failed: ' + e.message, 'error');
+      }
+    });
+    // Paste as plain text only — prevents weird HTML from Word/etc. ending up
+    // in the contenteditable
+    el.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
     });
   });
 
@@ -1234,12 +1241,31 @@ function gatherEdits(cardEl) {
   const out = {};
   cardEl.querySelectorAll('[data-field]').forEach((el) => {
     const f = el.dataset.field;
-    if (f === 'hashtags') {
-      out.hashtags = el.value.split(',').map((x) => x.trim()).filter(Boolean);
-    } else if (f === 'image_url' && !el.value.trim()) {
+    // contenteditable .post-text uses innerText; inputs/textareas use value.
+    const isEditable = el.isContentEditable || el.classList.contains('post-text');
+    const raw = isEditable ? (el.innerText || '') : el.value;
+    if (f === 'text') {
+      out.text = raw.trim();
+    } else if (f === 'caption_with_tags') {
+      // Same auto-extraction as the blur handler — split caption from
+      // trailing hashtag block.
+      const text = raw.trim();
+      const parts = text.split(/\n\n+/);
+      const tail = parts[parts.length - 1] || '';
+      const tailIsTags = parts.length > 1 && /^[#\w\s]+$/.test(tail) && /#/.test(tail);
+      if (tailIsTags) {
+        out.caption = parts.slice(0, -1).join('\n\n').trim();
+        out.hashtags = (tail.match(/#[\w]+/g) || []).map((t) => t.replace(/^#/, '').toLowerCase());
+      } else {
+        out.caption = text;
+        out.hashtags = [];
+      }
+    } else if (f === 'hashtags') {
+      out.hashtags = raw.split(',').map((x) => x.trim()).filter(Boolean);
+    } else if (f === 'image_url' && !raw.trim()) {
       // skip empty manual override
     } else {
-      out[f] = el.value;
+      out[f] = raw;
     }
   });
   // Carousel slide edits
