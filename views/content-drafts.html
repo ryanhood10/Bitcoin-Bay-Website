@@ -697,7 +697,7 @@ function renderInstagramCarouselCard(d) {
   const activeOverlayY = Number.isFinite(active.overlay_y) ? active.overlay_y : 92;
   const activeOverlayColor = (typeof active.overlay_color === 'string' && /^#[0-9a-f]{3,8}$/i.test(active.overlay_color))
     ? active.overlay_color : '#FFFFFF';
-  const showOverlay = !isCta;
+  const showOverlay = !isBranded;
   const activeOverlayFont = active.overlay_font === 'espn' ? 'espn' : 'brand';
   const overlayFontClass = activeOverlayFont === 'espn' ? ' font-espn' : '';
   const heroImage = baseImage
