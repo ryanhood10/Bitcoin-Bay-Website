@@ -476,7 +476,11 @@ async function findCarouselImages(slides) {
 // escapeXml below would turn `&#39;` into `&amp;#39;` and render as literal
 // `&#39;` in the SVG output. Decode common entities first.
 function decodeHtmlEntitiesNode(s) {
-  return String(s || '')
+  // Loop until idempotent so double-encoded input (`&amp;#39;`) gets fully
+  // unwrapped — single pass would leave `&#39;` and the next escape would
+  // re-encode it to `&amp;#39;` again. Cap at 5 passes.
+  let prev = String(s || '');
+  const passOnce = (str) => str
     .replace(/&#(\d+);/g, (_, n) => {
       const c = parseInt(n, 10);
       return Number.isFinite(c) && c >= 32 && c < 0x10000 ? String.fromCharCode(c) : '';
@@ -488,6 +492,12 @@ function decodeHtmlEntitiesNode(s) {
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
     .replace(/&amp;/g, '&');
+  for (let i = 0; i < 5; i++) {
+    const next = passOnce(prev);
+    if (next === prev) break;
+    prev = next;
+  }
+  return prev;
 }
 
 function escapeXml(s) {

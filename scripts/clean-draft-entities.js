@@ -18,7 +18,10 @@
 const { MongoClient } = require('mongodb');
 
 function decodeEntities(s) {
-  return String(s || '')
+  // Loop until idempotent — double-encoded text (`&amp;#39;` for `'`) needs
+  // multiple passes. Cap at 5 to prevent pathological input from spinning.
+  let prev = String(s || '');
+  const passOnce = (str) => str
     .replace(/&#(\d+);/g, (_, n) => {
       const c = parseInt(n, 10);
       return Number.isFinite(c) && c >= 32 && c < 0x10000 ? String.fromCharCode(c) : '';
@@ -30,6 +33,12 @@ function decodeEntities(s) {
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
     .replace(/&amp;/g, '&');
+  for (let i = 0; i < 5; i++) {
+    const next = passOnce(prev);
+    if (next === prev) break;
+    prev = next;
+  }
+  return prev;
 }
 
 // Walk an arbitrary value, decoding strings; preserve structure for arrays

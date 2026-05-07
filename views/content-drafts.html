@@ -1128,9 +1128,20 @@ async function actionDraftFromGame(eventId, leaguePath) {
 // caption preview.
 function decodeHtmlEntities(s) {
   if (!s) return '';
-  const t = document.createElement('textarea');
-  t.innerHTML = String(s);
-  return t.value;
+  // Loop until the decode is idempotent — handles double-encoded text like
+  // `&amp;#39;` (where the `&` itself got entity-escaped). One pass would
+  // only strip the outer `&amp;`, leaving `&#39;` to be re-escaped on the
+  // next render and showing literally on screen. Cap at 5 passes so a
+  // pathological input can't spin forever.
+  let prev = String(s);
+  for (let i = 0; i < 5; i++) {
+    const t = document.createElement('textarea');
+    t.innerHTML = prev;
+    const next = t.value;
+    if (next === prev) break;
+    prev = next;
+  }
+  return prev;
 }
 
 // Safe-render any user-content string: first decode any HTML entities that
