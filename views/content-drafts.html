@@ -564,9 +564,9 @@ function renderTwitterCard(d) {
         ${variantChip}
         <span class="status-pill ${status}">${status}</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);" title="${escapeHtml(d.topic || '')}">${escapeHtml(d.format_hint || 'take')}</div>
+      <div style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">${safeText(d.format_hint || 'take')}</div>
     </div>
-    <div class="collapsed-preview">${escapeHtml((d.text || '').slice(0, 120))}…</div>
+    <div class="collapsed-preview">${safeText((d.text || '').slice(0, 120))}…</div>
     <div class="card-body">
       <div class="tweet-mock-header">
         <img class="avatar" src="/bb-logo.png" alt="" onerror="this.style.display='none'"/>
@@ -602,9 +602,9 @@ function renderInstagramSingleCard(d) {
       <div class="card-head-left">
         <span class="status-pill ${status}">${status}</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);" title="${escapeHtml(d.topic || '')}">single image</div>
+      <div style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">single image</div>
     </div>
-    <div class="collapsed-preview">${escapeHtml((d.caption || '').slice(0, 120))}…</div>
+    <div class="collapsed-preview">${safeText((d.caption || '').slice(0, 120))}…</div>
     <div class="card-body" style="padding-bottom:6px;">
       <div class="ig-mock-header">
         <div class="ig-avatar-ring"><img src="/bb-logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ig-avatar-fallback',textContent:'BB'}))"/></div>
@@ -628,7 +628,7 @@ function renderInstagramSingleCard(d) {
         <summary>✏️ More edits — image overlay text + manual URL override</summary>
         <div class="field-row">
           <div class="field-label">Image overlay text (≤8 words, shown on the photo)</div>
-          <input class="field-input" data-field="image_overlay_text" value="${escapeHtml(d.image_overlay_text || '')}" ${isLocked ? 'disabled' : ''} />
+          <input class="field-input" data-field="image_overlay_text" value="${safeText(d.image_overlay_text || '')}" ${isLocked ? 'disabled' : ''} />
         </div>
         <div class="field-row">
           <div class="field-label">Override image URL (manual)</div>
@@ -706,14 +706,14 @@ function renderInstagramCarouselCard(d) {
          ${showOverlay ? `<div class="overlay-headline${overlayFontClass}${isLocked ? '' : ' draggable'}"
               data-overlay-x="${activeOverlayX}" data-overlay-y="${activeOverlayY}"
               data-overlay-font="${activeOverlayFont}"
-              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${escapeHtml(active.headline || '')}</div>` : ''}
+              style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${safeText(active.headline || '')}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
          ${isLocked ? '' : `<div class="image-corner-actions">
            <button class="corner-btn" data-action="replace-photo" data-slide-index="${cur}" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
            <button class="corner-btn" data-action="generate-art" data-slide-index="${cur}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
          </div>`}
          <div class="image-meta">
-           <span>${escapeHtml(active.image_attribution || '')}</span>
+           <span>${safeText(active.image_attribution || '')}</span>
            ${downloadUrl ? `<a class="download-btn" download="slide-${cur + 1}.jpg" href="${escapeHtml(downloadUrl)}" title="Download this slide (publish-ready composite)">💾</a>` : ''}
          </div>
        </div>`
@@ -742,9 +742,9 @@ function renderInstagramCarouselCard(d) {
         <span class="status-pill ${status}">${status}</span>
         <span class="pill" style="background:rgba(74,158,255,0.1); color: var(--blue); border-color: rgba(74,158,255,0.3);">${slides.length}-slide carousel</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);" title="${escapeHtml(d.topic || '')}">${escapeHtml((d.topic || '').slice(0, 32))}${(d.topic || '').length > 32 ? '…' : ''}</div>
+      <div style="font-size:10px;color:var(--muted);" title="${safeText(d.topic || '')}">${safeText((d.topic || '').slice(0, 32))}${(d.topic || '').length > 32 ? '…' : ''}</div>
     </div>
-    <div class="collapsed-preview">${escapeHtml((d.caption || '').slice(0, 120))}…</div>
+    <div class="collapsed-preview">${safeText((d.caption || '').slice(0, 120))}…</div>
     <div class="card-body" style="padding-bottom:6px;">
       <div class="ig-mock-header">
         <div class="ig-avatar-ring"><img src="/bb-logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ig-avatar-fallback',textContent:'BB'}))"/></div>
@@ -828,23 +828,23 @@ function buildSlideEditor(d, s, i, isLocked, totalSlides) {
   // only thing most operators touch. Everything else lives behind "More edits".
   return `<div class="slide-panel active" data-slide="${i}">
       <div class="slide-panel-head">
-        <span class="slide-role-pill">${escapeHtml((s.slide_role || '').replace(/_/g, ' '))}</span>
+        <span class="slide-role-pill">${safeText((s.slide_role || '').replace(/_/g, ' '))}</span>
         <span style="font-size:10px;color:var(--muted);">slide ${i + 1} of ${totalSlides}${s.is_cta_slide ? ' · BB CTA' : ''}</span>
       </div>
       <div class="field-row">
         <div class="field-label">Headline (shown on the image, ≤8 words)</div>
-        <input class="field-input" data-slide-field="headline" data-slide-index="${i}" value="${escapeHtml(s.headline || '')}" ${isLocked ? 'disabled' : ''} placeholder="Drag the headline on the image to reposition it" />
+        <input class="field-input" data-slide-field="headline" data-slide-index="${i}" value="${safeText(s.headline || '')}" ${isLocked ? 'disabled' : ''} placeholder="Drag the headline on the image to reposition it" />
       </div>
       ${colorRow}
       <details class="advanced" style="margin-top:10px;">
         <summary>✏️ More edits — body text, image subject, manual URL, Claude re-prompt</summary>
         <div class="field-row">
           <div class="field-label">Body / alt text (not shown on image — only for accessibility + dev preview)</div>
-          <textarea class="editor" data-slide-field="body_text" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="min-height:50px;">${escapeHtml(s.body_text || '')}</textarea>
+          <textarea class="editor" data-slide-field="body_text" data-slide-index="${i}" ${isLocked ? 'disabled' : ''} style="min-height:50px;">${safeText(s.body_text || '')}</textarea>
         </div>
         <div class="field-row">
           <div class="field-label">Image subject (drives the photo lookup — full athlete name, no abbreviations)</div>
-          <input class="field-input" data-slide-field="image_subject" data-slide-index="${i}" value="${escapeHtml(s.image_subject || '')}" ${isLocked ? 'disabled' : ''} />
+          <input class="field-input" data-slide-field="image_subject" data-slide-index="${i}" value="${safeText(s.image_subject || '')}" ${isLocked ? 'disabled' : ''} />
         </div>
         <div class="field-row">
           <div class="field-label">Manual image URL override</div>
@@ -875,7 +875,7 @@ function renderImageBlock(d, position = 'below-text', size = '') {
       <button class="corner-btn" data-action="generate-art" title="Replace with AI scene (Replicate InstantID, ~$0.05)">🎨</button>
     </div>
     <div class="image-meta">
-      <span>${escapeHtml(attr || '')}</span>
+      <span>${safeText(attr || '')}</span>
       <a class="download-btn" download="${escapeHtml(fname)}" href="${escapeHtml(url)}" title="Download">💾</a>
     </div>
   </div>`;
@@ -897,7 +897,7 @@ function renderEmptyImagePlaceholder(subject, slideIndex, imageStatus) {
     <div style="font-size: 28px; margin-bottom: 8px;">📸</div>
     <div style="font-size: 12px; color: var(--text); margin-bottom: 4px;">${statusLine}</div>
     <div style="font-size: 11px; color: var(--muted2); margin-bottom: 4px;">Subject:</div>
-    <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; word-break: break-word;">"${escapeHtml(subj)}"</div>
+    <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; word-break: break-word;">"${safeText(subj)}"</div>
     <div style="font-size: 10px; color: var(--muted); margin-bottom: 12px; line-height: 1.5;">Sources searched: <b>Wikimedia Commons</b>, <b>Unsplash</b>, <b>Pexels</b> — all free, all real editorial photos.<br/>If the subject is too abstract, no source will have a match.</div>
     <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
       <button class="btn small" data-action="generate-art" ${slideAttr} title="Generate AI scene with Replicate InstantID (~$0.05)">🎨 AI scene</button>
@@ -911,11 +911,11 @@ function renderEmptyImagePlaceholder(subject, slideIndex, imageStatus) {
 function renderHashtagRow(d, isLocked) {
   const tags = Array.isArray(d.hashtags) ? d.hashtags : [];
   const pills = tags.length
-    ? tags.map((t) => `<span class="hashtag-pill">#${escapeHtml(String(t).replace(/^#/, ''))}</span>`).join('')
+    ? tags.map((t) => `<span class="hashtag-pill">#${safeText(String(t).replace(/^#/, ''))}</span>`).join('')
     : `<span class="hashtag-pill empty">no hashtags — click to add</span>`;
   return `<div class="hashtag-row" data-hashtag-row ${isLocked ? 'data-locked' : ''}>
     ${pills}
-    <input class="field-input hashtag-edit-input" data-field="hashtags" value="${escapeHtml(tags.join(', '))}" ${isLocked ? 'disabled' : ''} placeholder="comma-separated, no #" />
+    <input class="field-input hashtag-edit-input" data-field="hashtags" value="${safeText(tags.join(', '))}" ${isLocked ? 'disabled' : ''} placeholder="comma-separated, no #" />
   </div>`;
 }
 
@@ -1054,6 +1054,15 @@ function decodeHtmlEntities(s) {
   return t.value;
 }
 
+// Safe-render any user-content string: first decode any HTML entities that
+// snuck into the stored value (Claude / paste-in occasionally emits `&#39;`
+// for apostrophes etc.), then re-escape so it renders as that character on
+// screen. Use this instead of bare escapeHtml() everywhere we render text
+// that originated from a draft field (headline, caption, body_text, etc.).
+function safeText(s) {
+  return escapeHtml(decodeHtmlEntities(s || ''));
+}
+
 // Render plain text with inline-blue hashtags and @mentions, line breaks
 // preserved. The single biggest "feels native" lever per UI research.
 function renderInlineText(text) {
@@ -1105,7 +1114,7 @@ function renderScenePanel(d, slideIndex) {
   const panelKey = isSlide ? slideIndex : '';
   return `<div class="scene-panel" data-scene-panel="${panelKey}">
     <div class="field-label">🎨 Generate AI scene with athlete's face (Replicate InstantID)</div>
-    <textarea class="scene-prompt" data-scene-field="prompt" ${sIdxAttr} placeholder="">${escapeHtml(prefilled)}</textarea>
+    <textarea class="scene-prompt" data-scene-field="prompt" ${sIdxAttr} placeholder="">${safeText(prefilled)}</textarea>
     <div class="scene-hint">InstantID preserves the face from the reference image while restyling the surroundings to match your prompt. The textarea above is pre-filled with a suggested prompt — edit before submitting if you want a different scene.</div>
     <div class="field-label" style="margin-top:8px;">Reference image URL (face source — defaults to current image)</div>
     <input class="field-input" data-scene-field="reference" ${sIdxAttr} value="${escapeHtml(refUrl)}" placeholder="https://..." />
@@ -1127,7 +1136,7 @@ function renderPhotoPanel(d, slideIndex) {
   const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
   const panelKey = isSlide ? slideIndex : '';
   return `<div class="photo-panel" data-photo-panel="${panelKey}">
-    <div class="field-label">📷 Replace photo — searching Wikimedia / Pexels / Unsplash for "${escapeHtml(subject || 'this subject')}"</div>
+    <div class="field-label">📷 Replace photo — searching Wikimedia / Pexels / Unsplash for "${safeText(subject || 'this subject')}"</div>
     <div class="photo-results" data-photo-results="${panelKey}">
       <div class="photo-loading">Click below to load candidates…</div>
     </div>
@@ -1609,7 +1618,7 @@ function renderPhotoCandidatesHtml(candidates, slideIndex) {
       return `<div class="photo-source"><div class="photo-source-label">${src.label}</div><div class="photo-empty">no results</div></div>`;
     }
     const thumbs = items.map((c, i) => `
-      <div class="photo-thumb" data-action="replace-photo-pick" data-photo-source="${src.key}" data-photo-index="${i}" ${sIdxAttr} title="${escapeHtml(c.attribution || '')}">
+      <div class="photo-thumb" data-action="replace-photo-pick" data-photo-source="${src.key}" data-photo-index="${i}" ${sIdxAttr} title="${safeText(c.attribution || '')}">
         <img src="${escapeHtml(c.thumb_url || c.url)}" alt="" referrerpolicy="no-referrer" />
       </div>`).join('');
     return `<div class="photo-source"><div class="photo-source-label">${src.label}</div><div class="photo-grid">${thumbs}</div></div>`;

@@ -471,8 +471,27 @@ async function findCarouselImages(slides) {
 }
 
 // ── BB-BRANDED COMPOSITE (sharp + SVG) ──
-function escapeXml(s) {
+// Defensive: text fields from Mongo / Claude occasionally contain literal
+// HTML entities (&#39; for ', &amp; for &). Without this decode pass,
+// escapeXml below would turn `&#39;` into `&amp;#39;` and render as literal
+// `&#39;` in the SVG output. Decode common entities first.
+function decodeHtmlEntitiesNode(s) {
   return String(s || '')
+    .replace(/&#(\d+);/g, (_, n) => {
+      const c = parseInt(n, 10);
+      return Number.isFinite(c) && c >= 32 && c < 0x10000 ? String.fromCharCode(c) : '';
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => {
+      const c = parseInt(h, 16);
+      return Number.isFinite(c) && c >= 32 && c < 0x10000 ? String.fromCharCode(c) : '';
+    })
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function escapeXml(s) {
+  return String(decodeHtmlEntitiesNode(s))
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
