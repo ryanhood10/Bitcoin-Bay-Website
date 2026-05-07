@@ -1046,7 +1046,10 @@ function wireCardActions(cardEl) {
     });
     el.addEventListener('blur', async () => {
       const field = el.dataset.field;
-      const text = (el.innerText || '').replace(/ /g, ' ').trim();  // normalize NBSPs
+      // Defensive: decodeHtmlEntities below catches any text that came in
+      // already-encoded (e.g. "you&#39;ve" pasted from another tool). On
+      // save we want the literal character so the next render is clean.
+      const text = decodeHtmlEntities((el.innerText || '').replace(/ /g, ' ')).trim();
       const draft = DRAFTS.find((x) => x._id === id);
       if (!draft) return;
       let savePayload = {};

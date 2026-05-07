@@ -25,6 +25,16 @@ app.use(cors());
 // index.html for "/" — we use an explicit route handler below.
 app.use(express.static(path.join(__dirname), { index: false }));
 
+// Phase 4+ — composite/AI-rendered carousel images live under public/post-images/
+// and are referenced by the content drafter dashboard via /post-images/* URLs
+// (so the IG Graph API can pull them at publish time too). The main static
+// mount serves the repo root, NOT public/, so we need a dedicated route here.
+app.use('/post-images', express.static(path.join(__dirname, 'public', 'post-images'), {
+  // Hash-suffixed filenames are stable per render, but we set a short cache
+  // so the operator sees fresh re-renders quickly. 1 min is enough.
+  maxAge: '1m',
+}));
+
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
 
