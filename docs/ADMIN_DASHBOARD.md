@@ -103,6 +103,8 @@ POST /api/admin/dashboard/post-drafts/:id/regenerate     — role: full  → re-
 POST /api/admin/dashboard/post-drafts/:id/swap-variant   — role: full  → flip Twitter draft between meme + professional variants (no Claude call; both pre-generated)
 POST /api/admin/dashboard/post-drafts/:id/generate-art   — role: full  → Replicate InstantID AI scene generation (~$0.05/call, audit-logged; 503 if REPLICATE_API_TOKEN unset)
 GET  /api/admin/dashboard/photo-search?subject=&intent= — role: full  → returns top-3 photo candidates per source (Wikimedia / Pexels / Unsplash) for the replace-photo UI
+GET  /api/admin/dashboard/branded-overlays?subject= — role: full  → manifest of crypto/exchange logo marks + auto-suggested keys for the sticker library (Phase 9.5)
+GET  /branded-overlays/:key.svg                       — public        → SVG render of one logo mark (used by the sticker picker thumbs + in-canvas overlay)
 POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — role: full  → re-runs imageRenderer.saveDraftImages on the draft; fire-and-forget (202)
 POST /api/admin/dashboard/post-drafts/:id/add-cta-slide  — role: full  → append a BB-branded CTA slide to a carousel (body: { headline?, subhead? }); cap 10 slides
 POST /api/admin/dashboard/post-drafts/:id/delete-slide   — role: full  → remove one slide from a carousel (body: { slide_index }); floor at 2 slides; audit-logged

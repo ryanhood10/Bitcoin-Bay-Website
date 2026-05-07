@@ -38,6 +38,8 @@
 //   POST /api/admin/dashboard/post-drafts/:id/swap-variant      — flip Twitter draft active variant (meme ↔ professional) (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/generate-art      — Replicate InstantID AI scene gen (FULL, ~$0.05/call)
 //   GET  /api/admin/dashboard/photo-search?subject=&intent= — top-3 photo candidates per source (Wikimedia/Pexels/Unsplash) for replace-photo UI (FULL)
+//   GET  /api/admin/dashboard/branded-overlays?subject= — manifest of crypto/exchange logo marks + auto-suggest (FULL)
+//   GET  /branded-overlays/:key.svg — public SVG render of one logo mark (no auth, used by sticker thumbnails)
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — re-run image pipeline for the whole draft (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/add-cta-slide     — append a BB-branded CTA slide to a carousel (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/delete-slide      — remove one slide from a carousel (floor: 2 slides) (FULL)
@@ -92,8 +94,9 @@ function getImageRenderer() {
 const PATCH_ALLOWED = new Set([
   'text', 'caption', 'hashtags',
   'image_subject', 'image_overlay_text', 'image_scene_prompt',
-  'image_url', 'image_attribution',
+  'image_url', 'image_attribution', 'image_source',
   'slides',
+  'branded_overlay', // Phase 9.5 — { key, x_pct, y_pct, scale_pct } sticker
   // status changes go through dedicated endpoints (skip/approve), not PATCH
 ]);
 
@@ -846,6 +849,39 @@ router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requi
 
 // Re-run the image pipeline for the entire draft. Use case: operator edited
 // slide subjects / overlay coords / colors and wants fresh composites without
+// Phase 9.5 — branded overlay (sticker) library. The manifest is a small
+// static list defined in brandedOverlays.js; we add a dynamic `suggested`
+// field based on the optional `subject` query so the picker can bubble
+// matching logos to the top.
+router.get('/api/admin/dashboard/branded-overlays', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+  try {
+    const subject = (req.query.subject || '').toString().trim();
+    const branded = require('./brandedOverlays');
+    const suggested = subject ? branded.suggestMarks(subject, { limit: 6 }) : [];
+    res.json({ success: true, manifest: branded.MANIFEST, suggested });
+  } catch (e) {
+    console.error('[admin-dashboard] /branded-overlays error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Phase 9.5 — public SVG renderer for one logo mark. Used by the sticker
+// picker thumbnails AND the in-canvas drag preview. Light, cacheable, no
+// auth (the SVG content is non-sensitive — just colored circles + text).
+router.get('/branded-overlays/:key.svg', (req, res) => {
+  try {
+    const branded = require('./brandedOverlays');
+    const key = String(req.params.key || '').trim();
+    const svg = branded.generateMarkSVG(key, 256);
+    if (!svg) return res.status(404).end();
+    res.set('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=86400, immutable');
+    res.send(svg);
+  } catch (e) {
+    res.status(500).end();
+  }
+});
+
 // Phase 9.2 — replace-photo UI candidate search. Returns up to 3 photo
 // candidates per source (Wikimedia / Pexels / Unsplash) for a free-text
 // `subject` query. The operator clicks a thumb to pick a replacement;

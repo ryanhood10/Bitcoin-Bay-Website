@@ -286,6 +286,32 @@
     .focus-modal-body > .card .image-preview.large img { max-height: 70vw; }
   }
 
+  /* Sticker picker (Phase 9.5) — opens when operator clicks 🏷️ corner btn.
+     Shows a 6-col grid of crypto/exchange logo marks. Auto-suggested marks
+     (matching slide image_subject) bubble to top with a gold ring. */
+  .sticker-panel { display: none; padding: 12px 14px; background: var(--surface2); border-top: 1px dashed var(--border2); }
+  .sticker-panel.open { display: block; }
+  .sticker-section-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 10px; margin-bottom: 4px; font-weight: 600; }
+  .sticker-section-label:first-of-type { margin-top: 0; }
+  .sticker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .sticker-thumb { position: relative; aspect-ratio: 1/1; border-radius: 8px; cursor: pointer; padding: 6px; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; transition: all 0.12s ease; }
+  .sticker-thumb img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+  .sticker-thumb:hover { border-color: var(--gold); transform: scale(1.05); }
+  .sticker-thumb.suggested { box-shadow: 0 0 0 2px var(--gold) inset; }
+  .sticker-thumb-name { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--muted); white-space: nowrap; }
+  .sticker-active-row { display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; }
+  .sticker-active-row img { width: 28px; height: 28px; }
+  .sticker-active-row .scale-slider { flex: 1; }
+  @media (max-width: 800px) { .sticker-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  /* In-canvas sticker overlay rendered on top of the slide preview. Behaves
+     like the headline overlay — draggable in non-locked mode, baked into
+     the composite by composeOverlayCard on the next /regenerate-all-images. */
+  .sticker-overlay { position: absolute; cursor: grab; user-select: none; touch-action: none; z-index: 3; }
+  .sticker-overlay.draggable:hover { outline: 2px dashed var(--gold); outline-offset: 4px; }
+  .sticker-overlay.dragging { cursor: grabbing; opacity: 0.85; }
+  .sticker-overlay img { width: 100%; height: 100%; pointer-events: none; display: block; }
+
   /* Photo-replace panel (Phase 9.2) — opens when operator clicks 📷 corner btn.
      Searches Wikimedia / Pexels / Unsplash for `subject` and shows up to 3
      thumbnails per source. Click a thumb to swap; or paste a manual URL. */
@@ -623,6 +649,7 @@ function renderTwitterCard(d) {
     </div>
     ${renderScenePanel(d)}
     ${renderPhotoPanel(d)}
+    ${renderStickerPanel(d)}
     ${renderActions(d, isLocked)}
   </div>`;
 }
@@ -682,6 +709,7 @@ function renderInstagramSingleCard(d) {
     </div>
     ${renderScenePanel(d)}
     ${renderPhotoPanel(d)}
+    ${renderStickerPanel(d)}
     ${renderActions(d, isLocked)}
   </div>`;
 }
@@ -751,8 +779,10 @@ function renderInstagramCarouselCard(d) {
               data-overlay-font="${activeOverlayFont}"
               style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${safeText(active.headline || '')}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
+         ${renderStickerOverlayHtml(active.branded_overlay, cur, isLocked)}
          ${isLocked ? '' : `<div class="image-corner-actions">
            <button class="corner-btn" data-action="replace-photo" data-slide-index="${cur}" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
+           <button class="corner-btn" data-action="add-sticker" data-slide-index="${cur}" title="Add a crypto/exchange branded sticker">🏷️</button>
            <button class="corner-btn" data-action="generate-art" data-slide-index="${cur}" title="Replace this slide with AI scene (~$0.05)">🎨</button>
          </div>`}
          <div class="image-meta">
@@ -901,6 +931,7 @@ function buildSlideEditor(d, s, i, isLocked, totalSlides) {
       </details>
       ${renderScenePanel(d, i)}
       ${renderPhotoPanel(d, i)}
+      ${renderStickerPanel(d, i)}
     </div>`;
 }
 
@@ -916,8 +947,10 @@ function renderImageBlock(d, position = 'below-text', size = '') {
   // pre-filled (suggestScenePrompt). Reference image defaults to this image.
   return `<div class="${cls}">
     <img src="${escapeHtml(url)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;placeholder&quot;>image fetch failed — try a manual URL in Advanced</div>'"/>
+    ${renderStickerOverlayHtml(d.branded_overlay, null, false)}
     <div class="image-corner-actions">
       <button class="corner-btn" data-action="replace-photo" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
+      <button class="corner-btn" data-action="add-sticker" title="Add a crypto/exchange branded sticker">🏷️</button>
       <button class="corner-btn" data-action="generate-art" title="Replace with AI scene (Replicate InstantID, ~$0.05)">🎨</button>
     </div>
     <div class="image-meta">
@@ -1172,6 +1205,56 @@ function renderScenePanel(d, slideIndex) {
   </div>`;
 }
 
+// Phase 9.5 — render the branded-sticker overlay if the slide / draft has
+// `branded_overlay` set. Positioned in % coords, drag handlers wired in
+// wireCardActions so it can be repositioned live.
+function renderStickerOverlayHtml(overlay, slideIndex, isLocked) {
+  if (!overlay || !overlay.key) return '';
+  const x = Number.isFinite(overlay.x_pct) ? overlay.x_pct : 80;
+  const y = Number.isFinite(overlay.y_pct) ? overlay.y_pct : 12;
+  const scale = Number.isFinite(overlay.scale_pct) ? overlay.scale_pct : 18;
+  const sIdx = Number.isInteger(slideIndex) ? slideIndex : '';
+  return `<div class="sticker-overlay${isLocked ? '' : ' draggable'}"
+       data-sticker-overlay
+       data-slide-index="${sIdx}"
+       data-x-pct="${x}"
+       data-y-pct="${y}"
+       data-scale-pct="${scale}"
+       data-key="${escapeHtml(overlay.key)}"
+       style="left:${x}%; top:${y}%; transform:translate(-50%, -50%); width:${scale}%; aspect-ratio:1/1;">
+    <img src="/branded-overlays/${escapeHtml(overlay.key)}.svg" alt="" />
+  </div>`;
+}
+
+// Phase 9.5 — sticker picker panel. Lazy-loads the manifest on first open.
+function renderStickerPanel(d, slideIndex) {
+  const isSlide = Number.isInteger(slideIndex);
+  const sIdxAttr = isSlide ? `data-slide-index="${slideIndex}"` : '';
+  const panelKey = isSlide ? slideIndex : '';
+  const current = isSlide
+    ? (d.slides || [])[slideIndex]?.branded_overlay
+    : d.branded_overlay;
+  const activeRow = (current && current.key) ? `
+    <div class="sticker-active-row">
+      <img src="/branded-overlays/${escapeHtml(current.key)}.svg" alt="" />
+      <div style="font-size:11px; color:var(--muted); flex:0 0 auto;">Active: <b style="color:var(--text);">${escapeHtml(current.key)}</b></div>
+      <input type="range" min="8" max="40" step="1" value="${Number.isFinite(current.scale_pct) ? current.scale_pct : 18}"
+             class="scale-slider" data-sticker-scale ${sIdxAttr} title="Scale (% of image width)" />
+      <button class="btn small ghost" data-action="remove-sticker" ${sIdxAttr} title="Remove sticker">🗑</button>
+      <button class="btn small primary" data-action="save-sticker-layout" ${sIdxAttr} title="Bake sticker into composite">💾 Save</button>
+    </div>` : '';
+  return `<div class="sticker-panel" data-sticker-panel="${panelKey}">
+    <div class="field-label">🏷️ Add a branded sticker — auto-suggested logos appear at top with a gold ring</div>
+    ${activeRow}
+    <div class="sticker-results" data-sticker-results="${panelKey}">
+      <div class="photo-loading">Loading manifest…</div>
+    </div>
+    <div style="display:flex; gap:6px; margin-top:10px;">
+      <button class="btn small ghost" data-action="add-sticker-cancel" ${sIdxAttr}>Close</button>
+    </div>
+  </div>`;
+}
+
 // Phase 9.2 — empty shell for the photo-replace picker. Populated lazily on
 // open via /api/admin/dashboard/photo-search. `slideIndex` is null for single
 // images (Twitter/IG single) or the slide index for carousel slides.
@@ -1396,6 +1479,11 @@ function wireCardActions(cardEl) {
         else if (action === 'replace-photo-cancel') closePhotoPanel(cardEl, slideIdx);
         else if (action === 'replace-photo-paste') await actionReplacePhotoFromUrl(id, cardEl, slideIdx);
         else if (action === 'replace-photo-pick') await actionReplacePhotoPick(id, cardEl, slideIdx, btn);
+        else if (action === 'add-sticker') await toggleStickerPanel(cardEl, slideIdx, id);
+        else if (action === 'add-sticker-cancel') closeStickerPanel(cardEl, slideIdx);
+        else if (action === 'sticker-pick') await actionStickerPick(id, cardEl, slideIdx, btn);
+        else if (action === 'remove-sticker') await actionRemoveSticker(id, slideIdx);
+        else if (action === 'save-sticker-layout') await actionSaveStickerLayout(id, cardEl, slideIdx);
         else if (action === 'add-cta-slide-cancel') {
           // Switch back to the first real slide
           CURRENT_SLIDE[id] = 0;
@@ -1548,18 +1636,28 @@ window.addEventListener('resize', () => {
 // Initialize drag-to-position on a single overlay-canvas. Updates the live
 // preview position + the dataset coords; persistence happens via apply-layout.
 function initOverlayDrag(canvas) {
-  const headline = canvas.querySelector('.overlay-headline.draggable');
-  if (!headline) return;
+  // Same drag logic for both the headline overlay and the Phase 9.5
+  // branded sticker overlay. Each draggable element manages its own
+  // x/y dataset and clamping range.
+  const targets = [
+    { el: canvas.querySelector('.overlay-headline.draggable'), xKey: 'overlayX', yKey: 'overlayY', xMin: 0, xMax: 95, yMin: 8, yMax: 98 },
+    { el: canvas.querySelector('.sticker-overlay.draggable'),  xKey: 'xPct',     yKey: 'yPct',     xMin: 4, xMax: 96, yMin: 4, yMax: 96 },
+  ].filter((t) => t.el);
+  if (!targets.length) return;
+  for (const t of targets) attachDrag(canvas, t);
+}
+
+function attachDrag(canvas, t) {
   let dragging = false, startX, startY, startLeftPx, startTopPx, rect;
   const start = (e) => {
     dragging = true;
-    headline.classList.add('dragging');
+    t.el.classList.add('dragging');
     rect = canvas.getBoundingClientRect();
     const point = e.touches ? e.touches[0] : e;
     startX = point.clientX;
     startY = point.clientY;
-    startLeftPx = (parseFloat(headline.style.left) || 0) / 100 * rect.width;
-    startTopPx = (parseFloat(headline.style.top) || 0) / 100 * rect.height;
+    startLeftPx = (parseFloat(t.el.style.left) || 0) / 100 * rect.width;
+    startTopPx = (parseFloat(t.el.style.top) || 0) / 100 * rect.height;
     e.preventDefault();
   };
   const move = (e) => {
@@ -1567,21 +1665,21 @@ function initOverlayDrag(canvas) {
     const point = e.touches ? e.touches[0] : e;
     const newLeftPx = startLeftPx + (point.clientX - startX);
     const newTopPx = startTopPx + (point.clientY - startY);
-    const xPct = Math.max(0, Math.min(95, (newLeftPx / rect.width) * 100));
-    const yPct = Math.max(8, Math.min(98, (newTopPx / rect.height) * 100));
-    headline.style.left = xPct + '%';
-    headline.style.top = yPct + '%';
-    headline.dataset.overlayX = xPct.toFixed(1);
-    headline.dataset.overlayY = yPct.toFixed(1);
+    const xPct = Math.max(t.xMin, Math.min(t.xMax, (newLeftPx / rect.width) * 100));
+    const yPct = Math.max(t.yMin, Math.min(t.yMax, (newTopPx / rect.height) * 100));
+    t.el.style.left = xPct + '%';
+    t.el.style.top = yPct + '%';
+    t.el.dataset[t.xKey] = xPct.toFixed(1);
+    t.el.dataset[t.yKey] = yPct.toFixed(1);
     e.preventDefault();
   };
   const end = () => {
     if (!dragging) return;
     dragging = false;
-    headline.classList.remove('dragging');
+    t.el.classList.remove('dragging');
   };
-  headline.addEventListener('mousedown', start);
-  headline.addEventListener('touchstart', start, { passive: false });
+  t.el.addEventListener('mousedown', start);
+  t.el.addEventListener('touchstart', start, { passive: false });
   document.addEventListener('mousemove', move);
   document.addEventListener('touchmove', move, { passive: false });
   document.addEventListener('mouseup', end);
@@ -1907,6 +2005,154 @@ async function applyPhotoReplacement(id, slideIndex, fields) {
   }).catch(() => {});
   toast('Photo replaced — re-rendering overlay…', 'success');
   setTimeout(() => loadDrafts(), 4000);
+}
+
+// ── Phase 9.5: branded sticker picker + per-slide overlay ────────────────
+function findStickerPanel(cardEl, slideIndex) {
+  const key = Number.isInteger(slideIndex) ? String(slideIndex) : '';
+  return cardEl.querySelector(`.sticker-panel[data-sticker-panel="${key}"]`);
+}
+
+async function toggleStickerPanel(cardEl, slideIndex, draftId) {
+  const panel = findStickerPanel(cardEl, slideIndex);
+  if (!panel) return;
+  const wasOpen = panel.classList.contains('open');
+  panel.classList.toggle('open');
+  if (!wasOpen) await loadStickerCandidates(cardEl, slideIndex, draftId);
+}
+
+function closeStickerPanel(cardEl, slideIndex) {
+  const panel = findStickerPanel(cardEl, slideIndex);
+  if (panel) panel.classList.remove('open');
+}
+
+async function loadStickerCandidates(cardEl, slideIndex, draftId) {
+  const panel = findStickerPanel(cardEl, slideIndex);
+  if (!panel) return;
+  const resultsEl = panel.querySelector('[data-sticker-results]');
+  if (!resultsEl) return;
+  const draft = DRAFTS.find((x) => x._id === draftId);
+  const subject = Number.isInteger(slideIndex)
+    ? (draft?.slides?.[slideIndex]?.image_subject || draft?.topic || '')
+    : (draft?.image_subject || draft?.topic || '');
+  resultsEl.innerHTML = '<div class="photo-loading">Loading manifest…</div>';
+  try {
+    const url = '/api/admin/dashboard/branded-overlays?' + new URLSearchParams({ subject }).toString();
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || 'manifest fetch failed');
+    resultsEl.innerHTML = renderStickerGridHtml(json.manifest, json.suggested, slideIndex);
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="photo-empty">Load failed: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderStickerGridHtml(manifest, suggested, slideIndex) {
+  const sIdxAttr = Number.isInteger(slideIndex) ? `data-slide-index="${slideIndex}"` : '';
+  const sugSet = new Set(suggested || []);
+  const renderThumb = (m) => `
+    <div class="sticker-thumb${sugSet.has(m.key) ? ' suggested' : ''}"
+         data-action="sticker-pick" data-sticker-key="${escapeHtml(m.key)}" ${sIdxAttr}
+         title="${escapeHtml(m.name)}${sugSet.has(m.key) ? ' (auto-suggested)' : ''}">
+      <img src="/branded-overlays/${escapeHtml(m.key)}.svg" alt="" />
+    </div>`;
+  const sections = [];
+  if (suggested && suggested.length) {
+    const sugItems = suggested.map((k) => manifest.find((m) => m.key === k)).filter(Boolean);
+    sections.push(`<div class="sticker-section-label">Suggested for this topic</div><div class="sticker-grid">${sugItems.map(renderThumb).join('')}</div>`);
+  }
+  const groups = [
+    { label: 'Bitcoin Bay', kind: 'brand' },
+    { label: 'Crypto coins', kind: 'coin' },
+    { label: 'Exchanges', kind: 'exchange' },
+  ];
+  for (const g of groups) {
+    const items = manifest.filter((m) => m.kind === g.kind && !sugSet.has(m.key));
+    if (!items.length) continue;
+    sections.push(`<div class="sticker-section-label">${g.label}</div><div class="sticker-grid">${items.map(renderThumb).join('')}</div>`);
+  }
+  return sections.join('');
+}
+
+async function actionStickerPick(id, cardEl, slideIndex, btn) {
+  const key = btn.dataset.stickerKey;
+  if (!key) return;
+  // Default placement: top-right corner-ish, modest size. Operator drags to
+  // taste, then clicks Save to bake.
+  const overlay = { key, x_pct: 80, y_pct: 14, scale_pct: 18 };
+  await applyBrandedOverlay(id, slideIndex, overlay);
+  // Re-open the panel with the new active row + scale slider
+  await loadStickerCandidates(cardEl, slideIndex, id);
+}
+
+async function actionRemoveSticker(id, slideIndex) {
+  await applyBrandedOverlay(id, slideIndex, null);
+}
+
+async function actionSaveStickerLayout(id, cardEl, slideIndex) {
+  // Pull current x/y/scale from the live overlay element + scale slider
+  const stickerEl = findStickerOverlay(cardEl, slideIndex);
+  const scaleEl = cardEl.querySelector(
+    Number.isInteger(slideIndex)
+      ? `[data-sticker-scale][data-slide-index="${slideIndex}"]`
+      : '[data-sticker-scale]:not([data-slide-index])'
+  );
+  const draft = DRAFTS.find((x) => x._id === id);
+  const current = Number.isInteger(slideIndex)
+    ? draft?.slides?.[slideIndex]?.branded_overlay
+    : draft?.branded_overlay;
+  if (!current?.key) {
+    toast('No active sticker on this slide', 'error');
+    return;
+  }
+  const overlay = {
+    key: current.key,
+    x_pct: stickerEl ? Number(stickerEl.dataset.xPct) : (current.x_pct ?? 80),
+    y_pct: stickerEl ? Number(stickerEl.dataset.yPct) : (current.y_pct ?? 14),
+    scale_pct: scaleEl ? Number(scaleEl.value) : (current.scale_pct ?? 18),
+  };
+  toast('Saving sticker layout…', '');
+  await applyBrandedOverlay(id, slideIndex, overlay);
+  // Bake into composite
+  fetch(`/api/admin/dashboard/post-drafts/${id}/regenerate-all-images`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  }).catch(() => {});
+  toast('Layout saved — rendering composite…', 'success');
+  setTimeout(() => loadDrafts(), 4000);
+}
+
+function findStickerOverlay(cardEl, slideIndex) {
+  if (Number.isInteger(slideIndex)) {
+    return cardEl.querySelector(`[data-sticker-overlay][data-slide-index="${slideIndex}"]`);
+  }
+  return cardEl.querySelector('[data-sticker-overlay]:not([data-slide-index]), [data-sticker-overlay][data-slide-index=""]');
+}
+
+async function applyBrandedOverlay(id, slideIndex, overlay) {
+  const draft = DRAFTS.find((x) => x._id === id);
+  if (!draft) return;
+  let body;
+  if (Number.isInteger(slideIndex)) {
+    const slides = (draft.slides || []).map((s, i) => i === slideIndex ? { ...s, branded_overlay: overlay } : s);
+    draft.slides = slides;
+    body = { slides };
+  } else {
+    draft.branded_overlay = overlay;
+    body = { branded_overlay: overlay };
+  }
+  const res = await fetch(`/api/admin/dashboard/post-drafts/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    toast(json.error || 'patch failed', 'error');
+    return false;
+  }
+  // Re-render just the affected card so the overlay shows immediately. We
+  // can't full loadDrafts here because the sticker panel is open and that
+  // would close it.
+  return true;
 }
 
 async function actionDeleteSlide(id, slideIndex) {

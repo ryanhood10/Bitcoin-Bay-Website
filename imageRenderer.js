@@ -698,7 +698,7 @@ function overlaySVG({ width, height, headline, badgeKind, overlayX, overlayY, ov
   </svg>`;
 }
 
-async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor, overlayFont }) {
+async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targetW = 1080, targetH = 1080, overlayX, overlayY, overlayColor, overlayFont, brandedOverlay }) {
   if (!imageUrl) throw new Error('composeOverlayCard requires imageUrl');
   // Download the source image (can be remote)
   const srcRes = await fetch(imageUrl, { signal: TIMEOUT(20000) });
@@ -710,7 +710,27 @@ async function composeOverlayCard({ imageUrl, headline, badgeKind, outPath, targ
     .toBuffer();
   // Compose overlay SVG on top (with optional custom position + color + font)
   const svg = overlaySVG({ width: targetW, height: targetH, headline, badgeKind, overlayX, overlayY, overlayColor, overlayFont });
-  const composed = sharp(baseBuf).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]);
+  const composites = [{ input: Buffer.from(svg), top: 0, left: 0 }];
+  // Phase 9.5 — branded sticker (crypto/exchange logo) baked at saved coords.
+  if (brandedOverlay && brandedOverlay.key) {
+    try {
+      const branded = require('./brandedOverlays');
+      const markSvg = branded.generateMarkSVG(brandedOverlay.key, 512);
+      if (markSvg) {
+        const scalePct = Number.isFinite(brandedOverlay.scale_pct) ? brandedOverlay.scale_pct : 18;
+        const stickerSize = Math.max(48, Math.round(targetW * (scalePct / 100)));
+        const stickerBuf = await sharp(Buffer.from(markSvg)).resize(stickerSize, stickerSize).png().toBuffer();
+        const xPct = Number.isFinite(brandedOverlay.x_pct) ? brandedOverlay.x_pct : 80;
+        const yPct = Number.isFinite(brandedOverlay.y_pct) ? brandedOverlay.y_pct : 12;
+        const left = Math.max(0, Math.min(targetW - stickerSize, Math.round((xPct / 100) * targetW - stickerSize / 2)));
+        const top = Math.max(0, Math.min(targetH - stickerSize, Math.round((yPct / 100) * targetH - stickerSize / 2)));
+        composites.push({ input: stickerBuf, left, top });
+      }
+    } catch (e) {
+      console.warn(`[imageRenderer] brandedOverlay bake skipped: ${e.message}`);
+    }
+  }
+  const composed = sharp(baseBuf).composite(composites);
   await ensureDir(path.dirname(outPath));
   await composed.jpeg({ quality: 88 }).toFile(outPath);
   return pathToPublicUrl(outPath);
@@ -828,6 +848,7 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
             overlayY: Number.isFinite(s.overlay_y) ? s.overlay_y : undefined,
             overlayColor: typeof s.overlay_color === 'string' ? s.overlay_color : undefined,
             overlayFont: s.overlay_font === 'espn' ? 'espn' : 'brand',
+            brandedOverlay: s.branded_overlay || null,
           });
         } catch (e) {
           console.warn(`[imageRenderer] slide ${i} composite failed: ${e.message}`);
@@ -873,13 +894,14 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
 
   // For IG single, compose with overlay; for X, leave the raw real photo
   // (X auto-renders the URL as a card and the tweet text carries the headline).
-  if (draft.platform === 'instagram_single' && draft.image_overlay_text) {
+  if (draft.platform === 'instagram_single' && (draft.image_overlay_text || draft.branded_overlay)) {
     try {
       const outPath = path.join(dir, id, 'main.jpg');
       const composite = await composeOverlayCard({
         imageUrl: hit.url,
-        headline: draft.image_overlay_text,
+        headline: draft.image_overlay_text || '',
         outPath,
+        brandedOverlay: draft.branded_overlay || null,
       });
       return {
         image_url: composite,

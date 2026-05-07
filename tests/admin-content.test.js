@@ -658,6 +658,76 @@ test('POST /post-drafts/:id/add-cta-slide — full-role passes auth, fails at Mo
 });
 
 // ---------------------------------------------------------------------------
+// /branded-overlays — Phase 9.5 — sticker library manifest + suggestions
+// ---------------------------------------------------------------------------
+test('GET /branded-overlays — 401 unauthenticated', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/branded-overlays');
+    assert.equal(r.status, 401);
+  } finally { await stopServer(server); }
+});
+
+test('GET /branded-overlays — 403 for dashboard role', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/branded-overlays', {
+      headers: { Cookie: cookieFor('dashboard') },
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('GET /branded-overlays — 200 returns manifest + empty suggested when no subject', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/branded-overlays', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.success, true);
+    assert.ok(Array.isArray(r.json.manifest));
+    assert.ok(r.json.manifest.length > 10);
+    assert.deepEqual(r.json.suggested, []);
+  } finally { await stopServer(server); }
+});
+
+test('GET /branded-overlays?subject=bitcoin — auto-suggests btc', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/admin/dashboard/branded-overlays?subject=bitcoin%20rally', {
+      headers: { Cookie: cookieFor('full') },
+    });
+    assert.equal(r.status, 200);
+    assert.ok(r.json.suggested.includes('btc'));
+  } finally { await stopServer(server); }
+});
+
+test('GET /branded-overlays/:key.svg — 200 with SVG content for valid key', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/branded-overlays/btc.svg');
+    assert.equal(r.status, 200);
+    assert.ok(r.text.includes('<svg'));
+    assert.ok(r.text.includes('₿'));
+  } finally { await stopServer(server); }
+});
+
+test('GET /branded-overlays/:key.svg — 404 for unknown key', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/branded-overlays/nonexistent.svg');
+    assert.equal(r.status, 404);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
 // /photo-search — Phase 9.2 — replace-photo candidate search
 // ---------------------------------------------------------------------------
 test('GET /photo-search — 401 unauthenticated', async () => {
