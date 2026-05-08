@@ -394,7 +394,8 @@
   .photo-panel.open { display: block; }
   .photo-source { margin-top: 10px; }
   .photo-source:first-of-type { margin-top: 0; }
-  .photo-source-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .photo-source-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .photo-source-hint { font-size: 9px; text-transform: none; letter-spacing: 0; color: var(--muted2); font-weight: 400; }
   .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .photo-thumb { position: relative; cursor: pointer; border-radius: 6px; overflow: hidden; aspect-ratio: 4/3; background: var(--surface); border: 2px solid transparent; transition: border-color 0.12s ease, transform 0.12s ease; }
   .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -1951,21 +1952,28 @@ async function loadPhotoCandidates(cardEl, slideIndex, draftId) {
 
 function renderPhotoCandidatesHtml(candidates, slideIndex) {
   const sIdxAttr = Number.isInteger(slideIndex) ? `data-slide-index="${slideIndex}"` : '';
+  // Sources sorted "free + licensed first → broader Google last" so the
+  // operator's eye lands on the safer-to-publish results first.
   const sources = [
-    { key: 'wikimedia', label: 'Wikimedia Commons' },
-    { key: 'pexels', label: 'Pexels' },
-    { key: 'unsplash', label: 'Unsplash' },
+    { key: 'wikimedia', label: 'Wikimedia Commons',  hint: 'free, attribution required' },
+    { key: 'pexels',    label: 'Pexels',             hint: 'free, no attribution required' },
+    { key: 'unsplash',  label: 'Unsplash',           hint: 'free, attribution appreciated' },
+    { key: 'google',    label: 'Google Image Search', hint: 'broader web — verify rights before publishing' },
   ];
   const sections = sources.map((src) => {
     const items = (candidates && candidates[src.key]) || [];
+    // Hide entirely if the source is unconfigured / returned nothing AND
+    // it's the optional Google one — don't waste vertical space telling
+    // the operator "no results" for a source they may not have wired up.
+    if (!items.length && src.key === 'google') return '';
     if (!items.length) {
-      return `<div class="photo-source"><div class="photo-source-label">${src.label}</div><div class="photo-empty">no results</div></div>`;
+      return `<div class="photo-source"><div class="photo-source-label">${src.label} <span class="photo-source-hint">${src.hint}</span></div><div class="photo-empty">no results</div></div>`;
     }
     const thumbs = items.map((c, i) => `
       <div class="photo-thumb" data-action="replace-photo-pick" data-photo-source="${src.key}" data-photo-index="${i}" ${sIdxAttr} title="${safeText(c.attribution || '')}">
         <img src="${escapeHtml(c.thumb_url || c.url)}" alt="" referrerpolicy="no-referrer" />
       </div>`).join('');
-    return `<div class="photo-source"><div class="photo-source-label">${src.label}</div><div class="photo-grid">${thumbs}</div></div>`;
+    return `<div class="photo-source"><div class="photo-source-label">${src.label} <span class="photo-source-hint">${src.hint}</span></div><div class="photo-grid">${thumbs}</div></div>`;
   }).join('');
   // Stash the raw candidates in a data attribute for the click handler.
   return `<div data-photo-candidates='${escapeHtml(JSON.stringify(candidates || {}))}'>${sections}</div>`;

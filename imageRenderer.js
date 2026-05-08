@@ -416,15 +416,56 @@ async function searchUnsplashCandidates(subject, limit = 3) {
   }
 }
 
+// Phase 9.8: Google Custom Search for images. Operator-only (replace-photo
+// UI), gated by GOOGLE_API_KEY + GOOGLE_CSE_ID env vars — silently empty
+// if either is unset (so the UI just shows the other three sources). Free
+// tier: 100 queries/day, then $5/1000. Operator clicks → one query.
+//
+// IMPORTANT: results may be copyrighted. Operator's call whether to use
+// them. We tag attribution as 'Google Image Search' so the source is
+// clear in any audit.
+async function searchGoogleCandidates(subject, limit = 6) {
+  const key = process.env.GOOGLE_API_KEY;
+  const cx  = process.env.GOOGLE_CSE_ID;
+  if (!key || !cx || !subject) return [];
+  try {
+    const url = 'https://www.googleapis.com/customsearch/v1?' + new URLSearchParams({
+      key, cx, q: subject, searchType: 'image',
+      num: String(Math.min(10, Math.max(limit, 6))),
+      safe: 'active',     // SafeSearch on — no NSFW results
+      imgSize: 'large',   // prefer large enough for IG/X composites
+    }).toString();
+    const res = await fetch(url, { signal: TIMEOUT(12000) });
+    if (!res.ok) {
+      console.warn(`[imageRenderer] google CSE returned HTTP ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    return (data.items || []).slice(0, limit).map((item) => ({
+      source: 'google',
+      url: item.link,
+      thumb_url: item.image?.thumbnailLink || item.link,
+      attribution: `Image: ${item.displayLink || 'Google Image Search'}`,
+      license: 'Third-party — verify before publishing',
+      descriptionurl: item.image?.contextLink || item.link,
+      title: item.title,
+    }));
+  } catch (e) {
+    console.warn(`[imageRenderer] google CSE candidates failed for "${subject}": ${e.message}`);
+    return [];
+  }
+}
+
 async function searchPhotoCandidates(subject, { intent, perSource = 3 } = {}) {
-  if (!subject) return { wikimedia: [], pexels: [], unsplash: [] };
+  if (!subject) return { wikimedia: [], pexels: [], unsplash: [], google: [] };
   const inferredIntent = intent || inferIntent(subject) || 'sport_action';
-  const [wikimedia, pexels, unsplash] = await Promise.all([
+  const [wikimedia, pexels, unsplash, google] = await Promise.all([
     searchWikimediaCandidates(subject, perSource),
     searchPexelsCandidates(subject, inferredIntent, perSource),
     searchUnsplashCandidates(subject, perSource),
+    searchGoogleCandidates(subject, Math.max(perSource * 2, 6)), // give Google more headroom
   ]);
-  return { wikimedia, pexels, unsplash };
+  return { wikimedia, pexels, unsplash, google };
 }
 
 // ── HERO CASCADE ──

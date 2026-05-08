@@ -146,6 +146,7 @@ Indexes on `bcb_messages` are ensured on boot by `messagesSync.ensureIndexes()` 
 | `SMS_TIMEZONE` | no | IANA name, default `America/Chicago`. |
 | `ANTHROPIC_API_KEY` | yes for content drafter | Claude API key. Used by `contentDrafter.js` for X+IG draft generation and the Pi engagement-reply scripts. |
 | `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY` | preferred for content drafter | Free editorial-photo APIs used by `imageRenderer.js` cascade. Wikimedia is the primary source; Pexels/Unsplash are tier-2 fallbacks. |
+| `GOOGLE_API_KEY` / `GOOGLE_CSE_ID` | optional | Google Programmable Search Engine for the operator's replace-photo modal (Phase 9.8). Free tier 100 queries/day. When unset, the picker silently hides the Google source — Wikimedia/Pexels/Unsplash still work. Setup: Google Cloud Console → enable Custom Search API → API key, then https://programmablesearchengine.google.com → new engine searching the entire web with image search ON → CSE ID. |
 | `REPLICATE_API_TOKEN` | optional | Replicate API token for the 🎨 Generate scene button (operator-triggered InstantID, ~$0.05/call). When unset, the endpoint returns 503 — the rest of the dashboard works normally. |
 | `BCBAY_REPLICATE_MODEL` | no | Override for the InstantID model identifier. Defaults to `zsxkib/instant-id`. |
 | `BCBAY_DRAFTER_MODEL` | no | Override for the Claude model used by the drafter. Defaults to `claude-sonnet-4-6`. |

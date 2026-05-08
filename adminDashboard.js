@@ -37,7 +37,7 @@
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate        — re-prompt Claude (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/swap-variant      — flip Twitter draft active variant (meme ↔ professional) (FULL)
 //   POST /api/admin/dashboard/post-drafts/:id/generate-art      — Replicate InstantID AI scene gen (FULL, ~$0.05/call)
-//   GET  /api/admin/dashboard/photo-search?subject=&intent= — top-3 photo candidates per source (Wikimedia/Pexels/Unsplash) for replace-photo UI (FULL)
+//   GET  /api/admin/dashboard/photo-search?subject=&intent= — top-3 photo candidates per source (Wikimedia/Pexels/Unsplash + Google when configured) for replace-photo UI (FULL)
 //   GET  /api/admin/dashboard/branded-overlays?subject= — manifest of crypto/exchange logo marks + auto-suggest (FULL)
 //   GET  /branded-overlays/:key.svg — public SVG render of one logo mark (no auth, used by sticker thumbnails)
 //   POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — re-run image pipeline for the whole draft (FULL)
