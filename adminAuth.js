@@ -27,6 +27,51 @@ const ROLE_FULL      = 'full';
 const ROLE_DASHBOARD = 'dashboard';
 const VALID_ROLES    = new Set([ROLE_FULL, ROLE_DASHBOARD]);
 
+// Per-user capability layer (Phase 10). The role still controls broad gates,
+// but `granted_sections` and `denied_sections` on a Mongo admin doc let us
+// hand a single user a specific extra capability (Goadma: dashboard role +
+// content_drafter grant for social-media management) or take one away
+// (Goadma: tickets denied — he doesn't manage player support).
+//
+// Section keys are server-side identifiers. The UI maps them to nav items;
+// the endpoints map them to access checks via `requireSection(name)`.
+const SECTIONS = {
+  MESSAGING:        'messaging',         // /admin/messages player-reply UI
+  ANALYTICS:        'analytics',         // GA4 + signups + Twitter/IG metrics on /admin/dashboard
+  USERS:            'users',             // signups panel
+  TICKETS:          'tickets',           // open-thread support panel
+  ENGAGEMENT:       'engagement',        // engagement-drafts (bot-suggested replies)
+  SOCIAL_METRICS:   'social_metrics',    // Twitter+IG analytics widgets
+  CONTENT_DRAFTER:  'content_drafter',   // /admin/dashboard/content
+  BONUS_CALCULATOR: 'bonus_calculator',  // /admin/dashboard/bonus-calculator
+};
+
+// Default sections by role. `full` gets everything; `dashboard` gets the
+// read-only analytics surface. Per-user grants/denies layer on top.
+const ROLE_DEFAULT_SECTIONS = {
+  [ROLE_FULL]: [
+    SECTIONS.MESSAGING, SECTIONS.ANALYTICS, SECTIONS.USERS, SECTIONS.TICKETS,
+    SECTIONS.ENGAGEMENT, SECTIONS.SOCIAL_METRICS, SECTIONS.CONTENT_DRAFTER,
+    SECTIONS.BONUS_CALCULATOR,
+  ],
+  [ROLE_DASHBOARD]: [
+    SECTIONS.ANALYTICS, SECTIONS.USERS, SECTIONS.TICKETS,
+    SECTIONS.ENGAGEMENT, SECTIONS.SOCIAL_METRICS,
+  ],
+};
+
+function effectiveSections(admin) {
+  const role = admin?.role || ROLE_DASHBOARD;
+  const base = new Set(ROLE_DEFAULT_SECTIONS[role] || []);
+  for (const s of admin?.granted_sections || []) base.add(s);
+  for (const s of admin?.denied_sections || []) base.delete(s);
+  return base;
+}
+
+function canAccess(admin, section) {
+  return effectiveSections(admin).has(section);
+}
+
 function getSessionSecret() {
   const s = process.env.ADMIN_SESSION_SECRET;
   if (!s || s.length < 24) {
@@ -60,10 +105,18 @@ function verifyCookie(raw) {
   return payload;
 }
 
-function setSessionCookie(res, user, role) {
+// Backward-compat: callers can pass (res, user, role) like before, OR a full
+// admin object as the second arg to capture the per-user capability flags.
+function setSessionCookie(res, userOrAdmin, role) {
+  const admin = (typeof userOrAdmin === 'object' && userOrAdmin)
+    ? userOrAdmin
+    : { username: userOrAdmin, role };
   const payload = {
-    user,
-    role: role || ROLE_FULL,
+    user: admin.username || admin.user,
+    role: admin.role || ROLE_FULL,
+    granted_sections: Array.isArray(admin.granted_sections) ? admin.granted_sections : [],
+    denied_sections:  Array.isArray(admin.denied_sections)  ? admin.denied_sections  : [],
+    landing_page:     admin.landing_page || null,
     iat: Date.now(),
     exp: Date.now() + COOKIE_TTL_MS,
   };
@@ -106,6 +159,9 @@ async function findAdmin(username) {
       username: doc.username,
       role:     VALID_ROLES.has(doc.role) ? doc.role : ROLE_DASHBOARD,
       passwordHash: doc.password_hash,
+      granted_sections: Array.isArray(doc.granted_sections) ? doc.granted_sections : [],
+      denied_sections:  Array.isArray(doc.denied_sections)  ? doc.denied_sections  : [],
+      landing_page:     doc.landing_page || null,
       source: 'mongo',
     };
   } catch (err) {
@@ -179,8 +235,35 @@ function requireAdmin(requiredRole) {
          </body></html>`
       );
     }
-    req.admin = { user: session.user, role: userRole };
+    req.admin = {
+      user: session.user,
+      role: userRole,
+      granted_sections: Array.isArray(session.granted_sections) ? session.granted_sections : [],
+      denied_sections:  Array.isArray(session.denied_sections)  ? session.denied_sections  : [],
+      landing_page:     session.landing_page || null,
+    };
     next();
+  };
+}
+
+// Section-gating middleware. Use AFTER requireAdmin so req.admin is set.
+// Returns 403 (or HTML for non-API paths) if the admin doesn't have access
+// to the named section. Falls back to allow if req.admin is missing because
+// requireAdmin should already have rejected; this is just defense-in-depth.
+function requireSection(section) {
+  return function (req, res, next) {
+    if (!req.admin) return res.status(401).json({ success: false, error: 'Not signed in' });
+    if (canAccess(req.admin, section)) return next();
+    if (wantsJson(req)) {
+      return res.status(403).json({ success: false, error: `section "${section}" not accessible by this admin` });
+    }
+    return res.status(403).type('html').send(
+      `<html><body style="font-family:system-ui;padding:40px;background:#0c0c10;color:#e8e6f0;">
+       <h1 style="color:#f87171;">403 — Access denied</h1>
+       <p>Your account does not have access to <code>${section}</code>.</p>
+       <p><a href="/admin/dashboard" style="color:#EE8034;">Go to your dashboard →</a></p>
+       </body></html>`
+    );
   };
 }
 
@@ -192,6 +275,8 @@ module.exports = {
   ROLE_FULL,
   ROLE_DASHBOARD,
   VALID_ROLES,
+  SECTIONS,
+  ROLE_DEFAULT_SECTIONS,
   signCookie,
   verifyCookie,
   setSessionCookie,
@@ -200,4 +285,7 @@ module.exports = {
   verifyPassword,
   touchLastLogin,
   requireAdmin,
+  requireSection,
+  effectiveSections,
+  canAccess,
 };

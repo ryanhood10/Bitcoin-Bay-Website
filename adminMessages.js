@@ -208,13 +208,18 @@ router.post('/admin/login', express.urlencoded({ extended: false }), async (req,
     return res.status(401).type('html').send(loginPage('Wrong username or password.'));
   }
 
-  // Successful login — wipe the counter for this IP, set session with role.
+  // Successful login — wipe the counter for this IP, set session with role
+  // + the per-user capability flags (Phase 10: granted/denied sections + an
+  // optional landing_page override). Pass the full admin object so the new
+  // fields land in the cookie and req.admin sees them on every request.
   _loginAttempts.delete(remoteIp);
-  adminAuth.setSessionCookie(res, admin.username, admin.role);
+  adminAuth.setSessionCookie(res, admin);
   await adminAuth.touchLastLogin(admin.username);
   await logAdminAction({ action: 'login_ok', username: admin.username, role: admin.role, remote_ip: remoteIp });
-  // Dashboard-only admins land on the analytics page; full admins land on messages.
-  res.redirect(admin.role === adminAuth.ROLE_FULL ? '/admin/messages' : '/admin/dashboard');
+  // Per-user landing_page wins; otherwise role default (full → messages,
+  // dashboard → analytics).
+  const fallback = admin.role === adminAuth.ROLE_FULL ? '/admin/messages' : '/admin/dashboard';
+  res.redirect(admin.landing_page || fallback);
 });
 
 router.post('/admin/logout', (req, res) => {

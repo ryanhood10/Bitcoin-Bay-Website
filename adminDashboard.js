@@ -157,9 +157,19 @@ router.get('/admin/dashboard', adminAuth.requireAdmin(), (req, res) => {
 });
 
 // Current admin identity — used by the dashboard JS to conditionally show
-// role-specific UI (e.g., "Back to messages" button only for full admins).
+// role-specific UI (e.g., "Back to messages" button only for full admins)
+// and Phase 10 per-user capability flags (effective_sections so the UI
+// can hide nav items the operator can't access).
 router.get('/api/admin/dashboard/me', adminAuth.requireAdmin(), (req, res) => {
-  res.json({ user: req.admin.user, role: req.admin.role });
+  const effective = Array.from(adminAuth.effectiveSections(req.admin));
+  res.json({
+    user: req.admin.user,
+    role: req.admin.role,
+    granted_sections: req.admin.granted_sections || [],
+    denied_sections:  req.admin.denied_sections  || [],
+    effective_sections: effective,
+    landing_page: req.admin.landing_page || null,
+  });
 });
 
 // ===========================================================================
@@ -247,7 +257,7 @@ router.get('/api/admin/dashboard/signups', adminAuth.requireAdmin(), async (req,
 // TICKETS — live snapshot + currently open threads
 // ===========================================================================
 
-router.get('/api/admin/dashboard/tickets/live', adminAuth.requireAdmin(), async (req, res) => {
+router.get('/api/admin/dashboard/tickets/live', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.TICKETS), async (req, res) => {
   try {
     const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 30, 100));
     const data = await withDb(async (db) => {
@@ -543,7 +553,7 @@ router.post('/api/admin/dashboard/bonus-report', adminAuth.requireAdmin(adminAut
 // HTML page (Phase 5) — full-role only because every action on this page is
 // full-role anyway, no point teasing dashboard-role admins with a UI they
 // can't use.
-router.get('/admin/dashboard/content', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
+router.get('/admin/dashboard/content', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), (req, res) => {
   // No-store: the SPA's JS lives inline in this HTML, so caching it would
   // pin operators on stale code after a deploy. The page is small and only
   // requested by full-role admins, so the cache miss is cheap.
@@ -630,7 +640,7 @@ router.get('/api/admin/dashboard/post-drafts', adminAuth.requireAdmin(), async (
 
 // Edit a draft. Whitelist of allowed fields: text/caption/hashtags/image_*/slides.
 // Status transitions go through dedicated /skip and /approve endpoints — not here.
-router.patch('/api/admin/dashboard/post-drafts/:id', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.patch('/api/admin/dashboard/post-drafts/:id', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -672,7 +682,7 @@ router.patch('/api/admin/dashboard/post-drafts/:id', adminAuth.requireAdmin(admi
 
 // Regenerate a draft. Body: { humor_pass?: bool, slide_index?: number, new_angle?: string }
 // slide_index regenerates one carousel slide; full-card regen otherwise.
-router.post('/api/admin/dashboard/post-drafts/:id/regenerate', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/regenerate', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -702,7 +712,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/regenerate', adminAuth.require
 // top-level fields (text, hashtags, image_overlay_text, image_scene_prompt,
 // takeaway_one_liner) are mirrored from the new active variant so the rest
 // of the pipeline (PATCH/approve/render) keeps using the same shape.
-router.post('/api/admin/dashboard/post-drafts/:id/swap-variant', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/swap-variant', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -759,7 +769,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/swap-variant', adminAuth.requi
 //
 // Returns 503 if REPLICATE_API_TOKEN is missing. Cost ~$0.05/call,
 // audit-logged with the model + prompt.
-router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -874,7 +884,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/generate-art', adminAuth.requi
 // static list defined in brandedOverlays.js; we add a dynamic `suggested`
 // field based on the optional `subject` query so the picker can bubble
 // matching logos to the top.
-router.get('/api/admin/dashboard/branded-overlays', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.get('/api/admin/dashboard/branded-overlays', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const subject = (req.query.subject || '').toString().trim();
     const branded = require('./brandedOverlays');
@@ -908,7 +918,7 @@ router.get('/branded-overlays/:key.svg', (req, res) => {
 // `subject` query. The operator clicks a thumb to pick a replacement;
 // the picked URL goes into the slide via PATCH + a /regenerate-all-images
 // pass to bake any active overlay back in.
-router.get('/api/admin/dashboard/photo-search', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.get('/api/admin/dashboard/photo-search', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const subject = (req.query.subject || '').toString().trim();
     if (!subject) {
@@ -928,7 +938,7 @@ router.get('/api/admin/dashboard/photo-search', adminAuth.requireAdmin(adminAuth
 });
 
 // re-prompting Claude for the deck text. Fire-and-forget — returns 202.
-router.post('/api/admin/dashboard/post-drafts/:id/regenerate-all-images', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/regenerate-all-images', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -967,7 +977,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/regenerate-all-images', adminA
 // Renders via composeBrandedCard (BB logo + headline + brand palette).
 // Caps the slides[] at 10 (Meta's hard limit; we typically cap at 5 in Claude
 // output but allow this manual extension up to 10).
-router.post('/api/admin/dashboard/post-drafts/:id/add-cta-slide', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/add-cta-slide', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -1027,7 +1037,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/add-cta-slide', adminAuth.requ
 // Remove one slide from a carousel. Body: { slide_index: <number> }.
 // Floor at 2 slides — Meta requires at least 2 images for a carousel and
 // operator confirmed minimum during Phase 9 planning.
-router.post('/api/admin/dashboard/post-drafts/:id/delete-slide', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/delete-slide', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -1079,7 +1089,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/delete-slide', adminAuth.requi
 // on the dyno's local filesystem under public/post-images/{date}/{id}/. Heads
 // up: Heroku's filesystem is ephemeral — files older than the last dyno
 // restart will be missing and the endpoint returns 404.
-router.get('/api/admin/dashboard/post-drafts/:id/zip', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.get('/api/admin/dashboard/post-drafts/:id/zip', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -1134,7 +1144,7 @@ router.get('/api/admin/dashboard/post-drafts/:id/zip', adminAuth.requireAdmin(ad
 });
 
 // Skip a draft. Body: { reason?: string }
-router.post('/api/admin/dashboard/post-drafts/:id/skip', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/skip', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -1163,7 +1173,7 @@ router.post('/api/admin/dashboard/post-drafts/:id/skip', adminAuth.requireAdmin(
 
 // Approve. Phase 6 just marks status='approved' and audit-logs. Phase 7 will
 // extend this handler to call socialPublisher and flip to 'posted' on success.
-router.post('/api/admin/dashboard/post-drafts/:id/approve', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/post-drafts/:id/approve', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const id = (req.params.id || '').trim();
     if (!ObjectId.isValid(id)) {
@@ -1285,7 +1295,7 @@ router.get('/api/admin/dashboard/game-state', adminAuth.requireAdmin(), async (r
 // Pulls ESPN game state, calls contentDrafter.draftFromGameState() to build
 // a one-shot Twitter draft (2 variants), inserts into bcb_post_drafts, and
 // returns the new draft id. Audit-logged with the cost estimate.
-router.post('/api/admin/dashboard/draft-from-game', adminAuth.requireAdmin(adminAuth.ROLE_FULL), async (req, res) => {
+router.post('/api/admin/dashboard/draft-from-game', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), async (req, res) => {
   try {
     const eventId = String(req.body?.event_id || '').trim();
     const leaguePath = String(req.body?.league_path || '').trim();
@@ -1358,7 +1368,7 @@ router.post('/api/cron/run-drafter', (req, res) => {
     note: 'Drafter started in background.' });
 });
 
-router.post('/api/admin/dashboard/run-drafter', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
+router.post('/api/admin/dashboard/run-drafter', adminAuth.requireAdmin(), adminAuth.requireSection(adminAuth.SECTIONS.CONTENT_DRAFTER), (req, res) => {
   const briefDate = (req.body?.date || '').toString().trim() || undefined;
   const adminUser = req.admin?.user;
 

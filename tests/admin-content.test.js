@@ -80,6 +80,21 @@ function cookieFor(role, user = 'tester') {
   return `bcb_admin=${signed}`;
 }
 
+// Phase 10 helper: cookie for a per-user-capability admin (granted/denied
+// sections + optional landing_page). Mimics what login does after pulling
+// the admin doc from Mongo.
+function cookieForAdmin(adminLike) {
+  const signed = adminAuth.signCookie({
+    user: adminLike.user || 'tester',
+    role: adminLike.role || 'dashboard',
+    granted_sections: adminLike.granted_sections || [],
+    denied_sections:  adminLike.denied_sections  || [],
+    landing_page:     adminLike.landing_page     || null,
+    iat: Date.now(), exp: Date.now() + 60_000,
+  });
+  return `bcb_admin=${signed}`;
+}
+
 const VALID_OBJECT_ID = '507f1f77bcf86cd799439011'; // any 24-hex string parses
 
 // ---------------------------------------------------------------------------
@@ -154,7 +169,7 @@ test('PATCH /api/admin/dashboard/post-drafts/:id — 403 for dashboard role', as
       body: { text: 'edit' },
     });
     assert.equal(r.status, 403);
-    assert.match(r.json.error, /Insufficient role/);
+    assert.match(r.json.error, /Insufficient role|not accessible by this admin/);
   } finally { await stopServer(server); }
 });
 
@@ -169,7 +184,7 @@ test('POST /api/admin/dashboard/post-drafts/:id/regenerate — 403 for dashboard
       body: {},
     });
     assert.equal(r.status, 403);
-    assert.match(r.json.error, /Insufficient role/);
+    assert.match(r.json.error, /Insufficient role|not accessible by this admin/);
   } finally { await stopServer(server); }
 });
 
@@ -503,7 +518,7 @@ test('POST /post-drafts/:id/generate-art — 403 for dashboard role (cost-bearin
       body: { scene_prompt: 'an athlete celebrating in confetti' },
     });
     assert.equal(r.status, 403);
-    assert.match(r.json.error, /Insufficient role/);
+    assert.match(r.json.error, /Insufficient role|not accessible by this admin/);
   } finally { await stopServer(server); }
 });
 
@@ -1082,6 +1097,112 @@ test('POST /draft-from-game — 400 league_path not in allowed list', async () =
       body: { event_id: '123', league_path: 'evil/path' },
     });
     assert.equal(r.status, 400);
+  } finally { await stopServer(server); }
+});
+
+// ---------------------------------------------------------------------------
+// Phase 10 — per-user capability layer (granted/denied sections + /me shape)
+// ---------------------------------------------------------------------------
+test('Phase 10 — dashboard role + granted content_drafter unlocks PATCH post-drafts', async () => {
+  // Goadma's exact setup: dashboard role + content_drafter granted.
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const cookie = cookieForAdmin({
+      role: 'dashboard',
+      granted_sections: ['content_drafter'],
+    });
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}`, {
+      method: 'PATCH',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: { text: 'edit' },
+    });
+    // Auth + section pass; 500 because Mongo isn't running in tests (same
+    // pattern as the existing full-role passthrough tests). The point is
+    // we got past the requireSection gate.
+    assert.notEqual(r.status, 401);
+    assert.notEqual(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('Phase 10 — full role + denied content_drafter blocks PATCH post-drafts', async () => {
+  // Inverse: a full-role admin can have a section explicitly denied.
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const cookie = cookieForAdmin({
+      role: 'full',
+      denied_sections: ['content_drafter'],
+    });
+    const r = await request(server, `/api/admin/dashboard/post-drafts/${VALID_OBJECT_ID}`, {
+      method: 'PATCH',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: { text: 'edit' },
+    });
+    assert.equal(r.status, 403);
+    assert.match(r.json.error, /not accessible by this admin/);
+  } finally { await stopServer(server); }
+});
+
+test('Phase 10 — full role + denied tickets blocks /tickets/live', async () => {
+  // Goadma's other half: tickets denied.
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const cookie = cookieForAdmin({
+      role: 'dashboard',
+      denied_sections: ['tickets'],
+    });
+    const r = await request(server, '/api/admin/dashboard/tickets/live', {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(r.status, 403);
+  } finally { await stopServer(server); }
+});
+
+test('Phase 10 — bonus calculator stays role-gated, not section-gated', async () => {
+  // Confirms we did NOT migrate bonus to the section system. A dashboard
+  // role with content_drafter granted + bonus_calculator granted should
+  // still be blocked because bonus uses requireAdmin(ROLE_FULL) directly.
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const cookie = cookieForAdmin({
+      role: 'dashboard',
+      granted_sections: ['content_drafter', 'bonus_calculator'],
+    });
+    const r = await request(server, '/api/admin/dashboard/bonus-reports', {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(r.status, 403);
+    assert.match(r.json.error, /Insufficient role/);
+  } finally { await stopServer(server); }
+});
+
+test('Phase 10 — /me returns effective_sections + capability flags', async () => {
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const cookie = cookieForAdmin({
+      user: 'goadma',
+      role: 'dashboard',
+      granted_sections: ['content_drafter'],
+      denied_sections: ['tickets'],
+      landing_page: '/admin/dashboard',
+    });
+    const r = await request(server, '/api/admin/dashboard/me', {
+      headers: { Cookie: cookie },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.role, 'dashboard');
+    assert.deepEqual(r.json.granted_sections, ['content_drafter']);
+    assert.deepEqual(r.json.denied_sections, ['tickets']);
+    assert.equal(r.json.landing_page, '/admin/dashboard');
+    // Effective: dashboard defaults + content_drafter - tickets
+    assert.ok(r.json.effective_sections.includes('content_drafter'));
+    assert.ok(r.json.effective_sections.includes('analytics'));
+    assert.ok(!r.json.effective_sections.includes('tickets'));
+    assert.ok(!r.json.effective_sections.includes('bonus_calculator'));
   } finally { await stopServer(server); }
 });
 

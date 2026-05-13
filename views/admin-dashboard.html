@@ -647,7 +647,7 @@ let MODE='day', OFFSET=0, REPORT=null, ALL_DATES=[];
 let ENGAGEMENT_STATS = { twitter: null, instagram: null };
 // CURRENT_ADMIN populated at load time. Used to conditionally show UI that
 // links into /admin/messages — only role=full admins can access that page.
-let CURRENT_ADMIN = { user: null, role: null };
+let CURRENT_ADMIN = { user: null, role: null, effective_sections: [] };
 async function fetchCurrentAdmin(){
   try {
     const res = await fetch('/api/admin/dashboard/me', { headers: { Accept: 'application/json' }});
@@ -655,6 +655,13 @@ async function fetchCurrentAdmin(){
   } catch(_) { /* stay null — UI treats as no messages access */ }
 }
 function canAccessMessages(){ return CURRENT_ADMIN && CURRENT_ADMIN.role === 'full'; }
+// Phase 10: per-user capability check. Falls back to true if /me hasn't
+// loaded yet so we don't accidentally hide everything during the initial
+// render (the server still gates the actual data).
+function hasSection(name){
+  if (!CURRENT_ADMIN || !Array.isArray(CURRENT_ADMIN.effective_sections)) return true;
+  return CURRENT_ADMIN.effective_sections.includes(name);
+}
 
 async function fetchEngagementStats(){
   try {
@@ -867,7 +874,8 @@ function renderAll(){
     </div>`;
   }
 
-  // ── SUPPORT TICKETS ──
+  // ── SUPPORT TICKETS ── (hidden when operator has 'tickets' denied — Phase 10)
+  if (hasSection('tickets')) {
   const tk = REPORT.tickets;
   html+=`<div class="section-block section-clickable" data-modal="tickets">
     <div class="section-header">
@@ -994,6 +1002,7 @@ function renderAll(){
     </div>
 
   </div>`;
+  } // end if (hasSection('tickets'))
 
 
 
@@ -1019,11 +1028,12 @@ function renderAll(){
     </div>`;
   }
 
-  // ── CONTENT DRAFTS (full-role admins only) ──
+  // ── CONTENT DRAFTS (section-gated) ──
   // Daily X + IG draft posts, generated overnight from the Pi research brief.
-  // Operator reviews, edits, regenerates, and approves before posting.
-  // Hidden from `dashboard`-role admins; server-side gate on role=full.
-  if (canAccessMessages()) {
+  // Phase 10: gated by the 'content_drafter' section so a dashboard-role
+  // operator (e.g. Goadma — social media manager) can be granted access
+  // without becoming a full admin.
+  if (hasSection('content_drafter')) {
     html += `<div class="section-block">
       <div class="section-header">
         <div class="section-title-row">
