@@ -493,10 +493,31 @@ function buildInstagramCarouselDraft({ topic, briefDate, parsed, humorPass }) {
 
 // ── PUBLIC: runDrafter ──
 async function runDrafter({ briefDate, dryRun = false } = {}) {
-  // Resolve brief
-  const date = briefDate || new Date().toISOString().slice(0, 10);
-  const brief = await withDb((db) => db.collection(BRIEFS_COLL).findOne({ date }));
-  if (!brief) throw new Error(`No brief found in ${BRIEFS_COLL} for date=${date}`);
+  // Resolve brief. If no explicit date passed, prefer "today by UTC" if it
+  // exists in Mongo, otherwise fall back to the most recent brief on file.
+  // Without the fallback the Pi-cron on UTC midnight day-flip OR a server
+  // running just-after-midnight would error with "No brief for YYYY-MM-DD"
+  // even when yesterday's brief is sitting right there ready to draft from.
+  let date = briefDate;
+  let brief = null;
+  if (date) {
+    brief = await withDb((db) => db.collection(BRIEFS_COLL).findOne({ date }));
+    if (!brief) throw new Error(`No brief found in ${BRIEFS_COLL} for date=${date}`);
+  } else {
+    const today = new Date().toISOString().slice(0, 10);
+    brief = await withDb((db) => db.collection(BRIEFS_COLL).findOne({ date: today }));
+    if (brief) {
+      date = today;
+    } else {
+      const latest = await withDb((db) =>
+        db.collection(BRIEFS_COLL).findOne({}, { sort: { date: -1 } })
+      );
+      if (!latest) throw new Error(`No briefs found in ${BRIEFS_COLL} at all`);
+      brief = latest;
+      date = latest.date;
+      console.log(`[contentDrafter] today's brief (${today}) not present — falling back to latest available: ${date}`);
+    }
+  }
 
   const ppt = brief.per_platform_topics;
   if (!ppt || !Array.isArray(ppt.twitter) || !ppt.instagram) {
