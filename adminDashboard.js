@@ -54,6 +54,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 const adminAuth = require('./adminAuth');
@@ -1317,6 +1318,43 @@ router.post('/api/admin/dashboard/draft-from-game', adminAuth.requireAdmin(admin
 
 // Run drafter — fire-and-forget. Returns 202 immediately so the dashboard
 // can poll /post-drafts to see drafts land. Async pattern matches Eldrin's.
+// Pi-cron endpoint: bcbay_research.py chains a curl to this after writing
+// the daily brief, so Heroku's drafter runs WITHOUT needing operator click
+// or a Heroku Scheduler addon. Auth via BCBAY_CRON_TOKEN env var (header
+// X-Bcbay-Cron-Token, constant-time compare). Same fire-and-forget pattern
+// as the admin-facing endpoint below; just different auth surface.
+router.post('/api/cron/run-drafter', express.json({ limit: '32kb' }), (req, res) => {
+  const expected = process.env.BCBAY_CRON_TOKEN;
+  if (!expected) {
+    return res.status(503).json({ success: false, error: 'BCBAY_CRON_TOKEN not configured' });
+  }
+  const provided = (req.get('X-Bcbay-Cron-Token') || '').trim();
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ success: false, error: 'invalid token' });
+  }
+  const briefDate = (req.body?.date || '').toString().trim() || undefined;
+  Promise.resolve()
+    .then(() => getContentDrafter().runDrafter({ briefDate }))
+    .then((out) => {
+      console.log(`[cron] runDrafter complete for ${out.brief_date}: ${out.drafts_count} drafts`);
+      logAdminAction({
+        action: 'content-drafter:cron-run',
+        admin: 'pi-cron', brief_date: out.brief_date, drafts_count: out.drafts_count,
+      }).catch(() => {});
+    })
+    .catch((e) => {
+      console.error('[cron] runDrafter background error:', e.message);
+      logAdminAction({
+        action: 'content-drafter:cron-run-failed',
+        admin: 'pi-cron', brief_date: briefDate, error: e.message,
+      }).catch(() => {});
+    });
+  res.status(202).json({ success: true, accepted: true,
+    note: 'Drafter started in background.' });
+});
+
 router.post('/api/admin/dashboard/run-drafter', adminAuth.requireAdmin(adminAuth.ROLE_FULL), (req, res) => {
   const briefDate = (req.body?.date || '').toString().trim() || undefined;
   const adminUser = req.admin?.user;

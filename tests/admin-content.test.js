@@ -201,6 +201,96 @@ test('POST /api/admin/dashboard/post-drafts/:id/approve — 403 for dashboard ro
   } finally { await stopServer(server); }
 });
 
+// ---------------------------------------------------------------------------
+// /api/cron/run-drafter — Phase 9.11 — Pi-cron drafter trigger
+// ---------------------------------------------------------------------------
+test('POST /api/cron/run-drafter — 503 when BCBAY_CRON_TOKEN unset', async () => {
+  const previous = process.env.BCBAY_CRON_TOKEN;
+  delete process.env.BCBAY_CRON_TOKEN;
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/cron/run-drafter', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: {},
+    });
+    assert.equal(r.status, 503);
+  } finally {
+    await stopServer(server);
+    if (previous !== undefined) process.env.BCBAY_CRON_TOKEN = previous;
+  }
+});
+
+test('POST /api/cron/run-drafter — 401 missing token', async () => {
+  const previous = process.env.BCBAY_CRON_TOKEN;
+  process.env.BCBAY_CRON_TOKEN = 'test-token-abc';
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/cron/run-drafter', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: {},
+    });
+    assert.equal(r.status, 401);
+  } finally {
+    await stopServer(server);
+    if (previous !== undefined) process.env.BCBAY_CRON_TOKEN = previous; else delete process.env.BCBAY_CRON_TOKEN;
+  }
+});
+
+test('POST /api/cron/run-drafter — 401 wrong token', async () => {
+  const previous = process.env.BCBAY_CRON_TOKEN;
+  process.env.BCBAY_CRON_TOKEN = 'test-token-abc';
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/cron/run-drafter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Bcbay-Cron-Token': 'wrong-token' },
+      body: {},
+    });
+    assert.equal(r.status, 401);
+  } finally {
+    await stopServer(server);
+    if (previous !== undefined) process.env.BCBAY_CRON_TOKEN = previous; else delete process.env.BCBAY_CRON_TOKEN;
+  }
+});
+
+test('POST /api/cron/run-drafter — 401 wrong-length token (timing-safe length check)', async () => {
+  const previous = process.env.BCBAY_CRON_TOKEN;
+  process.env.BCBAY_CRON_TOKEN = 'test-token-abc';
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/cron/run-drafter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Bcbay-Cron-Token': 'x' },
+      body: {},
+    });
+    assert.equal(r.status, 401);
+  } finally {
+    await stopServer(server);
+    if (previous !== undefined) process.env.BCBAY_CRON_TOKEN = previous; else delete process.env.BCBAY_CRON_TOKEN;
+  }
+});
+
+test('POST /api/cron/run-drafter — 202 with valid token (fires drafter in background)', async () => {
+  const previous = process.env.BCBAY_CRON_TOKEN;
+  process.env.BCBAY_CRON_TOKEN = 'test-token-abc';
+  const app = makeApp();
+  const server = await startServer(app);
+  try {
+    const r = await request(server, '/api/cron/run-drafter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Bcbay-Cron-Token': 'test-token-abc' },
+      body: { date: '2026-05-08' },
+    });
+    assert.equal(r.status, 202);
+    assert.equal(r.json.success, true);
+  } finally {
+    await stopServer(server);
+    if (previous !== undefined) process.env.BCBAY_CRON_TOKEN = previous; else delete process.env.BCBAY_CRON_TOKEN;
+  }
+});
+
 test('POST /api/admin/dashboard/run-drafter — 401 unauthenticated', async () => {
   const app = makeApp();
   const server = await startServer(app);
