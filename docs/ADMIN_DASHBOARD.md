@@ -15,7 +15,8 @@ shares its admin auth.
 | `contentDrafter.js` | Phase 3+ — daily X + IG post drafter. Reads `bcb_post_briefs` (Pi-written), runs three Claude prompts (twitter / instagram_single / instagram_carousel), writes `bcb_post_drafts`. CLI: `node contentDrafter.js --date YYYY-MM-DD [--dry-run]`. Lazy-loaded by `adminDashboard.js`. |
 | `imageRenderer.js` | Phase 4+ — real-photo cascade (Wikimedia → Unsplash → Pexels) with intent-aware source ordering and off-topic Pexels rejection. BB-branded `sharp` SVG composites for promo subjects. Optional Replicate InstantID AI scene generation (operator-triggered via 🎨 button). Public helpers: `findHeroImage`, `findCarouselImages`, `composeBrandedCard`, `composeOverlayCard`, `saveDraftImages`, `generateAIScene`, `inferIntent`, `isBBSubject`. |
 | `views/admin-dashboard.html` | Single-page dashboard. All HTML + CSS + JS inline. Talks only to `/api/admin/dashboard/*` and `/auth/instagram/status`. |
-| `views/content-drafts.html` | Phase 5+ — single-page review/approve UI for daily X + IG drafts. Served at `/admin/dashboard/content` (full-role only). Per-card edit, regenerate, funny-twist, 🎨 generate-scene, skip, approve. Per-slide editor for IG carousels. |
+| `views/content-drafts.html` | Phase 5–9 — single-page review/approve UI for daily X + IG drafts. Served at `/admin/dashboard/content` (full-role only). Three-button card-actions row (Save · ⋯ More popover · Approve). Click ⛶ to open a card in the **focus modal**. Image preview has corner buttons that open **tool modals**: 📷 photo (Wikimedia/Pexels/Unsplash/Brave 4-source picker), 🏷️ branded sticker (25-logo library with auto-suggest from `image_subject`), 🎨 AI scene (Replicate InstantID), 🗑 delete-slide. Headline overlay + sticker both draggable (move) and resizable (gold corner handle, ↘); selected sticker can be deleted with the keyboard. Stale-drafts banner above the columns when a newer brief exists than the latest drafts (one-click re-trigger). |
+| `brandedOverlays.js` | Phase 9.5 — programmatic transparent SVG mark library for the sticker picker. 25 marks (BB + 14 crypto coins + 10 exchanges); `generateMarkSVG(key, size)` returns a fully transparent text-glyph mark with white halo + drop shadow for legibility on any photo. `suggestMarks(subject)` does keyword matching for auto-suggest. |
 | `views/bonus-calculator.html` | Stand-alone weekly-leaderboard tool served at `/admin/dashboard/bonus-calculator` (full-role only). XLSX upload + bonus math runs entirely client-side via SheetJS; only the final top-10 payload POSTs to `/api/admin/dashboard/bonus-report`. |
 
 Plus `scripts/manage-admins.js` — CLI to add/list/remove/set-password/set-role
@@ -97,13 +98,14 @@ POST /api/admin/dashboard/bonus-report        — role: full  → upsert one wee
 
 GET  /admin/dashboard/content                            — role: full  → content drafts review/approve HTML
 GET  /api/admin/dashboard/post-briefs/latest             — any admin   → today's brief metadata
-GET  /api/admin/dashboard/post-drafts?date=&platform=&status= — any admin → list draft posts
-PATCH /api/admin/dashboard/post-drafts/:id               — role: full  → edit text/caption/hashtags/slides/image_url/image_overlay_text/image_scene_prompt (slides may include overlay_x/overlay_y/overlay_color per slide for the drag editor)
+GET  /api/admin/dashboard/post-drafts?date=&platform=&status= — any admin → list draft posts; response also includes `drafts_brief_date`, `latest_brief_date`, and `stale: bool` so the UI can render the stale-drafts banner (Phase 9.10)
+PATCH /api/admin/dashboard/post-drafts/:id               — role: full  → edit text/caption/hashtags/slides/image_url/image_overlay_text/image_scene_prompt/branded_overlay (slides may include overlay_x/overlay_y/overlay_color/overlay_font_size_pct/branded_overlay per slide for the drag+resize editor)
 POST /api/admin/dashboard/post-drafts/:id/regenerate     — role: full  → re-prompt Claude (body: { humor_pass?, slide_index?, new_angle? }); for Twitter drafts with `variants[]`, regenerates only the active variant
 POST /api/admin/dashboard/post-drafts/:id/swap-variant   — role: full  → flip Twitter draft between meme + professional variants (no Claude call; both pre-generated)
 POST /api/admin/dashboard/post-drafts/:id/generate-art   — role: full  → Replicate InstantID AI scene generation (~$0.05/call, audit-logged; 503 if REPLICATE_API_TOKEN unset)
-GET  /api/admin/dashboard/photo-search?subject=&intent= — role: full  → returns top-3 photo candidates per source (Wikimedia / Pexels / Unsplash) for the replace-photo UI
+GET  /api/admin/dashboard/photo-search?subject=&intent= — role: full  → returns top-N photo candidates per source (Wikimedia / Pexels / Unsplash / Brave / Google) for the replace-photo modal; sources gated by their respective env vars (silent skip when unset)
 GET  /api/admin/dashboard/branded-overlays?subject= — role: full  → manifest of crypto/exchange logo marks + auto-suggested keys for the sticker library (Phase 9.5)
+GET  /branded-overlays/:key.svg                       — public        → SVG render of one logo mark (used by the sticker picker thumbs + in-canvas overlay; cache-control public,max-age=86400,immutable)
 GET  /branded-overlays/:key.svg                       — public        → SVG render of one logo mark (used by the sticker picker thumbs + in-canvas overlay)
 POST /api/admin/dashboard/post-drafts/:id/regenerate-all-images — role: full  → re-runs imageRenderer.saveDraftImages on the draft; fire-and-forget (202)
 POST /api/admin/dashboard/post-drafts/:id/add-cta-slide  — role: full  → append a BB-branded CTA slide to a carousel (body: { headline?, subhead? }); cap 10 slides
@@ -112,6 +114,7 @@ GET  /api/admin/dashboard/post-drafts/:id/zip            — role: full  → str
 POST /api/admin/dashboard/post-drafts/:id/skip           — role: full  → mark skipped + reason
 POST /api/admin/dashboard/post-drafts/:id/approve        — role: full  → mark approved (Phase 7 will wire publish)
 POST /api/admin/dashboard/run-drafter                    — role: full  → fire-and-forget contentDrafter run, returns 202
+POST /api/cron/run-drafter                               — token-protected (X-Bcbay-Cron-Token vs BCBAY_CRON_TOKEN env var) → same as above but for the Pi cron (no admin cookie). Pi `bcbay_research.py` cron line chains a curl into this endpoint after writing the daily brief, so drafts land automatically without operator clicks (Phase 9.11). 503 if BCBAY_CRON_TOKEN unset; 401 on missing/wrong token (constant-time compare); 202 fire-and-forget on success.
 
 GET  /api/admin/dashboard/game-state?event_id=&league_path= — any admin → ESPN live game state proxy (score + last plays + win prob, 30s in-memory cache)
 POST /api/admin/dashboard/draft-from-game                — role: full  → Claude one-shot Twitter draft seeded from a live ESPN game (~$0.04/call, 2 variants)
