@@ -1372,7 +1372,7 @@ function renderPhotoPanel(d, slideIndex) {
   const panelKey = isSlide ? slideIndex : '';
   return `<div class="photo-panel" data-photo-panel="${panelKey}">
     <div class="tool-modal-head"><span class="title">📷 Replace photo</span><button data-action="replace-photo-cancel" ${sIdxAttr} aria-label="Close">✕</button></div>
-    <div class="field-label">Searching Wikimedia / Pexels / Unsplash for "${safeText(subject || 'this subject')}"</div>
+    <div class="field-label">Searching Wikimedia · Pexels · Unsplash · Brave for "${safeText(subject || 'this subject')}"</div>
     <div class="photo-results" data-photo-results="${panelKey}">
       <div class="photo-loading">Click below to load candidates…</div>
     </div>
@@ -1952,20 +1952,23 @@ async function loadPhotoCandidates(cardEl, slideIndex, draftId) {
 
 function renderPhotoCandidatesHtml(candidates, slideIndex) {
   const sIdxAttr = Number.isInteger(slideIndex) ? `data-slide-index="${slideIndex}"` : '';
-  // Sources sorted "free + licensed first → broader Google last" so the
-  // operator's eye lands on the safer-to-publish results first.
+  // Sources sorted "free + licensed first → broader web last" so operator's
+  // eye lands on safer-to-publish results first. Brave is the broad-web
+  // source (replaced the failed Google Custom Search integration); Google
+  // is kept as a dormant slot in case the env vars ever resolve.
   const sources = [
-    { key: 'wikimedia', label: 'Wikimedia Commons',  hint: 'free, attribution required' },
-    { key: 'pexels',    label: 'Pexels',             hint: 'free, no attribution required' },
-    { key: 'unsplash',  label: 'Unsplash',           hint: 'free, attribution appreciated' },
+    { key: 'wikimedia', label: 'Wikimedia Commons',   hint: 'free, attribution required' },
+    { key: 'pexels',    label: 'Pexels',              hint: 'free, no attribution required' },
+    { key: 'unsplash',  label: 'Unsplash',            hint: 'free, attribution appreciated' },
+    { key: 'brave',     label: 'Brave Search',        hint: 'broader web — verify rights before publishing' },
     { key: 'google',    label: 'Google Image Search', hint: 'broader web — verify rights before publishing' },
   ];
   const sections = sources.map((src) => {
     const items = (candidates && candidates[src.key]) || [];
-    // Hide entirely if the source is unconfigured / returned nothing AND
-    // it's the optional Google one — don't waste vertical space telling
-    // the operator "no results" for a source they may not have wired up.
-    if (!items.length && src.key === 'google') return '';
+    // Hide entirely if the optional broad-web sources returned nothing —
+    // don't waste vertical space on "no results" placeholders for sources
+    // the operator may not have wired up.
+    if (!items.length && (src.key === 'google' || src.key === 'brave')) return '';
     if (!items.length) {
       return `<div class="photo-source"><div class="photo-source-label">${src.label} <span class="photo-source-hint">${src.hint}</span></div><div class="photo-empty">no results</div></div>`;
     }

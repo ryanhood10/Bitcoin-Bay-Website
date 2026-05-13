@@ -416,6 +416,52 @@ async function searchUnsplashCandidates(subject, limit = 3) {
   }
 }
 
+// Phase 9.9: Brave Search Images. Operator-only (replace-photo UI), gated
+// by BRAVE_API_KEY env var — silently empty if unset. Free tier: 2,000
+// queries/month, no card required, single key (no CSE concept). Replaces
+// the failed Google Custom Search integration; way cleaner API surface.
+//
+// IMPORTANT: results are broad-web and may be copyrighted. Operator's call
+// whether to use them. We tag attribution with the source domain so the
+// origin is clear in any audit.
+async function searchBraveCandidates(subject, limit = 6) {
+  const key = process.env.BRAVE_API_KEY;
+  if (!key || !subject) return [];
+  try {
+    const url = 'https://api.search.brave.com/res/v1/images/search?' + new URLSearchParams({
+      q: subject,
+      count: String(Math.min(50, Math.max(limit, 6))),
+      safesearch: 'strict',
+      country: 'us',
+      search_lang: 'en',
+    }).toString();
+    const res = await fetch(url, {
+      headers: {
+        'X-Subscription-Token': key,
+        'Accept': 'application/json',
+      },
+      signal: TIMEOUT(12000),
+    });
+    if (!res.ok) {
+      console.warn(`[imageRenderer] brave returned HTTP ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    return (data.results || []).slice(0, limit).map((r) => ({
+      source: 'brave',
+      url: r.properties?.url || r.url,           // full-res image URL
+      thumb_url: r.thumbnail?.src || r.properties?.url,
+      attribution: `Image: ${r.source || r.meta_url?.hostname || 'Brave Search'}`,
+      license: 'Third-party — verify before publishing',
+      descriptionurl: r.url,                       // page that hosts the image
+      title: r.title,
+    }));
+  } catch (e) {
+    console.warn(`[imageRenderer] brave candidates failed for "${subject}": ${e.message}`);
+    return [];
+  }
+}
+
 // Phase 9.8: Google Custom Search for images. Operator-only (replace-photo
 // UI), gated by GOOGLE_API_KEY + GOOGLE_CSE_ID env vars — silently empty
 // if either is unset (so the UI just shows the other three sources). Free
@@ -457,15 +503,20 @@ async function searchGoogleCandidates(subject, limit = 6) {
 }
 
 async function searchPhotoCandidates(subject, { intent, perSource = 3 } = {}) {
-  if (!subject) return { wikimedia: [], pexels: [], unsplash: [], google: [] };
+  if (!subject) return { wikimedia: [], pexels: [], unsplash: [], brave: [], google: [] };
   const inferredIntent = intent || inferIntent(subject) || 'sport_action';
-  const [wikimedia, pexels, unsplash, google] = await Promise.all([
+  // Brave gets headroom (it returns broad-web results that need more breadth
+  // for the operator to scan past low-quality matches). Google stays in the
+  // promise pile in case the env vars ever come back, but in practice it's
+  // empty unless GOOGLE_API_KEY + GOOGLE_CSE_ID resolve.
+  const [wikimedia, pexels, unsplash, brave, google] = await Promise.all([
     searchWikimediaCandidates(subject, perSource),
     searchPexelsCandidates(subject, inferredIntent, perSource),
     searchUnsplashCandidates(subject, perSource),
-    searchGoogleCandidates(subject, Math.max(perSource * 2, 6)), // give Google more headroom
+    searchBraveCandidates(subject, Math.max(perSource * 2, 6)),
+    searchGoogleCandidates(subject, Math.max(perSource * 2, 6)),
   ]);
-  return { wikimedia, pexels, unsplash, google };
+  return { wikimedia, pexels, unsplash, brave, google };
 }
 
 // ── HERO CASCADE ──
@@ -896,7 +947,7 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
       // by the photo-replace UI ('wikimedia' / 'pexels' / 'unsplash' / 'manual')
       // and image_url is present, use that URL directly instead of re-searching.
       const operatorPicked = s.image_url
-        && ['wikimedia', 'pexels', 'unsplash', 'manual'].includes(String(s.image_source || ''));
+        && ['wikimedia', 'pexels', 'unsplash', 'brave', 'google', 'manual'].includes(String(s.image_source || ''));
       const hit = operatorPicked
         ? { url: s.image_url, attribution: s.image_attribution || '' }
         : await findHeroImage(s.image_subject);
@@ -957,7 +1008,7 @@ async function saveDraftImages(draft, { dateDir, draftId } = {}) {
   // the carousel path so manually-replaced photos persist through every
   // subsequent /regenerate-all-images.
   const operatorPicked = draft.image_url
-    && ['wikimedia', 'pexels', 'unsplash', 'manual'].includes(String(draft.image_source || ''));
+    && ['wikimedia', 'pexels', 'unsplash', 'brave', 'google', 'manual'].includes(String(draft.image_source || ''));
   if (!operatorPicked && !subject) return { image_status: 'failed' };
   const hit = operatorPicked
     ? { url: draft.image_url, attribution: draft.image_attribution || '' }
@@ -1017,4 +1068,6 @@ module.exports = {
   searchWikimediaCandidates,
   searchPexelsCandidates,
   searchUnsplashCandidates,
+  searchBraveCandidates,    // Phase 9.9
+  searchGoogleCandidates,   // Phase 9.8 (gated, dormant by default)
 };

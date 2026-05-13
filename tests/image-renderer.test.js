@@ -17,6 +17,9 @@ const {
   isBBSubject,
   inferBrandedKind,
   pexelsOffTopic,
+  searchBraveCandidates,
+  searchGoogleCandidates,
+  searchPhotoCandidates,
 } = require('../imageRenderer');
 
 // ---------------------------------------------------------------------------
@@ -162,4 +165,69 @@ test('pexelsOffTopic — does NOT filter for non-sport intents', () => {
 test('pexelsOffTopic — handles missing alt gracefully', () => {
   const photo = { url: 'https://pexels.com/photo/12345/' };
   assert.equal(pexelsOffTopic(photo, 'sport_action'), false);
+});
+
+// ---------------------------------------------------------------------------
+// Phase 9.9 — Brave Search Images (replace-photo source). Verifies the
+// guard rails: missing key → silent empty; missing subject → silent empty.
+// We don't test the live API call here (would need network + the operator
+// key); scripts/test-image-search.js covers the live smoke test.
+// ---------------------------------------------------------------------------
+test('searchBraveCandidates — returns [] when BRAVE_API_KEY is unset', async () => {
+  const previous = process.env.BRAVE_API_KEY;
+  delete process.env.BRAVE_API_KEY;
+  try {
+    const out = await searchBraveCandidates('lakers', 3);
+    assert.deepEqual(out, []);
+  } finally {
+    if (previous !== undefined) process.env.BRAVE_API_KEY = previous;
+  }
+});
+
+test('searchBraveCandidates — returns [] for empty subject', async () => {
+  const out = await searchBraveCandidates('', 3);
+  assert.deepEqual(out, []);
+});
+
+test('searchPhotoCandidates — returns the brave key alongside the others', async () => {
+  // No env vars set → all sources gracefully empty, but the keys must exist
+  // so the UI's source loop can render the labels in the right order.
+  const previousBrave = process.env.BRAVE_API_KEY;
+  const previousPexels = process.env.PEXELS_API_KEY;
+  const previousUnsplash = process.env.UNSPLASH_ACCESS_KEY;
+  const previousGoogleKey = process.env.GOOGLE_API_KEY;
+  const previousGoogleCse = process.env.GOOGLE_CSE_ID;
+  delete process.env.BRAVE_API_KEY;
+  delete process.env.PEXELS_API_KEY;
+  delete process.env.UNSPLASH_ACCESS_KEY;
+  delete process.env.GOOGLE_API_KEY;
+  delete process.env.GOOGLE_CSE_ID;
+  try {
+    // Empty subject short-circuits Wikimedia too — we just want the shape.
+    const out = await searchPhotoCandidates('');
+    assert.deepEqual(Object.keys(out).sort(), ['brave', 'google', 'pexels', 'unsplash', 'wikimedia']);
+  } finally {
+    if (previousBrave !== undefined) process.env.BRAVE_API_KEY = previousBrave;
+    if (previousPexels !== undefined) process.env.PEXELS_API_KEY = previousPexels;
+    if (previousUnsplash !== undefined) process.env.UNSPLASH_ACCESS_KEY = previousUnsplash;
+    if (previousGoogleKey !== undefined) process.env.GOOGLE_API_KEY = previousGoogleKey;
+    if (previousGoogleCse !== undefined) process.env.GOOGLE_CSE_ID = previousGoogleCse;
+  }
+});
+
+test('searchGoogleCandidates — silent empty when either env var is missing', async () => {
+  // Sanity check the existing dormant Google integration still no-ops cleanly
+  // (used by scripts/test-image-search.js when GOOGLE_API_KEY is set without CSE).
+  const previousKey = process.env.GOOGLE_API_KEY;
+  const previousCse = process.env.GOOGLE_CSE_ID;
+  delete process.env.GOOGLE_API_KEY;
+  delete process.env.GOOGLE_CSE_ID;
+  try {
+    assert.deepEqual(await searchGoogleCandidates('lakers'), []);
+    process.env.GOOGLE_API_KEY = 'fake-key-for-shape-test';
+    assert.deepEqual(await searchGoogleCandidates('lakers'), []);  // still empty (no CSE)
+  } finally {
+    if (previousKey !== undefined) process.env.GOOGLE_API_KEY = previousKey; else delete process.env.GOOGLE_API_KEY;
+    if (previousCse !== undefined) process.env.GOOGLE_CSE_ID = previousCse;
+  }
 });
