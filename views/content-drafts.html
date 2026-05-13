@@ -64,6 +64,15 @@
   .btn.ghost:hover:not(:disabled) { color: var(--text); background: var(--surface2); }
 
   /* STATUS STRIP */
+  /* Stale-drafts banner — high-attention orange to flag that the operator
+     is looking at week-old drafts. One-click button generates drafts for
+     the freshest brief. Mobile stacks the text above the button. */
+  .stale-banner { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 14px 18px; background: linear-gradient(135deg, rgba(247,148,29,0.18), rgba(247,148,29,0.08)); border: 1px solid var(--gold); border-radius: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .stale-banner .stale-text { font-size: 13px; line-height: 1.4; color: var(--text); flex: 1 1 auto; min-width: 0; }
+  .stale-banner .stale-detail { display: block; font-size: 11px; color: var(--muted2); margin-top: 4px; }
+  .stale-banner .btn { flex: 0 0 auto; }
+  @media (max-width: 600px) { .stale-banner .btn { width: 100%; } }
+
   .status-strip { display: flex; gap: 16px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; font-size: 12px; }
   .status-strip .label { color: var(--muted2); }
   .status-strip .value { color: var(--text); font-weight: 600; }
@@ -611,6 +620,17 @@
     <div><span class="label">Today's category:</span> <span id="status-category" class="topic">—</span></div>
     <div><span class="label">Drafts:</span> <span id="status-count" class="value">0</span></div>
     <div id="status-runtime" style="color: var(--muted); display: none;"></div>
+  </div>
+
+  <!-- STALE-DRAFTS BANNER (Phase 9.10) — appears when latest_brief_date >
+       drafts_brief_date, i.e. Pi wrote a new brief but the drafter hasn't
+       been run for it yet. Click to fire the drafter for the latest brief. -->
+  <div id="stale-banner" class="stale-banner" style="display:none;">
+    <div class="stale-text">
+      📰 <span id="stale-count">—</span> newer brief<span id="stale-plural"></span> available since these drafts.
+      <span class="stale-detail">Showing drafts from <b id="stale-current">—</b>; latest brief is <b id="stale-latest">—</b>.</span>
+    </div>
+    <button id="stale-run-btn" class="btn primary" onclick="runDrafterForLatest()">↻ Generate drafts for <span id="stale-target">—</span></button>
   </div>
 
   <!-- TODAY'S GAMES (Phase 8 — operator-pull) -->
@@ -2536,13 +2556,22 @@ async function actionApprove(id, cardEl) {
 }
 
 // ─── Run drafter ────────────────────────────────────────────────────────
-async function runDrafter() {
-  const btn = document.getElementById('btn-run-drafter');
-  btn.disabled = true;
-  btn.textContent = 'Running drafter…';
+async function runDrafter(targetDate) {
+  // Buttons that trigger this: header "↻ Run drafter now" (no date — picks
+  // latest brief server-side) AND the stale-banner "Generate drafts for
+  // [date]" (passes the latest_brief_date so the run is deterministic).
+  const headerBtn = document.getElementById('btn-run-drafter');
+  const bannerBtn = document.getElementById('stale-run-btn');
+  const lockBtns = (disabled, msg) => {
+    if (headerBtn) { headerBtn.disabled = disabled; if (msg !== undefined) headerBtn.innerHTML = msg; }
+    if (bannerBtn) { bannerBtn.disabled = disabled; }
+  };
+  lockBtns(true, 'Running drafter…');
   try {
+    const body = targetDate ? { date: targetDate } : {};
     const res = await fetch('/api/admin/dashboard/run-drafter', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'run-drafter failed');
@@ -2557,11 +2586,44 @@ async function runDrafter() {
   } catch (e) {
     toast(e.message, 'error');
   } finally {
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.innerHTML = '↻ Run drafter now';
-    }, 90000);
+    setTimeout(() => lockBtns(false, '↻ Run drafter now'), 90000);
   }
+}
+
+// Phase 9.10 — banner "Generate drafts for [date]" reads the date from its
+// own data attribute (set by renderStaleBanner) so it's always pointed at
+// the freshest brief, regardless of how stale the cached page is.
+function runDrafterForLatest() {
+  const btn = document.getElementById('stale-run-btn');
+  const date = btn?.dataset.targetDate;
+  return runDrafter(date);
+}
+
+function renderStaleBanner(currentDate, latestDate, isStale) {
+  const banner = document.getElementById('stale-banner');
+  if (!banner) return;
+  if (!isStale || !latestDate || currentDate === latestDate) {
+    banner.style.display = 'none';
+    return;
+  }
+  // Compute the "N newer briefs" count by date difference (good-enough proxy
+  // since Pi writes one brief per day; lexical YYYY-MM-DD diff = day delta).
+  const diff = Math.max(1, daysBetween(currentDate, latestDate));
+  banner.querySelector('#stale-count').textContent = String(diff);
+  banner.querySelector('#stale-plural').textContent = diff === 1 ? '' : 's';
+  banner.querySelector('#stale-current').textContent = currentDate || '(none)';
+  banner.querySelector('#stale-latest').textContent = latestDate;
+  banner.querySelector('#stale-target').textContent = latestDate;
+  const runBtn = banner.querySelector('#stale-run-btn');
+  if (runBtn) runBtn.dataset.targetDate = latestDate;
+  banner.style.display = 'flex';
+}
+
+function daysBetween(a, b) {
+  if (!a || !b) return 1;
+  const da = new Date(a + 'T00:00:00Z').getTime();
+  const db = new Date(b + 'T00:00:00Z').getTime();
+  return Math.round((db - da) / 86_400_000);
 }
 
 // ─── Load + render ──────────────────────────────────────────────────────
@@ -2574,6 +2636,13 @@ async function loadDrafts() {
 
     BRIEF = briefRes?.brief || null;
     DRAFTS = draftsRes?.drafts || [];
+
+    // Phase 9.10 — stale-drafts banner. Server tells us the brief_date the
+    // returned drafts came from + the latest brief_date in Mongo. If they
+    // differ (and the latest is newer), Pi has written briefs the drafter
+    // hasn't processed yet → surface a one-click "Generate" banner so the
+    // operator isn't staring at week-old drafts forever.
+    renderStaleBanner(draftsRes?.drafts_brief_date, draftsRes?.latest_brief_date, draftsRes?.stale);
 
     // Status strip
     const dateEl = document.getElementById('status-date');

@@ -579,15 +579,25 @@ router.get('/api/admin/dashboard/post-drafts', adminAuth.requireAdmin(), async (
     if (req.query.platform) filter.platform = String(req.query.platform);
     if (req.query.status) filter.status = String(req.query.status);
 
-    const docs = await withDb(async (db) => {
+    const { docs, latestDraftDate, latestBriefDate } = await withDb(async (db) => {
       const coll = db.collection(POST_DRAFTS);
-      // If no date filter, default to the latest brief_date so the operator
-      // sees today's batch by default.
+      const briefs = db.collection(POST_BRIEFS);
+      // If no date filter, default to the latest brief_date present in DRAFTS so
+      // the operator sees the freshest batch we actually have.
+      let latestDraftDate = null;
       if (!filter.brief_date) {
         const latest = await coll.findOne({}, { sort: { brief_date: -1 }, projection: { brief_date: 1 } });
-        if (latest?.brief_date) filter.brief_date = latest.brief_date;
+        latestDraftDate = latest?.brief_date || null;
+        if (latestDraftDate) filter.brief_date = latestDraftDate;
       }
-      return coll.find(filter).sort({ platform: 1, created_at: 1 }).toArray();
+      // Also peek at the latest BRIEF — if newer than the latest draft, we
+      // surface a `stale` flag so the UI can offer a one-click run-drafter
+      // banner. Pi writes briefs nightly; drafter doesn't auto-run on Heroku
+      // (no scheduler); so without this signal the operator stares at week-
+      // old drafts forever (this exact bug, May 8 2026).
+      const latestBrief = await briefs.findOne({}, { sort: { date: -1 }, projection: { date: 1 } });
+      const docs = await coll.find(filter).sort({ platform: 1, created_at: 1 }).toArray();
+      return { docs, latestDraftDate, latestBriefDate: latestBrief?.date || null };
     });
 
     // Stringify _ids and clean dates so the dashboard JS can pass them
@@ -600,7 +610,17 @@ router.get('/api/admin/dashboard/post-drafts', adminAuth.requireAdmin(), async (
       }
       return { _id: id, ...d };
     });
-    res.json({ success: true, drafts: out });
+    // Staleness flag: latest brief is newer than latest draft → drafter
+    // hasn't run for the new brief yet. Client uses this to render a
+    // "Generate drafts for [date]" banner.
+    const stale = !!(latestBriefDate && latestDraftDate && latestBriefDate > latestDraftDate);
+    res.json({
+      success: true,
+      drafts: out,
+      drafts_brief_date: latestDraftDate,   // brief_date the returned drafts were generated from
+      latest_brief_date: latestBriefDate,   // newest brief in the collection (target for run-drafter)
+      stale,
+    });
   } catch (e) {
     console.error('[admin-dashboard] /post-drafts list error:', e.message);
     res.status(500).json({ success: false, error: e.message });
