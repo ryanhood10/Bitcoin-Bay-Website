@@ -1323,7 +1323,10 @@ router.post('/api/admin/dashboard/draft-from-game', adminAuth.requireAdmin(admin
 // or a Heroku Scheduler addon. Auth via BCBAY_CRON_TOKEN env var (header
 // X-Bcbay-Cron-Token, constant-time compare). Same fire-and-forget pattern
 // as the admin-facing endpoint below; just different auth surface.
-router.post('/api/cron/run-drafter', express.json({ limit: '32kb' }), (req, res) => {
+router.post('/api/cron/run-drafter', (req, res) => {
+  // body parsing is handled globally in server.js (bodyParser.json), so no
+  // inline json middleware here — adding one would try to re-read an
+  // already-consumed stream → "InternalServerError: stream is not readable".
   const expected = process.env.BCBAY_CRON_TOKEN;
   if (!expected) {
     return res.status(503).json({ success: false, error: 'BCBAY_CRON_TOKEN not configured' });
