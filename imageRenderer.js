@@ -310,6 +310,44 @@ async function findPexelsImage(subject, intent = 'sport_action') {
 }
 
 // ── UNSPLASH (placeholder; active if UNSPLASH_ACCESS_KEY set) ──
+// Phase 10.3: Brave Search Images as a tier-2 fallback in the auto cascade
+// for athlete-intent subjects. Wikimedia is hit-or-miss for active NBA/NFL
+// players whose Commons coverage is sparse; Pexels/Unsplash effectively
+// have zero athlete coverage. Brave returns sports-media + Pinterest hits
+// that almost always include the actual athlete. Free tier 2,000/month;
+// only fires when Wikimedia returned nothing → ~1-3 calls/day in practice.
+// Returns same shape as findUnsplashImage / findPexelsImage.
+async function findBraveImage(subject) {
+  const key = process.env.BRAVE_API_KEY;
+  if (!key || !subject) return null;
+  try {
+    const url = 'https://api.search.brave.com/res/v1/images/search?' + new URLSearchParams({
+      q: subject, count: '5', safesearch: 'strict', country: 'us', search_lang: 'en',
+    }).toString();
+    const res = await fetch(url, {
+      headers: { 'X-Subscription-Token': key, 'Accept': 'application/json' },
+      signal: TIMEOUT(12000),
+    });
+    if (!res.ok) {
+      console.warn(`[imageRenderer] brave findHero returned HTTP ${res.status} for "${subject}"`);
+      return null;
+    }
+    const data = await res.json();
+    const result = (data.results || [])[0];
+    if (!result) return null;
+    return {
+      url: result.properties?.url || result.url,
+      source: 'brave',
+      attribution: `Image: ${result.source || result.meta_url?.hostname || 'Brave Search'}`,
+      license: 'Third-party — verify before publishing',
+      descriptionurl: result.url,
+    };
+  } catch (e) {
+    console.warn(`[imageRenderer] brave findHero failed for "${subject}": ${e.message}`);
+    return null;
+  }
+}
+
 async function findUnsplashImage(subject) {
   const key = process.env.UNSPLASH_ACCESS_KEY;
   if (!key || !subject) return null;
@@ -527,9 +565,16 @@ async function findHeroImage(subject, opts = {}) {
   // subjects now correctly route Wikimedia first.
   const intent = opts.intent || inferIntent(subject);
   const isPersonOrPlace = ['athlete', 'team', 'stadium', 'league'].includes(intent);
+  // Phase 10.3: athlete cascade now Wikimedia → Brave → Unsplash → Pexels.
+  // Brave slots in 2nd because Wikimedia coverage of active NBA/NFL players
+  // is sparse, while Pexels/Unsplash are stock libraries with effectively
+  // zero athlete coverage. Brave returns sports-media + Pinterest hits that
+  // almost always include the actual athlete — exactly what we need for
+  // daily auto-runs without operator manual replacement.
   const sources = isPersonOrPlace
     ? [
         () => findWikimediaImage(subject),
+        () => findBraveImage(subject),
         () => findUnsplashImage(subject),
         () => findPexelsImage(subject, intent),
       ]
