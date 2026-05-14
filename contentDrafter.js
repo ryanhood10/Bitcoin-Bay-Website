@@ -384,10 +384,10 @@ Return STRICT JSON, exactly this shape, no markdown, no commentary:
   "slides": [
     {
       "slide_role": "lead_photo|secondary_photo|data_card|key_quote|cta",
-      "image_subject": "exact visual subject for image lookup (string). FULL athlete names, no abbreviations. STAY IN THE LEAD'S WORLD — same athlete's face / same team's stadium / same game's scoreboard / same crypto symbol as slide 1. Don't pivot to an unrelated player or game.",
+      "image_subject": "SHORT + SEARCH-FRIENDLY query for the photo cascade (Wikimedia/Pexels/Unsplash). FULL athlete name + AT MOST one context word — e.g. 'Tristan Thompson' or 'Tristan Thompson Cavaliers' or 'Bitcoin chart'. NEVER include cinematic scene language (no 'close-up', 'postgame interview', 'sitting courtside in street clothes', 'intense game-face expression', etc.) — those wording choices tank the match rate at Wikimedia/Pexels/Unsplash and we end up with generic stock photos instead of the actual athlete. Cohesion: STAY IN THE LEAD'S WORLD across slides — same athlete's name on most slides, with the supporting visuals (chart, opponent, related asset) limited to 1-2 slides.",
       "headline": "3-10-word on-image overlay text. Reaction-tweet flavor.",
       "body_text": "≤20 words — the one specific fact that makes the headline land. Tied to the lead's story.",
-      "image_scene_prompt": "string|null — set ONLY when a real photo of this slide's exact moment is unlikely. Used for operator-triggered AI scene generation per-slide. Leave null when image_subject works.",
+      "image_scene_prompt": "string|null — THIS is where cinematic scene description goes ('Tristan Thompson at a postgame podium with a Bitcoin logo overlay, dramatic backlight, Cavaliers jersey'). Used by the operator's 🎨 AI-scene button when the real-photo cascade misses. Set this for slides where the real photo is unlikely (specific moments, on-court action, athlete + crypto composites). Leave null when image_subject alone is enough.",
       "source_url": "string or null"
     }
   ]
