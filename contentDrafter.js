@@ -316,7 +316,7 @@ PROPOSED SLIDE SEQUENCE FROM PI BRIEF (reference only — feel free to
 REWRITE any slide subject that drifts off-topic from the lead):
 ${slidesBrief}
 
-CAROUSEL COHESION MANDATE (most important rule on this page):
+CAROUSEL COHESION MANDATE (the most important rule on this page):
 The whole deck is ONE story. Every slide must expand on slide 1's specific
 subject — same athlete, same game, same play, same news event. Don't
 introduce a new athlete, team, league, or topic in the middle of the deck.
@@ -334,18 +334,36 @@ as different angles on that thread:
 - the league / opponent fallout
 All anchored to the SAME story.
 
+LEAD-FACE ANCHORING (Phase 10.2):
+Aim for AT LEAST 60% of slides (rounded up) to feature the lead's actual
+subject in the image — face/team logo/uniform/stadium. A 5-slide deck
+should have ≥3 slides where image_subject is the lead athlete/team
+themselves. The other 1-2 can be supporting visuals (stat-context
+charts, opponent shots, related-asset close-ups) BUT each must be
+explicitly tied to the lead in its body_text.
+
+NAME-THE-EXAMPLES RULE (Phase 10.2):
+If a body_text references "other athletes who did X" or "some players
+saw Y," NAME at least one specific example by full name. Anonymous
+references ("some took half their salary in BTC") feel vague and break
+the cohesion illusion. Either name the player (Russell Okung, Aaron
+Rodgers, Saquon Barkley) or rewrite the slide to stay on the lead.
+
 Slide-role guidance:
 - Slide 1 (lead_photo): the hook. Reaction-tweet headline, real-photo
   subject from the lead's actual moment.
 - Slides 2 to N-1: deeper looks at the SAME story. Keep image_subject in
   the same world (same athlete's face, same team's stadium, same game's
-  scoreboard). NEVER cut to an unrelated player or game.
+  scoreboard). NEVER cut to an unrelated player or game. Prefer
+  multiple shots of the LEAD ATHLETE (warm-up, post-game interview,
+  team huddle, celebration) over swapping in stock charts/screens.
 - Final slide (slide N): the ONE place a pivot is allowed. Either:
     (a) a sportsbook / BTC bankroll angle that ties the news to what
         a sharp bettor does next, OR
     (b) a soft BB CTA ("more breakdowns at bitcoinbay.com"), OR
     (c) a forward-look — what to watch in the next game.
-  Even here, name the lead's athlete/team — don't go fully generic.
+  Even here, name the lead's athlete/team in the body — don't go
+  fully generic.
 
 Slide voice (per BB_VOICE_IG above):
 - Headlines: 3-10 words. Reaction-tweet flavor. Punchy.
