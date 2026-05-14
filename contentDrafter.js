@@ -140,7 +140,10 @@ const BB_VOICE_IG = `${BB_VOICE_BASE}
 
 PLATFORM VOICE: INSTAGRAM, HYPE-FAN VARIANT.
 
-Anchor on the actual @bitcoin_bay voice — these are real recent captions:
+The vibe should feel like our @BitcoinBay_com Twitter — meme/reaction style,
+first-name basis, casual sports-fan energy — just sized up for IG's 1-3
+sentence caption window. Anchor on the actual @bitcoin_bay voice — real
+recent captions:
   "Doing this at 41 is crazy. The KING 👑"
   "This man is such a cheat code 👽"
   "Brooks and the Suns are ready for a BATTLE."
@@ -155,7 +158,10 @@ Rules:
 - 5-7 sport-specific hashtags at the end (separate paragraph). Mix broad +
   specific (e.g. #nba + #celtics, #nflfootball + #chiefs).
 - First-name basis with athletes.
-- The funniest observations perform best — lean into that without forcing it.`.trim();
+- The funniest observations perform best — lean into that without forcing it.
+- Carousel slide HEADLINES should feel like punchy quote-tweets: 3-10 words,
+  reaction-flavored, NOT explainer-heavy. Body text under each headline is
+  the one specific fact that makes the headline land.`.trim();
 
 // Backward-compat alias (slide-only carousel regen path uses this)
 const BB_VOICE = BB_VOICE_IG;
@@ -306,15 +312,52 @@ TOPIC FOR THIS DRAFT:
 - Slide count: ${(topic.slides || []).length}
 - Source URL (mention briefly in deck caption): ${topic.source_url || '(none)'}
 
-PROPOSED SLIDE SEQUENCE (improve where you see fit, but keep slide_role + image_subject):
+PROPOSED SLIDE SEQUENCE FROM PI BRIEF (reference only — feel free to
+REWRITE any slide subject that drifts off-topic from the lead):
 ${slidesBrief}
 
-CAROUSEL RULES:
-- Slide 1 (lead_photo) hooks the eye — strong headline, real-photo subject.
-- Story flows slide-by-slide. Each slide stands alone if someone stops swiping.
-- Final slide is the CTA — soft pointer; never an aggressive sign-up push.
-- Each slide's headline ≤8 words; each slide's body_text ≤20 words.
-- Deck-level caption is SHORT (100-300 chars), not a 1200-char essay.
+CAROUSEL COHESION MANDATE (most important rule on this page):
+The whole deck is ONE story. Every slide must expand on slide 1's specific
+subject — same athlete, same game, same play, same news event. Don't
+introduce a new athlete, team, league, or topic in the middle of the deck.
+A reader swiping through should think: "this is all about [Slide 1's
+specific story]."
+
+If the Pi's proposed sequence mixes unrelated subjects, OVERRIDE it. Pick
+the strongest single thread from slide 1 and write slides 2 through N-1
+as different angles on that thread:
+- the player's reaction / quote
+- the play-by-play detail
+- the stat that explains it
+- the historical context
+- the betting / line implication
+- the league / opponent fallout
+All anchored to the SAME story.
+
+Slide-role guidance:
+- Slide 1 (lead_photo): the hook. Reaction-tweet headline, real-photo
+  subject from the lead's actual moment.
+- Slides 2 to N-1: deeper looks at the SAME story. Keep image_subject in
+  the same world (same athlete's face, same team's stadium, same game's
+  scoreboard). NEVER cut to an unrelated player or game.
+- Final slide (slide N): the ONE place a pivot is allowed. Either:
+    (a) a sportsbook / BTC bankroll angle that ties the news to what
+        a sharp bettor does next, OR
+    (b) a soft BB CTA ("more breakdowns at bitcoinbay.com"), OR
+    (c) a forward-look — what to watch in the next game.
+  Even here, name the lead's athlete/team — don't go fully generic.
+
+Slide voice (per BB_VOICE_IG above):
+- Headlines: 3-10 words. Reaction-tweet flavor. Punchy.
+- Body text: ≤20 words; the one specific fact that makes the headline land.
+- Use first-name basis with athletes (SGA, Mahomes, Bane), not "the OKC
+  Thunder's point guard."
+- 1-2 emoji per slide where they earn the spot. Not every slide.
+
+Deck-level caption:
+- 100-300 chars. NOT a 1200-char essay.
+- Hook → key insight → invitation to swipe.
+- Same meme-leaning hype-fan voice as a tweet.
 
 Return STRICT JSON, exactly this shape, no markdown, no commentary:
 {
@@ -323,9 +366,9 @@ Return STRICT JSON, exactly this shape, no markdown, no commentary:
   "slides": [
     {
       "slide_role": "lead_photo|secondary_photo|data_card|key_quote|cta",
-      "image_subject": "exact visual subject for image lookup (string). FULL athlete names, no abbreviations. Avoid abstract verb-subjects.",
-      "headline": "≤8-word on-image overlay text",
-      "body_text": "≤20 words — the alt-text/storytelling layer (not on the image, used for accessibility and dev preview)",
+      "image_subject": "exact visual subject for image lookup (string). FULL athlete names, no abbreviations. STAY IN THE LEAD'S WORLD — same athlete's face / same team's stadium / same game's scoreboard / same crypto symbol as slide 1. Don't pivot to an unrelated player or game.",
+      "headline": "3-10-word on-image overlay text. Reaction-tweet flavor.",
+      "body_text": "≤20 words — the one specific fact that makes the headline land. Tied to the lead's story.",
       "image_scene_prompt": "string|null — set ONLY when a real photo of this slide's exact moment is unlikely. Used for operator-triggered AI scene generation per-slide. Leave null when image_subject works.",
       "source_url": "string or null"
     }
