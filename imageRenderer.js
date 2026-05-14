@@ -150,13 +150,20 @@ function inferIntent(subject) {
   if (TEAM_TOKENS.test(s)) return 'team';
   if (CRYPTO_TOKENS.test(s)) return 'crypto';
   if (FINANCE_TOKENS.test(s)) return 'abstract_finance';
-  // Capitalized full name: 2-4 words, each starts with uppercase letter.
-  // Allows hyphens/apostrophes (Shai Gilgeous-Alexander, D'Andre Swift).
+  // Capitalized name PREFIX: 2-4 leading words start with uppercase, then
+  // any number of lowercase context words ("Tristan Thompson press
+  // conference", "Shai Gilgeous-Alexander celebration"). Was previously
+  // requiring EVERY word capitalized, which broke routing for the
+  // search-friendly per-slide subjects Phase 10.2 forced ("Tristan
+  // Thompson interview" → sport_action → cascade skipped Brave → Pexels
+  // stock photos instead of the actual athlete).
   const words = s.split(/\s+/);
-  if (words.length >= 2 && words.length <= 4 &&
-      words.every((w) => /^[A-Z][a-zA-Z'\-]+$/.test(w))) {
-    return 'athlete';
+  let capPrefix = 0;
+  for (const w of words) {
+    if (/^[A-Z][a-zA-Z'\-]+$/.test(w)) capPrefix++;
+    else break;
   }
+  if (capPrefix >= 2 && capPrefix <= 4) return 'athlete';
   return 'sport_action';
 }
 
