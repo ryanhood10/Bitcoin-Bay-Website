@@ -246,11 +246,29 @@
   /* Carousel "1/N" pill on the image (native IG style) */
   .ig-card-num { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.72); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 12px; pointer-events: none; z-index: 3; }
 
-  /* Carousel dot row under the image (native IG style) */
-  .ig-dots { display: flex; justify-content: center; gap: 5px; padding: 6px 0 4px; background: var(--surface); align-items: center; }
-  .ig-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); cursor: pointer; transition: all 0.12s ease; flex-shrink: 0; }
-  .ig-dots .dot.active { background: var(--blue); transform: scale(1.2); }
+  /* Carousel dot row under the image (native IG style) — Phase 10.4: bigger
+     dots with halo hit-areas, plus a "Slide N of M" label so the operator
+     always knows where they are. */
+  .ig-dots { display: flex; justify-content: center; gap: 8px; padding: 8px 0 6px; background: var(--surface); align-items: center; flex-wrap: wrap; }
+  .ig-dots .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); cursor: pointer; transition: all 0.12s ease; flex-shrink: 0; position: relative; }
+  .ig-dots .dot::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; }  /* generous hit area */
+  .ig-dots .dot.active { background: var(--blue); transform: scale(1.35); box-shadow: 0 0 0 2px rgba(56,151,240,0.25); }
   .ig-dots .dot:hover { background: var(--muted2); }
+  .ig-dots .slide-counter { font-size: 11px; color: var(--muted2); font-weight: 600; margin-right: 8px; min-width: 60px; text-align: right; }
+
+  /* Phase 10.4: ‹ › arrow buttons over the image. Always visible on mobile,
+     fade in on desktop hover. Keyboard ← / → also navigates after first
+     dot/arrow click on a carousel (sets last-interacted card). */
+  .slide-nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.65); border: 0; color: white; font-size: 26px; font-weight: 700; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; opacity: 0; transition: opacity 0.15s ease, background 0.12s ease, transform 0.12s ease; padding: 0 0 4px; user-select: none; }
+  .slide-nav-arrow.prev { left: 10px; }
+  .slide-nav-arrow.next { right: 10px; padding-bottom: 4px; padding-left: 2px; }
+  .image-preview:hover .slide-nav-arrow { opacity: 1; }
+  .slide-nav-arrow:hover { background: rgba(0,0,0,0.85); transform: translateY(-50%) scale(1.08); }
+  .slide-nav-arrow:active { transform: translateY(-50%) scale(0.96); }
+  @media (hover: none) {
+    /* Mobile: always visible, slightly smaller. */
+    .slide-nav-arrow { opacity: 0.92; width: 36px; height: 36px; font-size: 22px; }
+  }
   /* "+" CTA slot tile in the dot row — appears at the end when no CTA
      slide has been added yet. Click → opens the CTA editor in the slide
      panel below. Visually distinct from real dots (dashed gold ring). */
@@ -875,6 +893,11 @@ function renderInstagramCarouselCard(d) {
   const showOverlay = !isBranded;
   const activeOverlayFont = active.overlay_font === 'espn' ? 'espn' : 'brand';
   const overlayFontClass = activeOverlayFont === 'espn' ? ' font-espn' : '';
+  // Phase 10.4: ‹ › arrow buttons render only when there are 2+ slides.
+  // Wrap-around navigation (last → first via Next, first → last via Prev).
+  const navArrows = slides.length > 1 ? `
+         <button class="slide-nav-arrow prev" data-action="prev-slide" title="Previous slide (←)" aria-label="Previous slide">‹</button>
+         <button class="slide-nav-arrow next" data-action="next-slide" title="Next slide (→)" aria-label="Next slide">›</button>` : '';
   const heroImage = baseImage
     ? `<div class="image-preview large overlay-canvas" data-slide-index="${cur}">
          <img src="${escapeHtml(baseImage)}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.querySelector('.overlay-headline')?.remove()"/>
@@ -884,6 +907,7 @@ function renderInstagramCarouselCard(d) {
               ${Number.isFinite(active.overlay_font_size_pct) ? `data-overlay-font-size-pct="${active.overlay_font_size_pct}"` : ''}
               style="left:${activeOverlayX}%; top:${activeOverlayY}%; color:${escapeHtml(activeOverlayColor)};">${safeText(active.headline || '')}${isLocked ? '' : '<div class="resize-handle" data-resize-target="headline" title="Drag to resize"></div>'}</div>` : ''}
          ${slides.length > 1 ? `<div class="ig-card-num">${cur + 1}/${slides.length}</div>` : ''}
+         ${navArrows}
          ${renderStickerOverlayHtml(active.branded_overlay, cur, isLocked)}
          ${isLocked ? '' : `<div class="image-corner-actions">
            <button class="corner-btn" data-action="replace-photo" data-slide-index="${cur}" title="Replace photo from Wikimedia / Pexels / Unsplash">📷</button>
@@ -937,7 +961,7 @@ function renderInstagramCarouselCard(d) {
     </div>
     ${slides.length === 0
       ? `<div class="slide-strip-empty">No slides yet — click <b>↻ Run drafter now</b> at the top to generate today's batch.</div>`
-      : `${heroImage}<div class="ig-dots">${dots}</div>`}
+      : `${heroImage}<div class="ig-dots"><span class="slide-counter">${ctaSlotActive ? '+ CTA' : `Slide ${cur + 1} of ${slides.length}`}</span>${dots}</div>`}
     <div class="card-body" style="padding-top:6px; padding-bottom:8px;">
       <div class="ig-mock-actions">
         <span title="Like">♡</span>
@@ -1470,14 +1494,8 @@ function wireCardActions(cardEl) {
     dot.addEventListener('click', () => {
       const raw = dot.dataset.slide;
       CURRENT_SLIDE[id] = (raw === 'cta_slot') ? 'cta_slot' : Number(raw);
-      const draft = DRAFTS.find((x) => x._id === id);
-      if (!draft) return;
-      const newHtml = renderInstagramCarouselCard(draft);
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = newHtml;
-      const newCard = wrapper.firstElementChild;
-      cardEl.replaceWith(newCard);
-      wireCardActions(newCard);
+      LAST_NAV_CARD = id;  // Phase 10.4: keyboard ←/→ now targets this carousel
+      rerenderCarousel(id);
     });
   });
 
@@ -1630,6 +1648,8 @@ function wireCardActions(cardEl) {
         else if (action === 'remove-sticker') await actionRemoveSticker(id, slideIdx);
         else if (action === 'save-sticker-layout') await actionSaveStickerLayout(id, cardEl, slideIdx);
         else if (action === 'open-more-menu') toggleMoreMenu(btn.dataset.menuTarget, btn);
+        else if (action === 'prev-slide') changeSlide(id, -1);
+        else if (action === 'next-slide') changeSlide(id, +1);
         else if (action === 'add-cta-slide-cancel') {
           // Switch back to the first real slide
           CURRENT_SLIDE[id] = 0;
@@ -2783,6 +2803,52 @@ async function autoRenderPendingDrafts() {
 }
 
 // ── Phase 9.7: ⋯ More menu open/close + outside-click + ESC ─────────────
+// Phase 10.4: ‹ › arrow + ←/→ keyboard slide navigation. Wraps around at
+// either end. Stamps `LAST_NAV_CARD` so the global keydown listener knows
+// which carousel the operator is working on.
+let LAST_NAV_CARD = null;
+function changeSlide(draftId, delta) {
+  const draft = DRAFTS.find((x) => x._id === draftId);
+  if (!draft || !Array.isArray(draft.slides) || draft.slides.length < 2) return;
+  const total = draft.slides.length;
+  let cur = CURRENT_SLIDE[draftId];
+  // Treat the "+ CTA" slot as past-the-end so prev returns to last real slide,
+  // next wraps to slide 0.
+  if (cur === 'cta_slot') cur = total;
+  if (typeof cur !== 'number') cur = 0;
+  CURRENT_SLIDE[draftId] = ((cur + delta) % total + total) % total;
+  LAST_NAV_CARD = draftId;
+  rerenderCarousel(draftId);
+}
+
+function rerenderCarousel(draftId) {
+  const draft = DRAFTS.find((x) => x._id === draftId);
+  const cardEl = document.querySelector(`.card[data-id="${draftId}"]`);
+  if (!draft || !cardEl) return;
+  const newHtml = renderInstagramCarouselCard(draft);
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = newHtml;
+  const newCard = wrapper.firstElementChild;
+  cardEl.replaceWith(newCard);
+  wireCardActions(newCard);
+}
+
+// Global ← / → keys cycle the most-recently-navigated carousel. Suppressed
+// when typing in inputs / contenteditable so it doesn't hijack regular text
+// editing keystrokes.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  // Don't fight the focus modal's own scroll; only fire when modal isn't open
+  if (document.getElementById('focus-modal')?.classList.contains('open')) {
+    // OK to fire when modal is open — operator is editing the active card
+  }
+  if (!LAST_NAV_CARD) return;
+  e.preventDefault();
+  changeSlide(LAST_NAV_CARD, e.key === 'ArrowLeft' ? -1 : +1);
+});
+
 function toggleMoreMenu(targetId, btn) {
   // Close any other open menus first.
   document.querySelectorAll('.more-menu.open').forEach((m) => {
