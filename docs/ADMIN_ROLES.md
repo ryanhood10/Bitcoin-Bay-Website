@@ -1,24 +1,64 @@
 # Admin Roles & Auth
 
-Two roles, one shared login cookie, backwards-compatible with the original
-single-admin setup.
+Two roles + a per-user capability layer (Phase 10), one shared login
+cookie, backwards-compatible with the original single-admin setup.
 
 ## Roles
 
-| Role | Access |
+| Role | Default sections (effective access) |
 |---|---|
-| `full` | `/admin/messages` (player tickets) + `/admin/dashboard` + `/admin/dashboard/bonus-calculator` + `/admin/dashboard/content` + `/auth/instagram/*` + all write endpoints (engagement-drafts PATCH, post-drafts PATCH/regenerate/generate-art/skip/approve, bonus-report POST) |
-| `dashboard` | `/admin/dashboard` (analytics page only) + read-only endpoints (`/api/admin/dashboard/report`, `/post-drafts` GET, `/post-briefs/latest` GET, etc.) |
+| `full` | messaging · analytics · users · tickets · engagement · social_metrics · content_drafter · bonus_calculator |
+| `dashboard` | analytics · users · tickets · engagement · social_metrics |
 
 Role is determined at login and baked into the signed cookie. Middleware
-`adminAuth.requireAdmin('full')` returns 403 for `dashboard` users. The
-dashboard UI additionally hides buttons that link into `/admin/messages` and
-`/admin/dashboard/content` (via the `canAccessMessages()` helper and
-role-gated link rendering).
+`adminAuth.requireAdmin('full')` returns 403 for `dashboard` users.
 
-Cost-bearing routes that hit paid APIs (Anthropic, Replicate) are all
-gated as `full`-role only — a `dashboard`-role admin cannot trigger
-spend even by hitting URLs directly.
+Cost-bearing routes that hit paid APIs (Anthropic, Replicate) — content
+drafter, AI scene generation — are gated by the `content_drafter` section
+(see capability layer below). Bonus calculator stays `full`-role-only
+since it touches a public-leaderboard write that we want to keep narrow.
+
+## Per-user capability layer (Phase 10)
+
+The 2-role system was too coarse for a social-media manager who needs the
+content drafter (`full`-only by default) but should NOT see Support
+Tickets (visible to all admins by default). Two arrays on each Mongo
+admin doc layer on top of the role:
+
+- `granted_sections` — capabilities beyond the role default (e.g. give a
+  dashboard-role user `content_drafter` access)
+- `denied_sections` — subtractions from the role default (e.g. hide
+  `tickets` from a specific admin)
+
+Effective access = `(role_default ∪ granted) − denied`.
+
+Section keys (from `adminAuth.SECTIONS`):
+
+| Key | What it controls |
+|---|---|
+| `messaging`        | `/admin/messages` player-reply UI |
+| `analytics`        | GA4 + signups + Twitter/IG metrics on `/admin/dashboard` |
+| `users`            | signups panel |
+| `tickets`          | open-thread support panel + `/api/admin/dashboard/tickets/live` |
+| `engagement`       | engagement-drafts (Pi-suggested replies) panels + endpoints |
+| `social_metrics`   | Twitter+IG analytics widgets |
+| `content_drafter`  | `/admin/dashboard/content` + all `/post-drafts/*` endpoints |
+| `bonus_calculator` | `/admin/dashboard/bonus-calculator` (currently still role-gated to `full`; section grant has no effect) |
+
+Server-side enforcement: the `requireSection(name)` middleware sits AFTER
+`requireAdmin()` on each gated endpoint. Returns 403 with
+`"section X not accessible by this admin"` if the user doesn't have it.
+
+Client-side: `/api/admin/dashboard/me` returns `effective_sections`. The
+analytics dashboard hides the Tickets panel + Content Drafts nav card
+based on this. Defense-in-depth — the server still gates the data.
+
+## Login redirect
+
+After successful POST to `/admin/login`, in priority order:
+
+1. **`admin.landing_page`** (per-user, if set) — explicit override
+2. **role default**: `full` → `/admin/messages`, `dashboard` → `/admin/dashboard`
 
 ## Where admins live
 
@@ -42,8 +82,11 @@ if (passOk) adminAuth.setSessionCookie(res, admin.username, admin.role);
 
 - Name: `bcb_admin`
 - TTL: 30 days
-- Payload: `{ user, role, iat, exp }` (older cookies without `role` default to `full` for back-compat)
+- Payload: `{ user, role, granted_sections, denied_sections, landing_page, iat, exp }`
+  (older cookies without these fields default to `full` role / empty arrays / null landing for back-compat)
 - Signing: HMAC-SHA256 with `ADMIN_SESSION_SECRET` (must be ≥24 chars)
+- After any capability change via the CLI, the affected admin must log out
+  and back in for the cookie to refresh.
 
 ## Managing accounts — `scripts/manage-admins.js`
 
@@ -64,7 +107,32 @@ heroku run -a bitcoin-bay node scripts/manage-admins.js set-password <username> 
 
 # Change role
 heroku run -a bitcoin-bay node scripts/manage-admins.js set-role <username> <full|dashboard>
+
+# ── Per-user capability commands (Phase 10) ──
+
+# Grant a capability beyond the role default (operator must re-login to refresh cookie)
+heroku run -a bitcoin-bay node scripts/manage-admins.js grant-section <username> <section>
+
+# Revoke a previously-granted capability
+heroku run -a bitcoin-bay node scripts/manage-admins.js ungrant-section <username> <section>
+
+# Subtract a capability from the role default (operator must re-login)
+heroku run -a bitcoin-bay node scripts/manage-admins.js deny-section <username> <section>
+
+# Remove a denial
+heroku run -a bitcoin-bay node scripts/manage-admins.js undeny-section <username> <section>
+
+# Set login redirect target (use "" to clear back to role default)
+heroku run -a bitcoin-bay node scripts/manage-admins.js set-landing-page <username> <path>
+
+# Print full admin doc + resolved effective sections
+heroku run -a bitcoin-bay node scripts/manage-admins.js show <username>
 ```
+
+Section keys: `messaging`, `analytics`, `users`, `tickets`, `engagement`,
+`social_metrics`, `content_drafter`, `bonus_calculator`. Note that
+`bonus_calculator` is gated by `requireAdmin(ROLE_FULL)` directly —
+granting/denying it has no effect on access.
 
 Username is stored lowercase; lookups are case-insensitive. Passwords are
 bcrypt'd at cost 12.
@@ -72,23 +140,40 @@ bcrypt'd at cost 12.
 ## Current roster (as of last check)
 
 ```
-Env admin:      @admin          role=full
+Env admin:        @admin          role=full
 Mongo admins:
   @bitcoinbay     role=full
-  @goadma         role=dashboard
   @palmbeachpete  role=full
+  @goadma         role=dashboard
+                  granted_sections: [content_drafter]
+                  denied_sections:  [tickets]
+                  landing_page:     /admin/dashboard
+                  → effective: analytics, content_drafter, engagement, social_metrics, users
+                  (Goadma is the social-media manager — Twitter + IG. He
+                   reviews + approves the daily content drafts and watches
+                   the social metrics that show how those posts convert
+                   to signups. He does NOT touch player support tickets
+                   or the weekly bonus leaderboard.)
 ```
 
-## Login redirect behavior
+## Recipe: add a new content-team admin
 
-After successful POST to `/admin/login`:
-- role=`full`      → `/admin/messages`  (lands on tickets)
-- role=`dashboard` → `/admin/dashboard` (lands on analytics)
+```bash
+# 1. Create with dashboard role (no full-admin spend exposure by default)
+heroku run -a bitcoin-bay node scripts/manage-admins.js add jane Hunter1! dashboard
 
-Either role can navigate to the other page (if allowed) via UI links:
-- messages page has a `Dashboard →` link in the header (full admins always)
-- dashboard's tickets modal has `Open admin →` / per-thread `Reply ↗`, both
-  conditionally rendered via `canAccessMessages()` (only for full role)
+# 2. Grant content drafter access
+heroku run -a bitcoin-bay node scripts/manage-admins.js grant-section jane content_drafter
+
+# 3. (optional) Hide tickets if they shouldn't see player support
+heroku run -a bitcoin-bay node scripts/manage-admins.js deny-section jane tickets
+
+# 4. (optional) Land them on the analytics dashboard, not messages
+heroku run -a bitcoin-bay node scripts/manage-admins.js set-landing-page jane /admin/dashboard
+
+# 5. Verify resolved state
+heroku run -a bitcoin-bay node scripts/manage-admins.js show jane
+```
 
 ## Rate limiting
 
